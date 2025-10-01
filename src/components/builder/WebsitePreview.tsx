@@ -78,7 +78,7 @@ export function WebsitePreview() {
       <div className="flex h-full w-full flex-1 items-start justify-center overflow-hidden">
         <div
           className={clsx(
-            "relative flex w-full max-h-[70vh] min-h-[28rem] items-center justify-center overflow-y-auto rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all md:max-h-[75vh] md:min-h-[40rem] lg:max-h-[80vh] lg:min-h-[48rem]",
+            "relative flex w-full max-h-[140vh] min-h-[56rem] items-center justify-center overflow-y-auto rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all md:max-h-[150vh] md:min-h-[80rem] lg:max-h-[160vh] lg:min-h-[96rem]",
             device === "mobile" && "py-8"
           )}
         >
