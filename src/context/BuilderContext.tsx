@@ -16,6 +16,9 @@ type BuilderContextValue = {
   updateTheme: (changes: Record<string, string>) => void;
   content: Record<string, string>;
   updateContent: (changes: Record<string, string>) => void;
+  isPreviewReady: boolean;
+  updatePreviewDocument: (html: string) => void;
+  openPreview: () => void;
 };
 
 const BuilderContext = createContext<BuilderContextValue | undefined>(undefined);
@@ -48,6 +51,7 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templates[0]?.id ?? "");
   const [theme, setTheme] = useState<Record<string, string>>(defaultTheme);
   const [content, setContent] = useState<Record<string, string>>(defaultContent);
+  const [previewDocument, setPreviewDocument] = useState("");
 
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId) ?? templates[0],
@@ -68,6 +72,28 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
     setSelectedTemplateId(templateId);
   }, []);
 
+  const updatePreviewDocument = useCallback((html: string) => {
+    setPreviewDocument(html);
+  }, []);
+
+  const openPreview = useCallback(() => {
+    if (!previewDocument || typeof window === "undefined") {
+      return;
+    }
+
+    const blob = new Blob([previewDocument], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const previewWindow = window.open(url, "_blank");
+    if (previewWindow) {
+      previewWindow.focus();
+    }
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  }, [previewDocument]);
+
+  const isPreviewReady = Boolean(previewDocument);
+
   const value = useMemo<BuilderContextValue>(
     () => ({
       device,
@@ -79,9 +105,23 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       theme,
       updateTheme,
       content,
-      updateContent
+      updateContent,
+      isPreviewReady,
+      updatePreviewDocument,
+      openPreview
     }),
-    [content, device, isSidebarCollapsed, selectTemplate, selectedTemplate, theme, toggleSidebar]
+    [
+      content,
+      device,
+      isPreviewReady,
+      openPreview,
+      isSidebarCollapsed,
+      selectTemplate,
+      selectedTemplate,
+      theme,
+      toggleSidebar,
+      updatePreviewDocument
+    ]
   );
 
   return <BuilderContext.Provider value={value}>{children}</BuilderContext.Provider>;
