@@ -51,7 +51,7 @@ export default function HomePage() {
                 <div className="mt-4 flex items-center justify-between">
                   <span className="text-xs font-medium uppercase tracking-[0.3em] text-slate-500">Template</span>
                   <Link
-                    href={`/builder/${template.id}`}
+                    href={`/builder/templates?template=${template.id}`}
                     className="inline-flex items-center justify-center rounded-full bg-builder-accent px-4 py-2 text-sm font-semibold text-slate-900 transition hover:brightness-110"
                   >
                     Select
