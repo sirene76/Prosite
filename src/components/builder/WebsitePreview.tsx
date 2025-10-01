@@ -17,7 +17,7 @@ type TemplatePayload = {
 };
 
 export function WebsitePreview() {
-  const { device, selectedTemplate, theme, content } = useBuilder();
+  const { device, selectedTemplate, theme, content, setPreviewDocument } = useBuilder();
   const [assets, setAssets] = useState<TemplatePayload | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,6 +26,7 @@ export function WebsitePreview() {
     const fetchTemplate = async () => {
       setIsLoading(true);
       setAssets(null);
+      setPreviewDocument("");
       try {
         const response = await fetch(`/api/templates/${encodeURIComponent(selectedTemplate.id)}`);
         if (!response.ok) {
@@ -48,7 +49,7 @@ export function WebsitePreview() {
     return () => {
       isMounted = false;
     };
-  }, [selectedTemplate.id]);
+  }, [selectedTemplate.id, setPreviewDocument]);
 
   const mergedData = useMemo(() => ({ ...theme, ...content }), [content, theme]);
 
@@ -64,18 +65,13 @@ export function WebsitePreview() {
     return html;
   }, [assets, mergedData, theme.accentColor, theme.backgroundColor, theme.primaryColor, theme.secondaryColor, theme.textColor]);
 
-  const handleFullPreview = () => {
-    if (!srcDoc) return;
-    const blob = new Blob([srcDoc], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const previewWindow = window.open(url, "_blank");
-    if (previewWindow) {
-      previewWindow.focus();
-    }
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
-  };
+  useEffect(() => {
+    setPreviewDocument(srcDoc);
+  }, [setPreviewDocument, srcDoc]);
+
+  useEffect(() => () => {
+    setPreviewDocument("");
+  }, [setPreviewDocument]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center overflow-hidden bg-slate-950/40 px-6 py-8">
@@ -83,14 +79,6 @@ export function WebsitePreview() {
         <p>
           Previewing <span className="font-medium text-slate-200">{selectedTemplate.name}</span>
         </p>
-        <button
-          type="button"
-          onClick={handleFullPreview}
-          disabled={!assets}
-          className="rounded-full border border-builder-accent/60 px-4 py-1.5 text-xs font-semibold text-builder-accent transition hover:bg-builder-accent/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Full Preview
-        </button>
       </div>
       <div className="flex h-full w-full flex-1 items-center justify-center overflow-hidden">
         <div
