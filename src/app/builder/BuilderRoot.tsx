@@ -49,10 +49,12 @@ export default function BuilderRoot({ children }: BuilderRootProps) {
               <DeviceControls />
             </div>
             <div className="flex flex-1 overflow-hidden">
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <WebsitePreview />
+              <div className="flex h-full flex-1 flex-col overflow-hidden">
+                <div className="flex flex-1 overflow-hidden">
+                  <WebsitePreview />
+                </div>
                 <div className="border-t border-slate-800/60 bg-builder-surface/60 backdrop-blur">
-                  <div className="mx-auto h-full max-h-[22rem] w-full max-w-5xl overflow-y-auto px-6 py-6">
+                  <div className="mx-auto w-full max-w-5xl max-h-[22rem] shrink-0 overflow-y-auto px-6 py-6">
                     {children}
                   </div>
                 </div>
