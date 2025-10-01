@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -9,9 +11,25 @@ function classNames(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-export function TemplateSelection() {
+type TemplateSelectionProps = {
+  initialTemplateId?: string;
+};
+
+export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps) {
   const router = useRouter();
   const { templates, selectedTemplate, selectTemplate } = useBuilder();
+
+  useEffect(() => {
+    if (!initialTemplateId) {
+      return;
+    }
+
+    const hasTemplate = templates.some((template) => template.id === initialTemplateId);
+
+    if (hasTemplate) {
+      selectTemplate(initialTemplateId);
+    }
+  }, [initialTemplateId, selectTemplate, templates]);
 
   if (!templates.length) {
     return (
