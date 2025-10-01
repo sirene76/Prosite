@@ -11,24 +11,28 @@
   "dependencies": {
     "@headlessui/react": "^2.1.5",
     "@heroicons/react": "^2.1.5",
-    "clsx": "^2.1.0",
+    "bcryptjs": "^3.0.2",
+    "clsx": "^2.1.1",
     "mongodb": "^6.6.2",
-    "mongoose": "^8.3.2",
-    "next": "15.0.0",
-    "next-auth": "^5.0.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "stripe": "^14.21.0"
+    "mongoose": "^8.18.3",
+    "next": "^15.5.4",
+    "next-auth": "^4.24.11",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "stripe": "^14.25.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@types/node": "^20.12.12",
-    "@types/react": "^18.3.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.19.19",
+    "@types/react": "^18.3.25",
     "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.16",
+    "@types/stripe": "^8.0.416",
+    "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
     "eslint-config-next": "15.0.0",
-    "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.4",
-    "typescript": "^5.4.5"
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3"
   }
 }
