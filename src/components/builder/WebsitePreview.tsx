@@ -27,7 +27,7 @@ export function WebsitePreview() {
       setIsLoading(true);
       setAssets(null);
       try {
-        const response = await fetch(`/api/websites?templateId=${encodeURIComponent(selectedTemplate.id)}`);
+        const response = await fetch(`/api/templates/${encodeURIComponent(selectedTemplate.id)}`);
         if (!response.ok) {
           throw new Error("Unable to load template");
         }

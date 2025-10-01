@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { useBuilder } from "@/context/BuilderContext";
-import { templates } from "@/lib/templates";
+import { templates } from "@/lib/templateDefinitions";
 
 const PAGE_SIZE = 3;
 
