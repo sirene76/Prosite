@@ -1,0 +1,9 @@
+{
+  "id": "saas-starter",
+  "name": "SaaS Starter",
+  "description": "A clean landing page template for SaaS products.",
+  "previewImage": "/thumbnails/saas-starter.png",
+  "sections": ["hero", "features", "pricing", "faq", "contact"],
+  "colors": ["primary", "secondary", "accent"],
+  "fonts": ["heading", "body"]
+}
