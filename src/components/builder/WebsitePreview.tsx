@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import clsx from "clsx";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBuilder } from "@/context/BuilderContext";
 import { renderTemplate } from "@/lib/renderTemplate";
 
-const deviceWidths: Record<"desktop" | "tablet" | "mobile", string> = {
-  desktop: "100%",
-  tablet: "768px",
-  mobile: "390px"
-};
+const DEVICE_DIMENSIONS = {
+  desktop: { width: 1440, height: 1024 },
+  tablet: { width: 1024, height: 1366 },
+  mobile: { width: 430, height: 932 }
+} as const;
+
+const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 2] as const;
 
 type TemplatePayload = {
   html: string;
@@ -20,6 +21,8 @@ export function WebsitePreview() {
   const { device, selectedTemplate, theme, content, updatePreviewDocument } = useBuilder();
   const [assets, setAssets] = useState<TemplatePayload | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [zoomIndex, setZoomIndex] = useState(() => ZOOM_LEVELS.indexOf(1));
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -68,44 +71,141 @@ export function WebsitePreview() {
     updatePreviewDocument(srcDoc);
   }, [srcDoc, updatePreviewDocument]);
 
+  const zoom = ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, zoomIndex))];
+
+  const handleZoomIn = useCallback(() => {
+    setZoomIndex((index) => Math.min(ZOOM_LEVELS.length - 1, index + 1));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoomIndex((index) => Math.max(0, index - 1));
+  }, []);
+
+  const handleResetZoom = useCallback(() => {
+    const defaultIndex = ZOOM_LEVELS.indexOf(1);
+    setZoomIndex(defaultIndex === -1 ? 0 : defaultIndex);
+  }, []);
+
+  const handleFitToScreen = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const { width, height } = DEVICE_DIMENSIONS[device];
+    const availableWidth = container.clientWidth;
+    const availableHeight = container.clientHeight;
+    const targetScale = Math.min(availableWidth / width, availableHeight / height);
+
+    let bestIndex = 0;
+    for (let i = 0; i < ZOOM_LEVELS.length; i += 1) {
+      if (ZOOM_LEVELS[i] <= targetScale + 0.0001) {
+        bestIndex = i;
+      }
+    }
+
+    setZoomIndex(bestIndex);
+    container.scrollTo({ top: 0, left: 0 });
+  }, [device]);
+
+  useEffect(() => {
+    handleResetZoom();
+  }, [device, handleResetZoom]);
+
+  const currentDimensions = DEVICE_DIMENSIONS[device];
+  const zoomLabel = `${Math.round(zoom * 100)}%`;
+
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-slate-950/40 px-6 py-8">
-      <div className="flex w-full max-w-6xl items-center justify-start pb-4 text-sm text-slate-400">
-        <p>
-          Previewing <span className="font-medium text-slate-200">{selectedTemplate.name}</span>
-        </p>
+    <div className="flex flex-1 flex-col gap-4">
+      <div className="flex items-center justify-between px-2 text-xs uppercase tracking-[0.3em] text-slate-500 sm:px-0">
+        <span className="text-slate-400">
+          Previewing <span className="text-slate-200">{selectedTemplate.name}</span>
+        </span>
+        <span className="text-slate-500">{device.toUpperCase()} • {zoomLabel}</span>
       </div>
-      <div className="flex h-full w-full flex-1 items-start justify-center overflow-hidden">
-        <div
-          className={clsx(
-            "relative flex h-full w-full flex-1 items-center justify-center overflow-hidden rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all",
-            device === "mobile" && "py-8"
-          )}
-        >
-          {isLoading ? (
-            <div className="text-sm text-slate-400">Loading preview...</div>
-          ) : assets ? (
-            <div
-              className={clsx(
-                "flex h-full w-full items-center justify-center",
-                device === "desktop" && "px-6",
-                device === "tablet" && "px-6",
-                device === "mobile" && "px-0"
-              )}
-              style={{ maxWidth: deviceWidths[device] }}
-            >
-              <iframe
-                key={`${selectedTemplate.id}-${device}`}
-                title="Website preview"
-                srcDoc={srcDoc}
-                className="h-full w-full rounded-[22px] border border-slate-800/50 bg-white shadow-inner transition-all"
-              />
+      <div className="flex flex-1 justify-center bg-gray-950 p-4">
+        <div className="relative flex w-full max-w-[1800px] flex-col items-center">
+          <div
+            ref={containerRef}
+            className="relative flex h-[85vh] w-full items-start justify-center overflow-auto rounded-[32px] border border-gray-900/70 bg-gray-900/40"
+          >
+            {isLoading ? (
+              <div className="flex h-full w-full items-center justify-center text-sm text-slate-500">
+                Loading preview...
+              </div>
+            ) : assets ? (
+              <div
+                className="pointer-events-auto"
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: "top center"
+                }}
+              >
+                <div
+                  className="mx-auto overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/80 shadow-[0_45px_90px_-40px_rgba(0,0,0,0.85)]"
+                  style={{ width: `${currentDimensions.width}px` }}
+                >
+                  <div className="flex items-center gap-3 border-b border-gray-800/70 bg-gray-900 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-rose-500" />
+                      <span className="h-3 w-3 rounded-full bg-amber-400" />
+                      <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                    </div>
+                    <div className="flex-1 rounded-md bg-gray-800/70 px-3 py-1 text-[11px] text-slate-400">
+                      preview.prosite/{device}
+                    </div>
+                  </div>
+                  <iframe
+                    key={`${selectedTemplate.id}-${device}`}
+                    title="Website preview"
+                    srcDoc={srcDoc}
+                    className="h-[1024px] w-[1440px] border-0 bg-white"
+                    style={{
+                      width: `${currentDimensions.width}px`,
+                      height: `${currentDimensions.height}px`
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-rose-400">
+                We couldn&apos;t load the template preview. Please refresh and try again.
+              </div>
+            )}
+
+            <div className="pointer-events-none absolute right-6 top-6 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleZoomOut}
+                disabled={zoomIndex === 0}
+                className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-gray-800 bg-gray-950/80 px-3 text-sm font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                onClick={handleResetZoom}
+                className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-gray-800 bg-gray-950/80 px-3 text-sm font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
+              >
+                {zoomLabel}
+              </button>
+              <button
+                type="button"
+                onClick={handleZoomIn}
+                disabled={zoomIndex === ZOOM_LEVELS.length - 1}
+                className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-gray-800 bg-gray-950/80 px-3 text-sm font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={handleFitToScreen}
+                className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-gray-800 bg-gray-950/80 px-3 text-sm font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
+              >
+                Fit
+              </button>
             </div>
-          ) : (
-            <div className="max-w-sm text-center text-sm text-rose-400">
-              We couldn&apos;t load the template preview. Please refresh and try again.
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

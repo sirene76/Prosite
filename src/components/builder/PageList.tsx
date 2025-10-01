@@ -9,9 +9,12 @@ type PageListProps = {
 export function PageList({ pages = defaultPages }: PageListProps) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-300">Pages</p>
-        <button type="button" className="text-xs font-medium text-builder-accent transition hover:underline">
+      <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
+        <span>Pages</span>
+        <button
+          type="button"
+          className="text-[10px] font-semibold text-slate-500 transition hover:text-slate-300"
+        >
           Manage
         </button>
       </div>
@@ -20,7 +23,7 @@ export function PageList({ pages = defaultPages }: PageListProps) {
           <button
             type="button"
             key={page}
-            className="whitespace-nowrap rounded-full border border-slate-700/70 bg-slate-900/40 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-builder-accent/40 hover:text-slate-100"
+            className="whitespace-nowrap rounded-full border border-gray-800 bg-gray-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
           >
             {page}
           </button>
