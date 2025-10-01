@@ -1,34 +1,32 @@
 import mongoose from "mongoose";
 
-type MongooseGlobal = typeof globalThis & {
-  mongoose?: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null };
-};
+const MONGODB_URI = process.env.DATABASE_URL;
 
-const globalWithMongoose = globalThis as MongooseGlobal;
-
-if (!globalWithMongoose.mongoose) {
-  globalWithMongoose.mongoose = { conn: null, promise: null };
+if (!MONGODB_URI) {
+  throw new Error("Missing DATABASE_URL");
 }
 
-const cached = globalWithMongoose.mongoose;
+type MongooseCache = {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+};
 
-export async function connectToDatabase() {
-  const uri = process.env.MONGODB_URI;
+const cached: MongooseCache = (global as typeof globalThis & { _mongoose?: MongooseCache })._mongoose || {
+  conn: null,
+  promise: null,
+};
 
-  if (!uri) {
-    throw new Error("MONGODB_URI environment variable is not set");
-  }
-
+export async function connectDB(): Promise<typeof mongoose> {
   if (cached.conn) {
     return cached.conn;
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(uri, {
-      maxPoolSize: 5
-    });
+    cached.promise = mongoose.connect(MONGODB_URI).then((m) => m);
   }
 
   cached.conn = await cached.promise;
+  (global as typeof globalThis & { _mongoose?: MongooseCache })._mongoose = cached;
+
   return cached.conn;
 }
