@@ -5,15 +5,16 @@
       <p class="tagline">{{tagline}}</p>
     </div>
     <nav class="nav">
+      <a href="#home">Home</a>
       <a href="#about">About</a>
-      <a href="#resume">Resume</a>
+      <a href="#services">Services</a>
       <a href="#portfolio">Portfolio</a>
       <a href="#testimonials">Testimonials</a>
       <a href="#contact">Contact</a>
     </nav>
   </aside>
   <main class="content">
-    <section class="hero">
+    <section id="home" class="hero">
       <p class="eyebrow">Now booking new collaborations</p>
       <h1>{{name}}</h1>
       <p class="lede">{{tagline}}</p>
@@ -28,7 +29,7 @@
       <p>{{about}}</p>
     </section>
 
-    <section id="resume" class="section resume">
+    <section id="services" class="section resume">
       <h2>{{resumeTitle}}</h2>
       <p>{{resumeSummary}}</p>
       <ul class="timeline">
@@ -105,3 +106,19 @@
     </section>
   </main>
 </section>
+<script>
+  window.addEventListener("message", function (event) {
+    if (!event || typeof event.data !== "object" || event.data === null) {
+      return;
+    }
+
+    if (event.data.type !== "scroll-to") {
+      return;
+    }
+
+    var target = document.getElementById(event.data.id);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+</script>

@@ -1,5 +1,8 @@
 "use client";
 
+import { useCallback } from "react";
+import { useBuilder } from "@/context/BuilderContext";
+
 const defaultPages = ["Home", "About", "Services", "Contact"];
 
 type PageListProps = {
@@ -7,6 +10,16 @@ type PageListProps = {
 };
 
 export function PageList({ pages = defaultPages }: PageListProps) {
+  const { previewFrame } = useBuilder();
+
+  const handleNavigate = useCallback(
+    (page: string) => {
+      const id = page.trim().toLowerCase().replace(/\s+/g, "-");
+      previewFrame?.contentWindow?.postMessage({ type: "scroll-to", id }, "*");
+    },
+    [previewFrame]
+  );
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
@@ -23,6 +36,7 @@ export function PageList({ pages = defaultPages }: PageListProps) {
           <button
             type="button"
             key={page}
+            onClick={() => handleNavigate(page)}
             className="whitespace-nowrap rounded-full border border-gray-800 bg-gray-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
           >
             {page}

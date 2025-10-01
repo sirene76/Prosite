@@ -4,10 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBuilder } from "@/context/BuilderContext";
 import { renderTemplate } from "@/lib/renderTemplate";
 
-const DEVICE_DIMENSIONS = {
-  desktop: { width: 1440, height: 1024 },
-  tablet: { width: 1024, height: 1366 },
-  mobile: { width: 430, height: 932 }
+const DEVICE_WIDTHS = {
+  desktop: 1440,
+  tablet: 768,
+  mobile: 375
+} as const;
+
+const DEVICE_HEIGHTS = {
+  desktop: 1024,
+  tablet: 1366,
+  mobile: 1024
 } as const;
 
 const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 2] as const;
@@ -22,6 +28,7 @@ type TemplatePayload = {
 export function WebsitePreview() {
   const {
     device,
+    registerPreviewFrame,
     selectedTemplate,
     theme,
     content,
@@ -34,6 +41,14 @@ export function WebsitePreview() {
   const [zoom, setZoom] = useState(1);
   const [isAutoFit, setIsAutoFit] = useState(true);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const setIframeRef = useCallback(
+    (node: HTMLIFrameElement | null) => {
+      iframeRef.current = node;
+      registerPreviewFrame(node);
+    },
+    [registerPreviewFrame]
+  );
 
   const clampZoom = useCallback((value: number) => {
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(3))));
@@ -120,7 +135,7 @@ export function WebsitePreview() {
       return;
     }
 
-    const { width } = DEVICE_DIMENSIONS[device];
+    const width = DEVICE_WIDTHS[device];
     const availableWidth = container.clientWidth;
     if (availableWidth <= 0) {
       return;
@@ -134,11 +149,11 @@ export function WebsitePreview() {
   }, [clampZoom, device]);
 
   useEffect(() => {
-    if (!assets) {
+    if (!assets || !isAutoFit) {
       return;
     }
     handleFitToScreen();
-  }, [assets, device, handleFitToScreen]);
+  }, [assets, device, handleFitToScreen, isAutoFit]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -191,7 +206,8 @@ export function WebsitePreview() {
     };
   }, [handleFitToScreen, isAutoFit]);
 
-  const currentDimensions = DEVICE_DIMENSIONS[device];
+  const currentWidth = DEVICE_WIDTHS[device];
+  const currentHeight = DEVICE_HEIGHTS[device];
   const zoomLabel = `${Math.round(zoom * 100)}%`;
 
   return (
@@ -222,7 +238,7 @@ export function WebsitePreview() {
               >
                 <div
                   className="mx-auto overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/80 shadow-[0_45px_90px_-40px_rgba(0,0,0,0.85)]"
-                  style={{ width: `${currentDimensions.width}px` }}
+                  style={{ width: `${currentWidth}px` }}
                 >
                   <div className="flex items-center gap-3 border-b border-gray-800/70 bg-gray-900 px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -236,12 +252,14 @@ export function WebsitePreview() {
                   </div>
                   <iframe
                     key={`${selectedTemplate.id}-${device}`}
+                    ref={setIframeRef}
                     title="Website preview"
                     srcDoc={srcDoc}
-                    className="h-[1024px] w-[1440px] border-0 bg-white"
+                    data-preview-frame="true"
+                    className="border-0 bg-white"
                     style={{
-                      width: `${currentDimensions.width}px`,
-                      height: `${currentDimensions.height}px`
+                      width: `${currentWidth}px`,
+                      height: `${currentHeight}px`
                     }}
                   />
                 </div>
