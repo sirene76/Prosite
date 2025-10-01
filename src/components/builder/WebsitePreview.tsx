@@ -38,8 +38,8 @@ export function WebsitePreview() {
   } = useBuilder();
   const [assets, setAssets] = useState<TemplatePayload | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [isAutoFit, setIsAutoFit] = useState(true);
+  const [zoom, setZoom] = useState(0.6);
+  const [isAutoFit, setIsAutoFit] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const setIframeRef = useCallback(
