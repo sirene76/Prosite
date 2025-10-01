@@ -9,10 +9,8 @@ export async function GET(
 ): Promise<Response> {
   try {
     const { templateId } = params;
-    const [assets, templates] = await Promise.all([
-      loadTemplateAssets(templateId),
-      loadTemplates(),
-    ]);
+    const assets = await loadTemplateAssets(templateId);
+    const templates = loadTemplates();
 
     const templateMeta = templates.find((template) => template.id === templateId);
     const placeholders = extractPlaceholders(assets.html);

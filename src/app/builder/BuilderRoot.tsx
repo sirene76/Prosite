@@ -16,8 +16,8 @@ const steps: BuilderStep[] = [
   { label: "Checkout", href: "/builder/checkout" },
 ];
 
-export default async function BuilderRoot({ children }: BuilderRootProps) {
-  const templates = await loadTemplates();
+export default function BuilderRoot({ children }: BuilderRootProps) {
+  const templates = loadTemplates();
 
   return (
     <BuilderProvider templates={templates}>

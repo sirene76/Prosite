@@ -1,4 +1,5 @@
-import fs from "fs/promises";
+import fs from "fs";
+import fsPromises from "fs/promises";
 import path from "path";
 
 const templatesDir = path.join(process.cwd(), "templates");
@@ -23,8 +24,8 @@ function toTitleCase(value: string) {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-async function readMetaFile(metaPath: string) {
-  const raw = await fs.readFile(metaPath, "utf-8");
+function readMetaFileSync(metaPath: string) {
+  const raw = fs.readFileSync(metaPath, "utf-8");
   return JSON.parse(raw) as Partial<TemplateDefinition & { path?: string }>;
 }
 
@@ -36,9 +37,14 @@ function sanitizeTemplateId(templateId: string) {
   return normalized;
 }
 
+async function readMetaFile(metaPath: string) {
+  const raw = await fsPromises.readFile(metaPath, "utf-8");
+  return JSON.parse(raw) as Partial<TemplateDefinition & { path?: string }>;
+}
+
 async function ensureDirectoryExists(dirPath: string) {
   try {
-    const stat = await fs.stat(dirPath);
+    const stat = await fsPromises.stat(dirPath);
     if (!stat.isDirectory()) {
       throw new Error(`Expected directory at ${dirPath}`);
     }
@@ -50,17 +56,12 @@ async function ensureDirectoryExists(dirPath: string) {
   }
 }
 
-export async function loadTemplates(): Promise<TemplateDefinition[]> {
-  let entries: fs.Dirent[] = [];
-  try {
-    entries = await fs.readdir(templatesDir, { withFileTypes: true });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return [];
-    }
-    throw error;
+export function loadTemplates(): TemplateDefinition[] {
+  if (!fs.existsSync(templatesDir)) {
+    return [];
   }
 
+  const entries = fs.readdirSync(templatesDir, { withFileTypes: true });
   const templates: TemplateDefinition[] = [];
 
   for (const entry of entries) {
@@ -73,7 +74,7 @@ export async function loadTemplates(): Promise<TemplateDefinition[]> {
     const metaPath = path.join(folderPath, "meta.json");
 
     try {
-      const meta = await readMetaFile(metaPath);
+      const meta = readMetaFileSync(metaPath);
       const id = typeof meta.id === "string" && meta.id.length > 0 ? meta.id : folderName;
       const name = typeof meta.name === "string" && meta.name.length > 0 ? meta.name : toTitleCase(id);
 
@@ -89,7 +90,6 @@ export async function loadTemplates(): Promise<TemplateDefinition[]> {
       });
     } catch (error) {
       console.warn(`Failed to read template metadata for ${folderName}:`, error);
-      continue;
     }
   }
 
@@ -98,7 +98,7 @@ export async function loadTemplates(): Promise<TemplateDefinition[]> {
 
 async function resolveTemplateDirectory(templateId: string) {
   const safeId = sanitizeTemplateId(templateId);
-  const directories = await fs.readdir(templatesDir, { withFileTypes: true });
+  const directories = await fsPromises.readdir(templatesDir, { withFileTypes: true });
 
   for (const entry of directories) {
     if (!entry.isDirectory()) {
@@ -131,7 +131,7 @@ export async function getTemplateHtml(templateId: string): Promise<string> {
   const filePath = path.join(folderPath, "index.html");
 
   try {
-    return await fs.readFile(filePath, "utf-8");
+    return await fsPromises.readFile(filePath, "utf-8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`HTML file not found for template: ${templateId}`);
@@ -145,7 +145,7 @@ export async function getTemplateCss(templateId: string): Promise<string> {
   const filePath = path.join(folderPath, "style.css");
 
   try {
-    return await fs.readFile(filePath, "utf-8");
+    return await fsPromises.readFile(filePath, "utf-8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`CSS file not found for template: ${templateId}`);
