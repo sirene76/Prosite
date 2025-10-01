@@ -49,7 +49,7 @@ export default function BuilderRoot({ children }: BuilderRootProps) {
               <DeviceControls />
             </div>
             <div className="flex flex-1 overflow-hidden">
-              <div className="flex h-full flex-1 flex-col overflow-hidden">
+              <div className="flex flex-1 flex-col h-full overflow-hidden">
                 <div className="flex flex-1 overflow-hidden">
                   <WebsitePreview />
                 </div>
