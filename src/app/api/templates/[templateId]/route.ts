@@ -3,11 +3,15 @@ import { NextResponse } from "next/server";
 import { loadTemplateAssets } from "@/lib/templates";
 
 export async function GET(
-  request: Request,
-  { params }: { params: { templateId: string } }
+  _request: Request,
+  { params }: { params: Promise<{ templateId: string }> }
 ): Promise<NextResponse<{ html: string; css: string }>> {
   try {
-    const { templateId } = params;
+    const { templateId } = await params;
+
+    if (!templateId) {
+      return NextResponse.json({ html: "", css: "" }, { status: 400 });
+    }
     const assets = await loadTemplateAssets(templateId);
     return NextResponse.json(assets, {
       headers: {
