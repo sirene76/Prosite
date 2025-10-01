@@ -1,83 +1,128 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import clsx from "clsx";
 import { useBuilder } from "@/context/BuilderContext";
-import { templates } from "@/lib/templateDefinitions";
 
-const PAGE_SIZE = 3;
+const palettePresets = [
+  {
+    name: "Aurora",
+    colors: {
+      primaryColor: "#38bdf8",
+      secondaryColor: "#0ea5e9",
+      accentColor: "#f472b6",
+      backgroundColor: "#020617",
+      textColor: "#e2e8f0",
+    },
+  },
+  {
+    name: "Luxe",
+    colors: {
+      primaryColor: "#f59e0b",
+      secondaryColor: "#d97706",
+      accentColor: "#fde68a",
+      backgroundColor: "#0b1120",
+      textColor: "#f8fafc",
+    },
+  },
+  {
+    name: "Verdant",
+    colors: {
+      primaryColor: "#34d399",
+      secondaryColor: "#10b981",
+      accentColor: "#86efac",
+      backgroundColor: "#022c22",
+      textColor: "#ecfdf5",
+    },
+  },
+] as const;
+
+const colorFields: { key: keyof typeof palettePresets[number]["colors"]; label: string }[] = [
+  { key: "primaryColor", label: "Primary" },
+  { key: "secondaryColor", label: "Secondary" },
+  { key: "accentColor", label: "Accent" },
+  { key: "backgroundColor", label: "Background" },
+  { key: "textColor", label: "Text" },
+];
 
 export function ThemeSelector() {
-  const { selectedTemplate, selectTemplate } = useBuilder();
-  const [page, setPage] = useState(0);
+  const { theme, updateTheme } = useBuilder();
 
-  const paginatedTemplates = useMemo(() => {
-    const start = page * PAGE_SIZE;
-    return templates.slice(start, start + PAGE_SIZE);
-  }, [page]);
-
-  const totalPages = Math.max(1, Math.ceil(templates.length / PAGE_SIZE));
-
-  useEffect(() => {
-    setPage((current) => Math.min(current, totalPages - 1));
-  }, [totalPages]);
-
-  const handlePrev = () => setPage((current) => Math.max(0, current - 1));
-  const handleNext = () => setPage((current) => Math.min(totalPages - 1, current + 1));
+  const activePalette = useMemo(() => {
+    return palettePresets.find((preset) => {
+      return colorFields.every((field) => preset.colors[field.key] === theme[field.key]);
+    });
+  }, [theme]);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-300">Template library</p>
-        <div className="flex items-center gap-2 text-slate-400">
-          <button
-            type="button"
-            onClick={handlePrev}
-            disabled={page === 0}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-700/70 transition hover:border-builder-accent/40 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            ◀
-          </button>
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={page >= totalPages - 1}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-700/70 transition hover:border-builder-accent/40 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            ▶
-          </button>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Palettes</p>
+        <div className="space-y-2">
+          {palettePresets.map((preset) => {
+            const isActive = activePalette?.name === preset.name;
+
+            return (
+              <button
+                type="button"
+                key={preset.name}
+                onClick={() => updateTheme(preset.colors)}
+                className={clsx(
+                  "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition",
+                  isActive
+                    ? "border-builder-accent/70 bg-gray-950"
+                    : "border-gray-800 bg-gray-900/40 hover:border-builder-accent/40"
+                )}
+              >
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">{preset.name}</p>
+                  <p className="text-xs text-slate-500">Click to apply this palette</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {colorFields.slice(0, 3).map((field) => (
+                    <span
+                      key={field.key}
+                      className="h-7 w-7 rounded-full border border-white/10"
+                      style={{ backgroundColor: preset.colors[field.key] }}
+                    />
+                  ))}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="space-y-3">
-        {paginatedTemplates.map((template) => (
-          <button
-            type="button"
-            key={template.id}
-            onClick={() => selectTemplate(template.id)}
-            className={clsx(
-              "w-full rounded-2xl border p-4 text-left transition",
-              selectedTemplate.id === template.id
-                ? "border-builder-accent bg-builder-accent/10"
-                : "border-slate-800/70 bg-slate-900/40 hover:border-builder-accent/40"
-            )}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-slate-100">{template.name}</p>
-                <p className="text-xs text-slate-400">{template.description}</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Fine tune colors</p>
+        <div className="space-y-3">
+          {colorFields.map(({ key, label }) => (
+            <label key={key} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
+              <div
+                className="h-10 w-10 flex-shrink-0 rounded-lg border border-white/10"
+                style={{ backgroundColor: theme[key] }}
+              />
+              <div className="flex-1 space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={theme[key] ?? ""}
+                    onChange={(event) => updateTheme({ [key]: event.target.value })}
+                    className="h-8 w-16 cursor-pointer rounded border border-gray-800 bg-gray-900"
+                  />
+                  <input
+                    type="text"
+                    value={theme[key] ?? ""}
+                    onChange={(event) => updateTheme({ [key]: event.target.value })}
+                    className="flex-1 rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
+                  />
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                {template.swatches.map((color) => (
-                  <span key={color} className="h-8 w-8 rounded-full border border-white/10" style={{ backgroundColor: color }} />
-                ))}
-              </div>
-            </div>
-          </button>
-        ))}
+            </label>
+          ))}
+        </div>
       </div>
-
-      <p className="text-xs text-slate-500">More templates launching soon. Upgrade to unlock premium collections.</p>
     </div>
   );
 }

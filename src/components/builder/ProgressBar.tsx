@@ -10,53 +10,46 @@ type ProgressBarProps = {
 
 export function ProgressBar({ steps, activeIndex, onStepClick }: ProgressBarProps) {
   return (
-    <nav className="mx-auto flex w-full max-w-6xl items-center gap-4 px-6 pb-4">
+    <nav className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 pb-3">
       {steps.map((step, index) => {
         const isActive = index === activeIndex;
         const isCompleted = activeIndex > index;
 
         return (
-          <button
-            type="button"
-            key={step.href}
-            onClick={() => onStepClick?.(step.href)}
-            className="group flex flex-1 items-center gap-3 text-left"
-          >
-            <span
-              className={clsx(
-                "flex h-8 w-8 items-center justify-center rounded-full border-2 transition",
-                isCompleted && "border-builder-accent bg-builder-accent/20 text-builder-accent",
-                isActive && !isCompleted && "border-builder-accent bg-builder-accent/20 text-builder-accent",
-                !isActive && !isCompleted && "border-slate-700/80 text-slate-500 group-hover:border-builder-accent/40"
-              )}
+          <div key={step.href} className="flex flex-1 items-center gap-4">
+            <button
+              type="button"
+              onClick={() => onStepClick?.(step.href)}
+              className="group flex items-center gap-3 text-left transition-colors"
             >
-              {isCompleted ? (
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path
-                    fillRule="evenodd"
-                    d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.043 7.11a1 1 0 0 1-1.433.019L3.29 8.947a1 1 0 0 1 1.42-1.406l4.2 4.245 6.333-6.392a1 1 0 0 1 1.414-.006z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              ) : (
-                <span className="text-sm font-semibold">{index + 1}</span>
-              )}
-            </span>
-            <span className="flex flex-col">
-              <span
-                className={clsx(
-                  "text-sm font-semibold uppercase tracking-wide",
-                  isActive ? "text-slate-100" : "text-slate-500 group-hover:text-slate-300"
-                )}
-              >
-                {step.label}
+              <span className="relative flex h-4 w-4 items-center justify-center">
+                <span
+                  className={clsx(
+                    "h-2.5 w-2.5 rounded-full border transition",
+                    isCompleted
+                      ? "border-transparent bg-builder-accent"
+                      : isActive
+                        ? "border-builder-accent bg-builder-accent/30"
+                        : "border-slate-700 bg-slate-800 group-hover:border-builder-accent/50"
+                  )}
+                />
               </span>
-              <span className="text-xs text-slate-500">Step {index + 1}</span>
-            </span>
+              <span className="flex flex-col">
+                <span
+                  className={clsx(
+                    "text-xs font-semibold uppercase tracking-[0.25em]",
+                    isActive ? "text-slate-200" : "text-slate-500 group-hover:text-slate-300"
+                  )}
+                >
+                  {step.label}
+                </span>
+                <span className="text-[11px] text-slate-600">Step {index + 1}</span>
+              </span>
+            </button>
             {index < steps.length - 1 ? (
-              <span className="hidden flex-1 border-t border-dashed border-slate-800/80 md:block" aria-hidden />
+              <span className="hidden flex-1 border-t border-dashed border-slate-800/80 sm:block" aria-hidden />
             ) : null}
-          </button>
+          </div>
         );
       })}
     </nav>
