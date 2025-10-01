@@ -16,6 +16,8 @@ type BuilderContextValue = {
   updateTheme: (changes: Record<string, string>) => void;
   content: Record<string, string>;
   updateContent: (changes: Record<string, string>) => void;
+  previewDocument: string;
+  setPreviewDocument: (doc: string) => void;
 };
 
 const BuilderContext = createContext<BuilderContextValue | undefined>(undefined);
@@ -48,6 +50,7 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templates[0]?.id ?? "");
   const [theme, setTheme] = useState<Record<string, string>>(defaultTheme);
   const [content, setContent] = useState<Record<string, string>>(defaultContent);
+  const [previewDocument, setPreviewDocument] = useState<string>("");
 
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId) ?? templates[0],
@@ -79,9 +82,24 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       theme,
       updateTheme,
       content,
-      updateContent
+      updateContent,
+      previewDocument,
+      setPreviewDocument
     }),
-    [content, device, isSidebarCollapsed, selectTemplate, selectedTemplate, theme, toggleSidebar]
+    [
+      content,
+      device,
+      isSidebarCollapsed,
+      previewDocument,
+      selectTemplate,
+      selectedTemplate,
+      setDevice,
+      setPreviewDocument,
+      theme,
+      toggleSidebar,
+      updateContent,
+      updateTheme
+    ]
   );
 
   return <BuilderContext.Provider value={value}>{children}</BuilderContext.Provider>;
