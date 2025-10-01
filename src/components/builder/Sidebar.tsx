@@ -18,6 +18,14 @@ const tabs = [
   { id: "content", label: "Content" }
 ] as const;
 
+const STEP_ORDER = ["theme", "content", "checkout"] as const;
+
+type StepKey = (typeof STEP_ORDER)[number];
+
+function formatStepLabel(step: StepKey) {
+  return step.charAt(0).toUpperCase() + step.slice(1);
+}
+
 type TabId = (typeof tabs)[number]["id"];
 type ContentFieldKey =
   | "name"
@@ -99,6 +107,19 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
   const currentStepLabel = useMemo(() => steps[currentIndex]?.label ?? "", [currentIndex, steps]);
+
+  const currentStepKey = STEP_ORDER[currentIndex] ?? STEP_ORDER[0];
+  const currentStepPosition = STEP_ORDER.findIndex((step) => step === currentStepKey);
+  const nextStepKey =
+    currentStepPosition >= 0 && currentStepPosition < STEP_ORDER.length - 1
+      ? STEP_ORDER[currentStepPosition + 1]
+      : undefined;
+  const nextButtonLabel =
+    currentStepKey === "checkout"
+      ? "Finish"
+      : nextStepKey
+        ? `Next: ${formatStepLabel(nextStepKey)}`
+        : "Next";
 
   const handleNavigate = (direction: "prev" | "next") => {
     const nextIndex = direction === "prev" ? currentIndex - 1 : currentIndex + 1;
@@ -192,7 +213,7 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
                 disabled={currentIndex === steps.length - 1}
                 className="flex-1 rounded-full bg-builder-accent px-4 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Next
+                {nextButtonLabel}
               </button>
             </div>
           </div>
