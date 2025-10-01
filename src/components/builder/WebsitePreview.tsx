@@ -78,25 +78,29 @@ export function WebsitePreview() {
       <div className="flex h-full w-full flex-1 items-start justify-center overflow-hidden">
         <div
           className={clsx(
-            "relative flex w-full max-h-[140vh] min-h-[56rem] items-center justify-center overflow-y-auto rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all md:max-h-[150vh] md:min-h-[80rem] lg:max-h-[160vh] lg:min-h-[96rem]",
+            "relative flex h-full w-full flex-1 items-center justify-center overflow-hidden rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all",
             device === "mobile" && "py-8"
           )}
         >
           {isLoading ? (
             <div className="text-sm text-slate-400">Loading preview...</div>
           ) : assets ? (
-            <iframe
-              key={`${selectedTemplate.id}-${device}`}
-              title="Website preview"
-              srcDoc={srcDoc}
-              style={{ width: deviceWidths[device] }}
+            <div
               className={clsx(
-                "w-full rounded-[22px] border border-slate-800/50 bg-white shadow-inner transition-all",
-                device === "desktop" && "mx-6",
-                device === "tablet" && "mx-6",
-                device === "mobile" && "mx-0"
+                "flex h-full w-full items-center justify-center",
+                device === "desktop" && "px-6",
+                device === "tablet" && "px-6",
+                device === "mobile" && "px-0"
               )}
-            />
+              style={{ maxWidth: deviceWidths[device] }}
+            >
+              <iframe
+                key={`${selectedTemplate.id}-${device}`}
+                title="Website preview"
+                srcDoc={srcDoc}
+                className="h-full w-full rounded-[22px] border border-slate-800/50 bg-white shadow-inner transition-all"
+              />
+            </div>
           ) : (
             <div className="max-w-sm text-center text-sm text-rose-400">
               We couldn&apos;t load the template preview. Please refresh and try again.
