@@ -10,25 +10,36 @@ const devices = [
 ] as const;
 
 export function DeviceControls() {
-  const { device, setDevice } = useBuilder();
+  const { device, setDevice, openPreview, isPreviewReady } = useBuilder();
 
   return (
-    <div className="flex items-center gap-2">
-      {devices.map((item) => (
-        <button
-          type="button"
-          key={item.id}
-          onClick={() => setDevice(item.id)}
-          className={clsx(
-            "rounded-full border px-4 py-1.5 text-sm font-medium transition",
-            device === item.id
-              ? "border-builder-accent bg-builder-accent/20 text-builder-accent"
-              : "border-slate-700/70 text-slate-400 hover:border-builder-accent/40 hover:text-slate-200"
-          )}
-        >
-          {item.label}
-        </button>
-      ))}
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        {devices.map((item) => (
+          <button
+            type="button"
+            key={item.id}
+            onClick={() => setDevice(item.id)}
+            className={clsx(
+              "rounded-full border px-4 py-1.5 text-sm font-medium transition",
+              device === item.id
+                ? "border-builder-accent bg-builder-accent/20 text-builder-accent"
+                : "border-slate-700/70 text-slate-400 hover:border-builder-accent/40 hover:text-slate-200"
+            )}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <span className="hidden h-5 w-px bg-slate-800/60 sm:block" aria-hidden />
+      <button
+        type="button"
+        onClick={openPreview}
+        disabled={!isPreviewReady}
+        className="rounded-full border border-builder-accent/60 px-4 py-1.5 text-xs font-semibold text-builder-accent transition hover:bg-builder-accent/10 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Full Preview
+      </button>
     </div>
   );
 }
