@@ -1,8 +1,8 @@
 {
   "id": "portfolio-creative",
   "name": "Portfolio Creative",
-  "description": "Bold single-page portfolio ideal for designers and agencies.",
-  "previewImage": "",
+  "description": "A bold single-page portfolio ideal for designers, agencies, and creative professionals.",
+  "previewImage": "/thumbnails/portfolio-creative.svg",
   "sections": [
     "Profile",
     "Hero",
