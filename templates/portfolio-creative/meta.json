@@ -1,0 +1,17 @@
+{
+  "id": "portfolio-creative",
+  "name": "Portfolio Creative",
+  "description": "Bold single-page portfolio ideal for designers and agencies.",
+  "previewImage": "",
+  "sections": [
+    "Profile",
+    "Hero",
+    "About",
+    "Resume",
+    "Portfolio",
+    "Testimonials",
+    "Contact"
+  ],
+  "colors": ["primary", "secondary", "accent", "background", "text"],
+  "fonts": ["heading", "body"]
+}

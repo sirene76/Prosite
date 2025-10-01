@@ -1,9 +1,32 @@
 import fs from "fs/promises";
 import path from "path";
 
-import { templates, type TemplateDefinition } from "./templateDefinitions";
-
 const templatesDir = path.join(process.cwd(), "templates");
+
+export type TemplateDefinition = {
+  id: string;
+  name: string;
+  description: string;
+  previewImage: string;
+  path: string;
+  sections: string[];
+  colors: string[];
+  fonts: string[];
+};
+
+function toTitleCase(value: string) {
+  return value
+    .replace(/[-_]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+async function readMetaFile(metaPath: string) {
+  const raw = await fs.readFile(metaPath, "utf-8");
+  return JSON.parse(raw) as Partial<TemplateDefinition & { path?: string }>;
+}
 
 function sanitizeTemplateId(templateId: string) {
   const normalized = path.normalize(templateId);
@@ -19,7 +42,7 @@ async function ensureDirectoryExists(dirPath: string) {
     if (!stat.isDirectory()) {
       throw new Error(`Expected directory at ${dirPath}`);
     }
-  } catch (error: unknown) {
+  } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`Template directory not found: ${dirPath}`);
     }
@@ -27,27 +50,89 @@ async function ensureDirectoryExists(dirPath: string) {
   }
 }
 
-export function getTemplatesMetadata(): TemplateDefinition[] {
-  return templates;
+export async function loadTemplates(): Promise<TemplateDefinition[]> {
+  let entries: fs.Dirent[] = [];
+  try {
+    entries = await fs.readdir(templatesDir, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+
+  const templates: TemplateDefinition[] = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const folderName = entry.name;
+    const folderPath = path.join(templatesDir, folderName);
+    const metaPath = path.join(folderPath, "meta.json");
+
+    try {
+      const meta = await readMetaFile(metaPath);
+      const id = typeof meta.id === "string" && meta.id.length > 0 ? meta.id : folderName;
+      const name = typeof meta.name === "string" && meta.name.length > 0 ? meta.name : toTitleCase(id);
+
+      templates.push({
+        id,
+        name,
+        description: typeof meta.description === "string" ? meta.description : "",
+        previewImage: typeof meta.previewImage === "string" ? meta.previewImage : "",
+        path: `/templates/${folderName}`,
+        sections: Array.isArray(meta.sections) ? meta.sections.map(String) : [],
+        colors: Array.isArray(meta.colors) ? meta.colors.map(String) : [],
+        fonts: Array.isArray(meta.fonts) ? meta.fonts.map(String) : [],
+      });
+    } catch (error) {
+      console.warn(`Failed to read template metadata for ${folderName}:`, error);
+      continue;
+    }
+  }
+
+  return templates.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function getTemplateList(): Promise<string[]> {
-  const entries = await fs.readdir(templatesDir, { withFileTypes: true });
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+async function resolveTemplateDirectory(templateId: string) {
+  const safeId = sanitizeTemplateId(templateId);
+  const directories = await fs.readdir(templatesDir, { withFileTypes: true });
+
+  for (const entry of directories) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const folderName = entry.name;
+    const folderPath = path.join(templatesDir, folderName);
+    const metaPath = path.join(folderPath, "meta.json");
+
+    try {
+      const meta = await readMetaFile(metaPath);
+      if (meta.id === safeId || folderName === safeId) {
+        await ensureDirectoryExists(folderPath);
+        return { folderPath, folderName };
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error(`Template not found: ${templateId}`);
 }
 
 export async function getTemplateHtml(templateId: string): Promise<string> {
-  const safeId = sanitizeTemplateId(templateId);
-  const templatePath = path.join(templatesDir, safeId);
-  await ensureDirectoryExists(templatePath);
-
-  const templateMeta = templates.find((template) => template.id === safeId);
-  const htmlFileName = templateMeta?.htmlFile ?? "index.html";
-  const filePath = path.join(templatePath, htmlFileName);
+  const { folderPath } = await resolveTemplateDirectory(templateId);
+  const filePath = path.join(folderPath, "index.html");
 
   try {
     return await fs.readFile(filePath, "utf-8");
-  } catch (error: unknown) {
+  } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`HTML file not found for template: ${templateId}`);
     }
@@ -56,17 +141,12 @@ export async function getTemplateHtml(templateId: string): Promise<string> {
 }
 
 export async function getTemplateCss(templateId: string): Promise<string> {
-  const safeId = sanitizeTemplateId(templateId);
-  const templatePath = path.join(templatesDir, safeId);
-  await ensureDirectoryExists(templatePath);
-
-  const templateMeta = templates.find((template) => template.id === safeId);
-  const cssFileName = templateMeta?.cssFile ?? "style.css";
-  const filePath = path.join(templatePath, cssFileName);
+  const { folderPath } = await resolveTemplateDirectory(templateId);
+  const filePath = path.join(folderPath, "style.css");
 
   try {
     return await fs.readFile(filePath, "utf-8");
-  } catch (error: unknown) {
+  } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`CSS file not found for template: ${templateId}`);
     }
@@ -75,10 +155,6 @@ export async function getTemplateCss(templateId: string): Promise<string> {
 }
 
 export async function loadTemplateAssets(templateId: string): Promise<{ html: string; css: string }> {
-  const [html, css] = await Promise.all([
-    getTemplateHtml(templateId),
-    getTemplateCss(templateId)
-  ]);
-
+  const [html, css] = await Promise.all([getTemplateHtml(templateId), getTemplateCss(templateId)]);
   return { html, css };
 }

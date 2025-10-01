@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { useBuilder } from "@/context/BuilderContext";
 import { renderTemplate } from "@/lib/renderTemplate";
 
@@ -31,7 +32,10 @@ export function WebsitePreview() {
     registerPreviewFrame,
     selectedTemplate,
     theme,
+    themeDefaults,
     content,
+    registerContentPlaceholders,
+    registerThemeDefaults,
     updatePreviewDocument,
     openPreview,
     isPreviewReady
@@ -66,6 +70,13 @@ export function WebsitePreview() {
         }
         const data = (await response.json()) as TemplatePayload;
         if (isMounted) {
+          const placeholders = extractPlaceholders(data.html);
+          const colorDefaults = extractColorDefaults(data.css, selectedTemplate.colors);
+          const fontDefaults = extractFontDefaults(data.css, selectedTemplate.fonts);
+
+          registerContentPlaceholders(placeholders);
+          registerThemeDefaults({ colors: colorDefaults, fonts: fontDefaults });
+
           setAssets(data);
         }
       } catch (error) {
@@ -81,21 +92,43 @@ export function WebsitePreview() {
     return () => {
       isMounted = false;
     };
-  }, [selectedTemplate.id]);
+  }, [registerContentPlaceholders, registerThemeDefaults, selectedTemplate.colors, selectedTemplate.fonts, selectedTemplate.id]);
 
-  const mergedData = useMemo(() => ({ ...theme, ...content }), [content, theme]);
+  const mergedData = useMemo(() => ({ ...content }), [content]);
 
   const srcDoc = useMemo(() => {
     if (!assets) {
       return "";
     }
 
-    const themedCss = `:root { --primary-color: ${theme.primaryColor}; --secondary-color: ${theme.secondaryColor}; --accent-color: ${theme.accentColor}; --background-color: ${theme.backgroundColor}; --text-color: ${theme.textColor}; } ${assets.css}`;
+    const colorVariables = selectedTemplate.colors
+      .map((key) => {
+        const value = theme.colors[key] ?? themeDefaults.colors[key];
+        if (!value) {
+          return null;
+        }
+        return `--color-${key}: ${value}; --${key}-color: ${value};`;
+      })
+      .filter(Boolean)
+      .join(" ");
+
+    const fontVariables = selectedTemplate.fonts
+      .map((key) => {
+        const value = theme.fonts[key] ?? themeDefaults.fonts[key];
+        if (!value) {
+          return null;
+        }
+        return `--font-${key}: ${value};`;
+      })
+      .filter(Boolean)
+      .join(" ");
+
+    const themedCss = `:root { ${colorVariables} ${fontVariables} }\n${assets.css}`;
 
     const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><style>${themedCss}</style></head><body>${renderTemplate(assets.html, mergedData)}</body></html>`;
 
     return html;
-  }, [assets, mergedData, theme.accentColor, theme.backgroundColor, theme.primaryColor, theme.secondaryColor, theme.textColor]);
+  }, [assets, mergedData, selectedTemplate.colors, selectedTemplate.fonts, theme.colors, theme.fonts, themeDefaults.colors, themeDefaults.fonts]);
 
   useEffect(() => {
     updatePreviewDocument(srcDoc);
@@ -315,4 +348,44 @@ export function WebsitePreview() {
       </div>
     </div>
   );
+}
+
+function extractPlaceholders(html: string) {
+  const matches = html.match(/{{(.*?)}}/g) ?? [];
+  const result = new Set<string>();
+  matches.forEach((match) => {
+    const key = match.slice(2, -2).trim();
+    if (key) {
+      result.add(key);
+    }
+  });
+  return Array.from(result);
+}
+
+function extractColorDefaults(css: string, keys: string[]) {
+  const defaults: Record<string, string> = {};
+  keys.forEach((key) => {
+    const pattern = new RegExp(`var\\(\\s*--(?:color-)?${escapeRegExp(key)}(?:-color)?\\s*,\\s*([^\\)]+)\\)`, "gi");
+    const match = pattern.exec(css);
+    if (match) {
+      defaults[key] = match[1].trim().replace(/^['"]|['"]$/g, "");
+    }
+  });
+  return defaults;
+}
+
+function extractFontDefaults(css: string, keys: string[]) {
+  const defaults: Record<string, string> = {};
+  keys.forEach((key) => {
+    const pattern = new RegExp(`var\\(\\s*--font-${escapeRegExp(key)}\\s*,\\s*([^\\)]+)\\)`, "gi");
+    const match = pattern.exec(css);
+    if (match) {
+      defaults[key] = match[1].trim();
+    }
+  });
+  return defaults;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
