@@ -78,7 +78,7 @@ export function WebsitePreview() {
       <div className="flex h-full w-full flex-1 items-center justify-center overflow-hidden">
         <div
           className={clsx(
-            "relative flex h-full max-h-[640px] flex-1 items-center justify-center rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40",
+            "relative flex h-full max-h-[90vh] flex-1 items-center justify-center rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all",
             device === "mobile" && "py-8"
           )}
         >
@@ -89,12 +89,12 @@ export function WebsitePreview() {
               key={`${selectedTemplate.id}-${device}`}
               title="Website preview"
               srcDoc={srcDoc}
-              style={{ width: deviceWidths[device], height: "100%" }}
+              style={{ width: deviceWidths[device] }}
               className={clsx(
-                "h-full rounded-[22px] border border-slate-800/50 bg-white shadow-inner",
+                "h-full w-full rounded-[22px] border border-slate-800/50 bg-white shadow-inner transition-all",
                 device === "desktop" && "mx-6",
                 device === "tablet" && "mx-6",
-                device === "mobile" && "mx-0 h-[640px] max-h-full w-[390px]"
+                device === "mobile" && "mx-0 h-[75vh] max-h-full"
               )}
             />
           ) : (
