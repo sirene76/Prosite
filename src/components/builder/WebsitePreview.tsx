@@ -11,6 +11,8 @@ const DEVICE_DIMENSIONS = {
 } as const;
 
 const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 2] as const;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2;
 
 type TemplatePayload = {
   html: string;
@@ -18,11 +20,24 @@ type TemplatePayload = {
 };
 
 export function WebsitePreview() {
-  const { device, selectedTemplate, theme, content, updatePreviewDocument } = useBuilder();
+  const {
+    device,
+    selectedTemplate,
+    theme,
+    content,
+    updatePreviewDocument,
+    openPreview,
+    isPreviewReady
+  } = useBuilder();
   const [assets, setAssets] = useState<TemplatePayload | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [zoomIndex, setZoomIndex] = useState(() => ZOOM_LEVELS.indexOf(1));
+  const [zoom, setZoom] = useState(1);
+  const [isAutoFit, setIsAutoFit] = useState(true);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const clampZoom = useCallback((value: number) => {
+    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(3))));
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,19 +86,32 @@ export function WebsitePreview() {
     updatePreviewDocument(srcDoc);
   }, [srcDoc, updatePreviewDocument]);
 
-  const zoom = ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, zoomIndex))];
-
   const handleZoomIn = useCallback(() => {
-    setZoomIndex((index) => Math.min(ZOOM_LEVELS.length - 1, index + 1));
+    setIsAutoFit(false);
+    setZoom((current) => {
+      const nextLevel = ZOOM_LEVELS.find((level) => level > current + 0.0001);
+      if (!nextLevel) {
+        return MAX_ZOOM;
+      }
+      return nextLevel;
+    });
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setZoomIndex((index) => Math.max(0, index - 1));
+    setIsAutoFit(false);
+    setZoom((current) => {
+      const reversedLevels = [...ZOOM_LEVELS].reverse();
+      const nextLevel = reversedLevels.find((level) => level < current - 0.0001);
+      if (!nextLevel) {
+        return MIN_ZOOM;
+      }
+      return nextLevel;
+    });
   }, []);
 
   const handleResetZoom = useCallback(() => {
-    const defaultIndex = ZOOM_LEVELS.indexOf(1);
-    setZoomIndex(defaultIndex === -1 ? 0 : defaultIndex);
+    setIsAutoFit(false);
+    setZoom(1);
   }, []);
 
   const handleFitToScreen = useCallback(() => {
@@ -92,25 +120,76 @@ export function WebsitePreview() {
       return;
     }
 
-    const { width, height } = DEVICE_DIMENSIONS[device];
+    const { width } = DEVICE_DIMENSIONS[device];
     const availableWidth = container.clientWidth;
-    const availableHeight = container.clientHeight;
-    const targetScale = Math.min(availableWidth / width, availableHeight / height);
-
-    let bestIndex = 0;
-    for (let i = 0; i < ZOOM_LEVELS.length; i += 1) {
-      if (ZOOM_LEVELS[i] <= targetScale + 0.0001) {
-        bestIndex = i;
-      }
+    if (availableWidth <= 0) {
+      return;
     }
 
-    setZoomIndex(bestIndex);
+    const targetScale = clampZoom(availableWidth / width);
+
+    setZoom(targetScale);
+    setIsAutoFit(true);
     container.scrollTo({ top: 0, left: 0 });
-  }, [device]);
+  }, [clampZoom, device]);
 
   useEffect(() => {
-    handleResetZoom();
-  }, [device, handleResetZoom]);
+    if (!assets) {
+      return;
+    }
+    handleFitToScreen();
+  }, [assets, device, handleFitToScreen]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+
+      event.preventDefault();
+      setIsAutoFit(false);
+
+      setZoom((current) => {
+        const delta = event.deltaY > 0 ? -0.1 : 0.1;
+        const next = clampZoom(current + delta);
+        return next;
+      });
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, [clampZoom]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      if (isAutoFit) {
+        handleFitToScreen();
+      }
+    });
+
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [handleFitToScreen, isAutoFit]);
 
   const currentDimensions = DEVICE_DIMENSIONS[device];
   const zoomLabel = `${Math.round(zoom * 100)}%`;
@@ -177,7 +256,7 @@ export function WebsitePreview() {
               <button
                 type="button"
                 onClick={handleZoomOut}
-                disabled={zoomIndex === 0}
+                disabled={zoom <= MIN_ZOOM + 0.0001}
                 className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-gray-800 bg-gray-950/80 px-3 text-sm font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 −
@@ -192,7 +271,7 @@ export function WebsitePreview() {
               <button
                 type="button"
                 onClick={handleZoomIn}
-                disabled={zoomIndex === ZOOM_LEVELS.length - 1}
+                disabled={zoom >= MAX_ZOOM - 0.0001}
                 className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-gray-800 bg-gray-950/80 px-3 text-sm font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 +
@@ -203,6 +282,14 @@ export function WebsitePreview() {
                 className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-gray-800 bg-gray-950/80 px-3 text-sm font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
               >
                 Fit
+              </button>
+              <button
+                type="button"
+                onClick={openPreview}
+                disabled={!isPreviewReady}
+                className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-builder-accent/60 bg-gray-950/80 px-3 text-sm font-medium text-builder-accent transition hover:border-builder-accent hover:bg-builder-accent/10 hover:text-builder-accent disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Full Preview
               </button>
             </div>
           </div>

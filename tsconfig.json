@@ -24,6 +24,9 @@
     "paths": {
       "@/*": [
         "src/*"
+      ],
+      "lucide-react": [
+        "src/icons/lucide-react"
       ]
     },
     "plugins": [

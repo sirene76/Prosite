@@ -1,45 +1,44 @@
 "use client";
 
 import clsx from "clsx";
+import { Monitor, Smartphone, Tablet } from "lucide-react";
+
 import { useBuilder } from "@/context/BuilderContext";
 
 const devices = [
-  { id: "desktop", label: "Desktop" },
-  { id: "tablet", label: "Tablet" },
-  { id: "mobile", label: "Mobile" }
+  { id: "desktop", label: "Desktop", Icon: Monitor },
+  { id: "tablet", label: "Tablet", Icon: Tablet },
+  { id: "mobile", label: "Mobile", Icon: Smartphone }
 ] as const;
 
 export function DeviceControls() {
-  const { device, setDevice, openPreview, isPreviewReady } = useBuilder();
+  const { device, setDevice } = useBuilder();
 
   return (
     <div className="flex items-center gap-3">
       <div className="flex items-center gap-2">
-        {devices.map((item) => (
-          <button
-            type="button"
-            key={item.id}
-            onClick={() => setDevice(item.id)}
-            className={clsx(
-              "rounded-full border px-4 py-1.5 text-sm font-medium transition",
-              device === item.id
-                ? "border-builder-accent bg-builder-accent/20 text-builder-accent"
-                : "border-slate-700/70 text-slate-400 hover:border-builder-accent/40 hover:text-slate-200"
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
+        {devices.map((item) => {
+          const Icon = item.Icon;
+          return (
+            <button
+              type="button"
+              key={item.id}
+              onClick={() => setDevice(item.id)}
+              title={item.label}
+              aria-label={item.label}
+              className={clsx(
+                "flex h-9 w-9 items-center justify-center rounded-full border transition",
+                device === item.id
+                  ? "border-builder-accent bg-builder-accent/20 text-builder-accent"
+                  : "border-slate-700/70 text-slate-400 hover:border-builder-accent/40 hover:text-slate-200"
+              )}
+            >
+              <Icon className="h-4 w-4" strokeWidth={1.75} />
+              <span className="sr-only">{item.label}</span>
+            </button>
+          );
+        })}
       </div>
-      <span className="hidden h-5 w-px bg-slate-800/60 sm:block" aria-hidden />
-      <button
-        type="button"
-        onClick={openPreview}
-        disabled={!isPreviewReady}
-        className="rounded-full border border-builder-accent/60 px-4 py-1.5 text-xs font-semibold text-builder-accent transition hover:bg-builder-accent/10 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Full Preview
-      </button>
     </div>
   );
 }
