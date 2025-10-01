@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { templates, type TemplateDefinition } from "@/lib/templates";
+import { templates, type TemplateDefinition } from "@/lib/templateDefinitions";
 
 type Device = "desktop" | "tablet" | "mobile";
 
