@@ -8,6 +8,8 @@ type Device = "desktop" | "tablet" | "mobile";
 type BuilderContextValue = {
   device: Device;
   setDevice: (device: Device) => void;
+  previewFrame: HTMLIFrameElement | null;
+  registerPreviewFrame: (frame: HTMLIFrameElement | null) => void;
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
   selectedTemplate: TemplateDefinition;
@@ -47,6 +49,7 @@ const defaultContent = {
 
 export function BuilderProvider({ children }: { children: React.ReactNode }) {
   const [device, setDevice] = useState<Device>("desktop");
+  const [previewFrame, setPreviewFrame] = useState<HTMLIFrameElement | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templates[0]?.id ?? "");
   const [theme, setTheme] = useState<Record<string, string>>(defaultTheme);
@@ -70,6 +73,10 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
 
   const selectTemplate = useCallback((templateId: string) => {
     setSelectedTemplateId(templateId);
+  }, []);
+
+  const registerPreviewFrame = useCallback((frame: HTMLIFrameElement | null) => {
+    setPreviewFrame(frame);
   }, []);
 
   const updatePreviewDocument = useCallback((html: string) => {
@@ -98,6 +105,8 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
     () => ({
       device,
       setDevice,
+      previewFrame,
+      registerPreviewFrame,
       isSidebarCollapsed,
       toggleSidebar,
       selectedTemplate,
@@ -113,6 +122,8 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
     [
       device,
       setDevice,
+      previewFrame,
+      registerPreviewFrame,
       isSidebarCollapsed,
       toggleSidebar,
       selectedTemplate,
