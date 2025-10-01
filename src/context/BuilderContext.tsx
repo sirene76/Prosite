@@ -28,7 +28,7 @@ const defaultTheme = {
   secondaryColor: "#0ea5e9",
   accentColor: "#f472b6",
   backgroundColor: "#020617",
-  textColor: "#e2e8f0"
+  textColor: "#e2e8f0",
 };
 
 const defaultContent = {
@@ -42,7 +42,7 @@ const defaultContent = {
   testimonialQuote: "Working with Avery elevated our brand presence tenfold.",
   testimonialAuthor: "Jordan Smith, CEO at Nova Labs",
   contactHeadline: "Let’s build something iconic.",
-  contactEmail: "hello@averyjohnson.design"
+  contactEmail: "hello@averyjohnson.design",
 };
 
 export function BuilderProvider({ children }: { children: React.ReactNode }) {
@@ -108,19 +108,22 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       updateContent,
       isPreviewReady,
       updatePreviewDocument,
-      openPreview
+      openPreview,
     }),
     [
-      content,
       device,
-      isPreviewReady,
-      openPreview,
+      setDevice,
       isSidebarCollapsed,
-      selectTemplate,
-      selectedTemplate,
-      theme,
       toggleSidebar,
-      updatePreviewDocument
+      selectedTemplate,
+      selectTemplate,
+      theme,
+      updateTheme,
+      content,
+      updateContent,
+      isPreviewReady,
+      updatePreviewDocument,
+      openPreview,
     ]
   );
 
