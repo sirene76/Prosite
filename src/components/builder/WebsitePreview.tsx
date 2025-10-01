@@ -69,7 +69,7 @@ export function WebsitePreview() {
   }, [srcDoc, updatePreviewDocument]);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center overflow-hidden bg-slate-950/40 px-6 py-8">
+    <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-slate-950/40 px-6 py-8">
       <div className="flex w-full max-w-6xl items-center justify-start pb-4 text-sm text-slate-400">
         <p>
           Previewing <span className="font-medium text-slate-200">{selectedTemplate.name}</span>
@@ -78,7 +78,7 @@ export function WebsitePreview() {
       <div className="flex h-full w-full flex-1 items-center justify-center overflow-hidden">
         <div
           className={clsx(
-            "relative flex h-full max-h-[90vh] flex-1 items-center justify-center rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all",
+            "relative flex h-full max-h-[90vh] min-h-[36rem] flex-1 items-center justify-center rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all md:min-h-[40rem] lg:min-h-[48rem]",
             device === "mobile" && "py-8"
           )}
         >

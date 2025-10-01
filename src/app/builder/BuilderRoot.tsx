@@ -43,14 +43,14 @@ export default function BuilderRoot({ children }: BuilderRootProps) {
           </div>
           <ProgressBar steps={steps} activeIndex={currentStep} onStepClick={(href) => router.push(href)} />
         </header>
-        <main className="flex flex-1 overflow-hidden">
-          <section className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex flex-1 min-h-0">
+          <section className="flex flex-1 flex-col min-h-0">
             <div className="flex items-center justify-end border-b border-slate-800/60 bg-builder-surface px-6 py-3">
               <DeviceControls />
             </div>
-            <div className="flex flex-1 overflow-hidden">
-              <div className="flex flex-1 flex-col h-full overflow-hidden">
-                <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 min-h-0">
+              <div className="flex flex-1 flex-col min-h-0">
+                <div className="flex flex-1 min-h-0">
                   <WebsitePreview />
                 </div>
                 <div className="border-t border-slate-800/60 bg-builder-surface/60 backdrop-blur">
