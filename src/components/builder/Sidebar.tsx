@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useBuilder } from "@/context/BuilderContext";
+import { useBuilder, type TemplateContentSection } from "@/context/BuilderContext";
 import { PageList } from "./PageList";
 import { ThemeSelector } from "./ThemeSelector";
 
@@ -15,10 +15,10 @@ type SidebarProps = {
 const tabs = [
   { id: "pages", label: "Pages" },
   { id: "theme", label: "Theme" },
-  { id: "content", label: "Content" }
+  { id: "content", label: "Content" },
 ] as const;
 
-const STEP_ORDER = ["theme", "content", "checkout"] as const;
+const STEP_ORDER = ["templates", "theme", "content", "checkout"] as const;
 
 type StepKey = (typeof STEP_ORDER)[number];
 
@@ -27,72 +27,6 @@ function formatStepLabel(step: StepKey) {
 }
 
 type TabId = (typeof tabs)[number]["id"];
-type ContentFieldKey =
-  | "name"
-  | "tagline"
-  | "about"
-  | "portfolioHeading"
-  | "contactEmail"
-  | "resumeTitle"
-  | "resumeSummary"
-  | "testimonialQuote"
-  | "testimonialAuthor"
-  | "contactHeadline";
-
-type ContentSection = {
-  id: string;
-  title: string;
-  fields: {
-    key: ContentFieldKey;
-    label: string;
-    type?: "textarea" | "email" | "text";
-  }[];
-};
-
-const contentSections: ContentSection[] = [
-  {
-    id: "home",
-    title: "Hero Section",
-    fields: [
-      { key: "name", label: "Hero headline" },
-      { key: "tagline", label: "Hero tagline" },
-    ],
-  },
-  {
-    id: "about",
-    title: "About Section",
-    fields: [{ key: "about", label: "About section", type: "textarea" }],
-  },
-  {
-    id: "services",
-    title: "Experience Section",
-    fields: [
-      { key: "resumeTitle", label: "Resume section title" },
-      { key: "resumeSummary", label: "Resume summary", type: "textarea" },
-    ],
-  },
-  {
-    id: "portfolio",
-    title: "Portfolio Section",
-    fields: [{ key: "portfolioHeading", label: "Portfolio heading" }],
-  },
-  {
-    id: "testimonials",
-    title: "Testimonials Section",
-    fields: [
-      { key: "testimonialQuote", label: "Testimonial quote", type: "textarea" },
-      { key: "testimonialAuthor", label: "Testimonial author" },
-    ],
-  },
-  {
-    id: "contact",
-    title: "Contact Section",
-    fields: [
-      { key: "contactHeadline", label: "Contact headline" },
-      { key: "contactEmail", label: "Contact email", type: "email" },
-    ],
-  },
-];
 
 export function Sidebar({ steps, currentIndex }: SidebarProps) {
   const router = useRouter();
@@ -103,6 +37,7 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
     content,
     updateContent,
     previewFrame,
+    contentSections,
   } = useBuilder();
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
@@ -180,7 +115,7 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
                       <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Structure</p>
                       <p className="text-sm font-semibold text-slate-100">{selectedTemplate.name}</p>
                     </div>
-                    <PageList pages={selectedTemplate.pages} />
+                    <PageList pages={selectedTemplate.sections} />
                   </div>
                 ) : null}
 
@@ -188,6 +123,7 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
 
                 {activeTab === "content" ? (
                   <ContentEditor
+                    sections={contentSections}
                     content={content}
                     updateContent={updateContent}
                     previewFrame={previewFrame}
@@ -224,15 +160,25 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
 }
 
 type ContentEditorProps = {
+  sections: TemplateContentSection[];
   content: Record<string, string>;
   updateContent: (changes: Record<string, string>) => void;
   previewFrame: HTMLIFrameElement | null;
 };
 
-function ContentEditor({ content, updateContent, previewFrame }: ContentEditorProps) {
+function ContentEditor({ sections, content, updateContent, previewFrame }: ContentEditorProps) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
 
-  const currentSection = contentSections[currentSectionIndex];
+  const currentSection = sections[currentSectionIndex];
+
+  useEffect(() => {
+    setCurrentSectionIndex((prevIndex) => {
+      if (sections.length === 0) {
+        return 0;
+      }
+      return Math.min(prevIndex, sections.length - 1);
+    });
+  }, [sections.length]);
 
   useEffect(() => {
     if (!previewFrame?.contentWindow || !currentSection) {
@@ -248,12 +194,19 @@ function ContentEditor({ content, updateContent, previewFrame }: ContentEditorPr
     );
   }, [currentSection, previewFrame]);
 
-  if (!currentSection) {
-    return null;
+  if (!sections.length) {
+    return (
+      <div className="space-y-3 rounded-2xl border border-gray-800/60 bg-gray-950/60 p-4 text-sm text-slate-400">
+        <p>No editable fields detected in this template yet.</p>
+        <p className="text-xs text-slate-500">
+          Once the template preview loads, any placeholders like <code>{"{{hero.title}}"}</code> will appear here for editing.
+        </p>
+      </div>
+    );
   }
 
   const isFirst = currentSectionIndex === 0;
-  const isLast = currentSectionIndex === contentSections.length - 1;
+  const isLast = currentSectionIndex === sections.length - 1;
 
   const handleNavigate = (direction: "prev" | "next") => {
     setCurrentSectionIndex((prevIndex) => {
@@ -261,7 +214,7 @@ function ContentEditor({ content, updateContent, previewFrame }: ContentEditorPr
         return prevIndex > 0 ? prevIndex - 1 : prevIndex;
       }
       if (direction === "next") {
-        return prevIndex < contentSections.length - 1 ? prevIndex + 1 : prevIndex;
+        return prevIndex < sections.length - 1 ? prevIndex + 1 : prevIndex;
       }
       return prevIndex;
     });
@@ -271,7 +224,7 @@ function ContentEditor({ content, updateContent, previewFrame }: ContentEditorPr
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-100">
-          Editing: <span className="text-slate-300">{currentSection.title}</span>
+          Editing: <span className="text-slate-300">{currentSection.label}</span>
         </p>
         <div className="flex items-center gap-2">
           <button

@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useBuilder } from "@/context/BuilderContext";
 
-const defaultPages = ["Home", "About", "Services", "Contact"];
+const defaultPages: string[] = [];
 
 type PageListProps = {
   pages?: string[];
@@ -14,7 +14,7 @@ export function PageList({ pages = defaultPages }: PageListProps) {
 
   const handleNavigate = useCallback(
     (page: string) => {
-      const id = page.trim().toLowerCase().replace(/\s+/g, "-");
+      const id = toSectionId(page);
       previewFrame?.contentWindow?.postMessage({ type: "scroll-to", id }, "*");
     },
     [previewFrame]
@@ -39,10 +39,26 @@ export function PageList({ pages = defaultPages }: PageListProps) {
             onClick={() => handleNavigate(page)}
             className="whitespace-nowrap rounded-full border border-gray-800 bg-gray-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
           >
-            {page}
+            {toDisplayLabel(page)}
           </button>
         ))}
       </div>
     </div>
   );
+}
+
+function toSectionId(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function toDisplayLabel(value: string) {
+  return value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (match) => match.toUpperCase());
 }

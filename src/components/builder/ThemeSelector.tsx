@@ -1,128 +1,141 @@
 "use client";
 
 import { useMemo } from "react";
-import clsx from "clsx";
 import { useBuilder } from "@/context/BuilderContext";
 
-const palettePresets = [
-  {
-    name: "Aurora",
-    colors: {
-      primaryColor: "#38bdf8",
-      secondaryColor: "#0ea5e9",
-      accentColor: "#f472b6",
-      backgroundColor: "#020617",
-      textColor: "#e2e8f0",
-    },
-  },
-  {
-    name: "Luxe",
-    colors: {
-      primaryColor: "#f59e0b",
-      secondaryColor: "#d97706",
-      accentColor: "#fde68a",
-      backgroundColor: "#0b1120",
-      textColor: "#f8fafc",
-    },
-  },
-  {
-    name: "Verdant",
-    colors: {
-      primaryColor: "#34d399",
-      secondaryColor: "#10b981",
-      accentColor: "#86efac",
-      backgroundColor: "#022c22",
-      textColor: "#ecfdf5",
-    },
-  },
-] as const;
-
-const colorFields: { key: keyof typeof palettePresets[number]["colors"]; label: string }[] = [
-  { key: "primaryColor", label: "Primary" },
-  { key: "secondaryColor", label: "Secondary" },
-  { key: "accentColor", label: "Accent" },
-  { key: "backgroundColor", label: "Background" },
-  { key: "textColor", label: "Text" },
-];
-
 export function ThemeSelector() {
-  const { theme, updateTheme } = useBuilder();
+  const { selectedTemplate, theme, themeDefaults, updateTheme } = useBuilder();
 
-  const activePalette = useMemo(() => {
-    return palettePresets.find((preset) => {
-      return colorFields.every((field) => preset.colors[field.key] === theme[field.key]);
-    });
-  }, [theme]);
+  const colorKeys = selectedTemplate.colors;
+  const fontKeys = selectedTemplate.fonts;
+
+  const palettes = useMemo(() => buildPalettes(colorKeys), [colorKeys]);
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Palettes</p>
-        <div className="space-y-2">
-          {palettePresets.map((preset) => {
-            const isActive = activePalette?.name === preset.name;
-
-            return (
+      {colorKeys.length ? (
+        <div className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Palettes</p>
+          <div className="space-y-2">
+            {palettes.map((preset) => (
               <button
                 type="button"
                 key={preset.name}
-                onClick={() => updateTheme(preset.colors)}
-                className={clsx(
-                  "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition",
-                  isActive
-                    ? "border-builder-accent/70 bg-gray-950"
-                    : "border-gray-800 bg-gray-900/40 hover:border-builder-accent/40"
-                )}
+                onClick={() => updateTheme({ colors: preset.colors })}
+                className="flex w-full items-center justify-between rounded-2xl border border-gray-800 bg-gray-900/40 px-4 py-3 text-left transition hover:border-builder-accent/40"
               >
                 <div>
                   <p className="text-sm font-semibold text-slate-100">{preset.name}</p>
-                  <p className="text-xs text-slate-500">Click to apply this palette</p>
+                  <p className="text-xs text-slate-500">Apply this palette</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {colorFields.slice(0, 3).map((field) => (
-                    <span
-                      key={field.key}
-                      className="h-7 w-7 rounded-full border border-white/10"
-                      style={{ backgroundColor: preset.colors[field.key] }}
-                    />
-                  ))}
+                  {Object.values(preset.colors)
+                    .slice(0, 3)
+                    .map((value, index) => (
+                      <span key={`${preset.name}-${index}`} className="h-7 w-7 rounded-full border border-white/10" style={{ backgroundColor: value }} />
+                    ))}
                 </div>
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="space-y-3">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Fine tune colors</p>
+      {colorKeys.length ? (
         <div className="space-y-3">
-          {colorFields.map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
-              <div
-                className="h-10 w-10 flex-shrink-0 rounded-lg border border-white/10"
-                style={{ backgroundColor: theme[key] }}
-              />
-              <div className="flex-1 space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={theme[key] ?? ""}
-                    onChange={(event) => updateTheme({ [key]: event.target.value })}
-                    className="h-8 w-16 cursor-pointer rounded border border-gray-800 bg-gray-900"
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Fine tune colors</p>
+          <div className="space-y-3">
+            {colorKeys.map((key) => {
+              const appliedValue = theme.colors[key] ?? themeDefaults.colors[key] ?? "";
+              return (
+                <label key={key} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
+                  <div
+                    className="h-10 w-10 flex-shrink-0 rounded-lg border border-white/10"
+                    style={{ backgroundColor: appliedValue || "transparent" }}
                   />
-                  <input
-                    type="text"
-                    value={theme[key] ?? ""}
-                    onChange={(event) => updateTheme({ [key]: event.target.value })}
-                    className="flex-1 rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
-                  />
-                </div>
-              </div>
-            </label>
-          ))}
+                  <div className="flex-1 space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{formatTokenLabel(key)}</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={ensureColorValue(theme.colors[key] ?? themeDefaults.colors[key])}
+                        onChange={(event) => updateTheme({ colors: { [key]: event.target.value } })}
+                        className="h-8 w-16 cursor-pointer rounded border border-gray-800 bg-gray-900"
+                      />
+                      <input
+                        type="text"
+                        value={theme.colors[key] ?? ""}
+                        placeholder={themeDefaults.colors[key] ?? "#000000"}
+                        onChange={(event) => updateTheme({ colors: { [key]: event.target.value } })}
+                        className="flex-1 rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
+
+      {fontKeys.length ? (
+        <div className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Fonts</p>
+          <div className="space-y-3">
+            {fontKeys.map((key) => (
+              <label key={key} className="flex flex-col gap-2 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{formatTokenLabel(key)}</span>
+                <input
+                  type="text"
+                  value={theme.fonts[key] ?? ""}
+                  placeholder={themeDefaults.fonts[key] ?? '"Inter", sans-serif'}
+                  onChange={(event) => updateTheme({ fonts: { [key]: event.target.value } })}
+                  className="w-full rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
+                />
+                <span className="text-[11px] text-slate-500">e.g. &ldquo;Outfit&rdquo;, sans-serif</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function formatTokenLabel(token: string) {
+  return token
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (match) => match.toUpperCase());
+}
+
+function ensureColorValue(value: string | undefined) {
+  return value && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : "#000000";
+}
+
+const basePalettes = [
+  ["#38bdf8", "#0ea5e9", "#f472b6", "#020617", "#e2e8f0"],
+  ["#f59e0b", "#d97706", "#fde68a", "#0b1120", "#f8fafc"],
+  ["#34d399", "#10b981", "#86efac", "#022c22", "#ecfdf5"],
+];
+
+function buildPalettes(colorKeys: string[]) {
+  if (!colorKeys.length) {
+    return [] as { name: string; colors: Record<string, string> }[];
+  }
+
+  return basePalettes.map((paletteValues, paletteIndex) => {
+    const colors: Record<string, string> = {};
+    colorKeys.forEach((key, index) => {
+      const value = paletteValues[index % paletteValues.length];
+      colors[key] = value;
+    });
+    const names = ["Aurora", "Luxe", "Verdant"];
+    return {
+      name: names[paletteIndex] ?? `Palette ${paletteIndex + 1}`,
+      colors,
+    };
+  });
 }

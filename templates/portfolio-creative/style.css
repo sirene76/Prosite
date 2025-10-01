@@ -4,10 +4,19 @@
 
 body {
   margin: 0;
-  font-family: "Inter", "Segoe UI", sans-serif;
-  background: var(--background-color, #0f172a);
-  color: var(--text-color, #e2e8f0);
+  font-family: var(--font-body, "Inter", "Segoe UI", sans-serif);
+  background: var(--color-background, #0f172a);
+  color: var(--color-text, #e2e8f0);
   line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading, "Outfit", "Inter", sans-serif);
 }
 
 a {
@@ -33,7 +42,7 @@ a {
 .profile .avatar {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--primary-color);
+  color: var(--color-primary);
 }
 
 .profile .tagline {
@@ -53,7 +62,7 @@ a {
 }
 
 .nav a:hover {
-  color: var(--primary-color);
+  color: var(--color-primary);
 }
 
 .content {
@@ -78,7 +87,7 @@ a {
 .hero h1 {
   font-size: clamp(2.8rem, 4vw, 4rem);
   margin: 0;
-  color: var(--text-color);
+  color: var(--color-text);
 }
 
 .hero .lede {
@@ -106,7 +115,7 @@ a {
 }
 
 .button.primary {
-  background: var(--primary-color);
+  background: var(--color-primary);
   color: #0b1120;
   box-shadow: 0 15px 35px rgba(56, 189, 248, 0.35);
 }
@@ -121,8 +130,8 @@ a {
 }
 
 .button.secondary:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .section {
