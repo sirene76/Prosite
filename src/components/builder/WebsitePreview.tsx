@@ -75,10 +75,10 @@ export function WebsitePreview() {
           Previewing <span className="font-medium text-slate-200">{selectedTemplate.name}</span>
         </p>
       </div>
-      <div className="flex h-full w-full flex-1 items-center justify-center overflow-hidden">
+      <div className="flex h-full w-full flex-1 items-start justify-center overflow-hidden">
         <div
           className={clsx(
-            "relative flex h-full max-h-[90vh] min-h-[36rem] flex-1 items-center justify-center rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all md:min-h-[40rem] lg:min-h-[48rem]",
+            "relative flex w-full max-h-[70vh] min-h-[28rem] items-center justify-center overflow-y-auto rounded-3xl border border-slate-800/60 bg-slate-900/60 shadow-xl shadow-black/40 transition-all md:max-h-[75vh] md:min-h-[40rem] lg:max-h-[80vh] lg:min-h-[48rem]",
             device === "mobile" && "py-8"
           )}
         >
@@ -91,10 +91,10 @@ export function WebsitePreview() {
               srcDoc={srcDoc}
               style={{ width: deviceWidths[device] }}
               className={clsx(
-                "h-full w-full rounded-[22px] border border-slate-800/50 bg-white shadow-inner transition-all",
+                "w-full rounded-[22px] border border-slate-800/50 bg-white shadow-inner transition-all",
                 device === "desktop" && "mx-6",
                 device === "tablet" && "mx-6",
-                device === "mobile" && "mx-0 h-[75vh] max-h-full"
+                device === "mobile" && "mx-0"
               )}
             />
           ) : (
