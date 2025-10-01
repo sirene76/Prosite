@@ -4,9 +4,9 @@ import { getTemplateCss, getTemplateHtml } from "@/lib/templates";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const templateId = params.id;
+  const {id: templateId} = await params;
 
   if (!templateId) {
     return NextResponse.json({ error: "Template id is required" }, { status: 400 });
