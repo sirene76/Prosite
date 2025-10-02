@@ -28,8 +28,8 @@ export async function POST(request: Request) {
           quantity: 1
         }
       ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/builder/checkout`
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/checkout/success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/checkout/cancel`
     });
 
     return NextResponse.json({ checkoutUrl: session.url });

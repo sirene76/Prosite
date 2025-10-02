@@ -28,9 +28,13 @@ export type TemplateContentSection = {
   fields: TemplateContentField[];
 };
 
-const BUILDER_STEPS = ["theme", "content", "checkout"] as const;
-
-type BuilderStep = (typeof BUILDER_STEPS)[number];
+import {
+  BUILDER_STEPS,
+  type BuilderStep,
+  buildBuilderStepPath,
+  getActiveBuilderStep,
+  resolveBuilderBasePath,
+} from "@/lib/builderSteps";
 
 type BuilderContextValue = {
   templates: TemplateDefinition[];
@@ -59,6 +63,8 @@ type BuilderContextValue = {
   goToStep: (index: number) => void;
   nextStep: () => void;
   prevStep: () => void;
+  builderBasePath: string;
+  websiteId?: string;
 };
 
 const BuilderContext = createContext<BuilderContextValue | undefined>(undefined);
@@ -267,6 +273,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     () => templates.find((template) => template.id === selectedTemplateId) ?? fallbackTemplate,
     [fallbackTemplate, selectedTemplateId, templates]
   );
+  const selectedTemplateIdRef = selectedTemplate.id;
 
   const toggleSidebar = useCallback(() => setIsSidebarCollapsed((prev) => !prev), []);
 
@@ -363,6 +370,10 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const router = useRouter();
   const pathname = usePathname();
+  const { basePath: builderBasePath, websiteId } = useMemo(
+    () => resolveBuilderBasePath(pathname),
+    [pathname]
+  );
 
   const goToStep = useCallback(
     (index: number) => {
@@ -370,43 +381,59 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         const clamped = Math.min(Math.max(index, 0), BUILDER_STEPS.length - 1);
         if (clamped !== previous) {
           const stepKey = BUILDER_STEPS[clamped];
-          router.push(`/builder/${stepKey}`);
+          const targetBasePath =
+            stepKey === "checkout" && !websiteId
+              ? `/builder/${selectedTemplateIdRef}`
+              : builderBasePath;
+          router.push(buildBuilderStepPath(targetBasePath, stepKey));
         }
         return clamped;
       });
     },
-    [router]
+    [builderBasePath, router, selectedTemplateIdRef, websiteId]
   );
 
   const nextStep = useCallback(() => {
     setCurrentStep((previous) => {
       const nextIndex = Math.min(previous + 1, BUILDER_STEPS.length - 1);
       if (nextIndex !== previous) {
-        router.push(`/builder/${BUILDER_STEPS[nextIndex]}`);
+        const stepKey = BUILDER_STEPS[nextIndex];
+        const targetBasePath =
+          stepKey === "checkout" && !websiteId
+            ? `/builder/${selectedTemplateIdRef}`
+            : builderBasePath;
+        router.push(buildBuilderStepPath(targetBasePath, stepKey));
       }
       return nextIndex;
     });
-  }, [router]);
+  }, [builderBasePath, router, selectedTemplateIdRef, websiteId]);
 
   const prevStep = useCallback(() => {
     setCurrentStep((previous) => {
       const nextIndex = Math.max(previous - 1, 0);
       if (nextIndex !== previous) {
-        router.push(`/builder/${BUILDER_STEPS[nextIndex]}`);
+        const stepKey = BUILDER_STEPS[nextIndex];
+        router.push(buildBuilderStepPath(builderBasePath, stepKey));
       }
       return nextIndex;
     });
-  }, [router]);
+  }, [builderBasePath, router]);
 
   useEffect(() => {
     if (!pathname) {
       return;
     }
 
-    const activeIndex = BUILDER_STEPS.findIndex((step) => pathname.includes(`/builder/${step}`));
-    if (activeIndex >= 0) {
-      setCurrentStep(activeIndex);
+    const activeStep = getActiveBuilderStep(pathname);
+    if (activeStep) {
+      const index = BUILDER_STEPS.indexOf(activeStep);
+      if (index >= 0) {
+        setCurrentStep(index);
+      }
+      return;
     }
+
+    setCurrentStep(0);
   }, [pathname]);
 
   const currentStepKey = BUILDER_STEPS[currentStep] ?? BUILDER_STEPS[0];
@@ -439,6 +466,8 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       goToStep,
       nextStep,
       prevStep,
+      builderBasePath,
+      websiteId,
     }),
     [
       templates,
@@ -466,6 +495,8 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       goToStep,
       nextStep,
       prevStep,
+      builderBasePath,
+      websiteId,
     ]
   );
 
