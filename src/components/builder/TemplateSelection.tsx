@@ -3,8 +3,6 @@
 import { useEffect } from "react";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-
 import { useBuilder } from "@/context/BuilderContext";
 
 function classNames(...classes: (string | false | null | undefined)[]) {
@@ -16,8 +14,7 @@ type TemplateSelectionProps = {
 };
 
 export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps) {
-  const router = useRouter();
-  const { templates, selectedTemplate, selectTemplate } = useBuilder();
+  const { templates, selectedTemplate, selectTemplate, nextStep } = useBuilder();
 
   useEffect(() => {
     if (!initialTemplateId) {
@@ -118,7 +115,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                   {isActive ? (
                     <button
                       type="button"
-                      onClick={() => router.push("/builder/theme")}
+                      onClick={nextStep}
                       className="flex-1 rounded-full border border-builder-accent/70 bg-builder-accent/10 px-4 py-2 text-sm font-semibold text-builder-accent transition hover:bg-builder-accent/20"
                     >
                       Continue to theme

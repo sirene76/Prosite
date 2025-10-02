@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
+import { getBuilderStepLabel } from "@/lib/builderSteps";
 import { DeviceControls } from "@/components/builder/DeviceControls";
 import { ProgressBar } from "@/components/builder/ProgressBar";
 import { Sidebar } from "@/components/builder/Sidebar";
@@ -17,13 +18,13 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
   const { isSidebarCollapsed, steps, currentStep, goToStep } = useBuilder();
 
   const progressSteps = useMemo(
-    () =>
-      steps.map((step) => ({
-        key: step,
-        label: step.charAt(0).toUpperCase() + step.slice(1),
-      })),
+    () => steps.map((step) => ({ key: step, label: getBuilderStepLabel(step) })),
     [steps]
   );
+  const stepSummary = useMemo(() => {
+    const summary = progressSteps.map((step) => step.label).join(" • ");
+    return summary || "Template • Theme • Content • Checkout";
+  }, [progressSteps]);
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-950 text-slate-100">
@@ -32,7 +33,7 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
           <div className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
             <div className="flex items-center gap-3">
               <span className="text-slate-200">Prosite Builder</span>
-              <span className="hidden text-slate-600 sm:inline">Theme • Content • Checkout</span>
+              <span className="hidden text-slate-600 sm:inline">{stepSummary}</span>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
