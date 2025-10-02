@@ -3,6 +3,7 @@ import { CheckoutClient } from "./CheckoutClient";
 import { connectDB } from "@/lib/mongodb";
 import { Website } from "@/models/website";
 import { getTemplateById } from "@/lib/templates";
+import { isValidObjectId } from "mongoose";
 
 const FALLBACK_IMAGE = "/placeholder-template.svg";
 
@@ -19,7 +20,11 @@ async function loadWebsite(websiteId: string) {
     return null;
   }
 
-  const website = await Website.findById(websiteId).lean<{
+  const websiteQuery = isValidObjectId(websiteId)
+    ? Website.findById(websiteId)
+    : Website.findOne({ slug: websiteId });
+
+  const website = await websiteQuery.lean<{
     name?: string;
     templateId?: string;
     theme?: { name?: string; label?: string };
