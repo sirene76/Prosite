@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
 import { getBuilderStepLabel } from "@/lib/builderSteps";
@@ -9,13 +9,25 @@ import { ProgressBar } from "@/components/builder/ProgressBar";
 import { Sidebar } from "@/components/builder/Sidebar";
 import { WebsitePreview } from "@/components/builder/WebsitePreview";
 import { StepNavigation } from "@/components/builder/StepNavigation";
+import { useParams } from "next/navigation";
 
 type BuilderLayoutClientProps = {
   children: ReactNode;
 };
 
 export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
-  const { isSidebarCollapsed, steps, currentStep, goToStep } = useBuilder();
+  const { isSidebarCollapsed, steps, currentStep, goToStep, setWebsiteId } = useBuilder();
+  const params = useParams<{ websiteId?: string }>();
+  const websiteIdFromParams =
+    typeof params?.websiteId === "string" && params.websiteId.trim().length > 0
+      ? params.websiteId.trim()
+      : undefined;
+
+  useEffect(() => {
+    if (websiteIdFromParams) {
+      setWebsiteId(websiteIdFromParams);
+    }
+  }, [setWebsiteId, websiteIdFromParams]);
 
   const progressSteps = useMemo(
     () => steps.map((step) => ({ key: step, label: getBuilderStepLabel(step) })),

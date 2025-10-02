@@ -73,6 +73,7 @@ type BuilderContextValue = {
   prevStep: () => void;
   builderBasePath: string;
   websiteId?: string;
+  setWebsiteId: (websiteId: string | undefined) => void;
 };
 
 const BuilderContext = createContext<BuilderContextValue | undefined>(undefined);
@@ -260,6 +261,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   const [contentSections, setContentSections] = useState<TemplateContentSection[]>([]);
   const [previewDocument, setPreviewDocument] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
+  const [websiteIdState, setWebsiteIdState] = useState<string | undefined>();
 
   const fallbackTemplate = useMemo<TemplateDefinition>(
     () =>
@@ -378,10 +380,35 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const router = useRouter();
   const pathname = usePathname();
-  const { basePath: builderBasePath, websiteId } = useMemo(
+  const { basePath: resolvedBasePath, websiteId: resolvedWebsiteId } = useMemo(
     () => resolveBuilderBasePath(pathname),
     [pathname]
   );
+
+  const websiteId = websiteIdState;
+
+  const setWebsiteId = useCallback((nextWebsiteId: string | undefined) => {
+    console.log("DEBUG BuilderContext → setWebsiteId:", nextWebsiteId);
+    setWebsiteIdState((previous) => {
+      if (previous === nextWebsiteId) {
+        return previous;
+      }
+      return nextWebsiteId;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (resolvedWebsiteId && resolvedWebsiteId !== websiteId) {
+      setWebsiteId(resolvedWebsiteId);
+    }
+  }, [resolvedWebsiteId, setWebsiteId, websiteId]);
+
+  const builderBasePath = useMemo(() => {
+    if (websiteId) {
+      return `/builder/${websiteId}`;
+    }
+    return resolvedBasePath;
+  }, [resolvedBasePath, websiteId]);
 
   const navigationTargetRef = useRef<
     | {
@@ -487,6 +514,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       prevStep,
       builderBasePath,
       websiteId,
+      setWebsiteId,
     }),
     [
       templates,
@@ -516,6 +544,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       prevStep,
       builderBasePath,
       websiteId,
+      setWebsiteId,
     ]
   );
 

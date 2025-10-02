@@ -12,29 +12,32 @@ export function StepNavigation() {
 
   const checkoutIndex = useMemo(() => steps.indexOf("checkout"), [steps]);
 
-const { hasPrevious, canGoToCheckout, nextButtonLabel } = useMemo(() => {
-  const previous = currentStep > 0;
-  const checkoutLabel = getBuilderStepLabel("checkout");
-  const hasCheckoutStep = checkoutIndex >= 0;
-  const onCheckoutStep = checkoutIndex === currentStep;
+  const { hasPrevious, canGoToCheckout, nextButtonLabel } = useMemo(() => {
+    const previous = currentStep > 0;
+    const checkoutLabel = getBuilderStepLabel("checkout");
+    const hasCheckoutStep = checkoutIndex >= 0;
+    const onCheckoutStep = checkoutIndex === currentStep;
 
-  return {
-    hasPrevious: previous,
-    // ✅ allow going to checkout step without requiring websiteId immediately
-    canGoToCheckout: hasCheckoutStep && !onCheckoutStep,
-    nextButtonLabel: hasCheckoutStep ? `Next: ${checkoutLabel}` : "Next",
-  };
-}, [checkoutIndex, currentStep]);
+    return {
+      hasPrevious: previous,
+      // ✅ allow going to checkout step without requiring websiteId immediately
+      canGoToCheckout: hasCheckoutStep && !onCheckoutStep,
+      nextButtonLabel: hasCheckoutStep ? `Next: ${checkoutLabel}` : "Next",
+    };
+  }, [checkoutIndex, currentStep]);
 
 
   const handleNext = useCallback(() => {
     if (checkoutIndex >= 0) {
-      if (websiteId) {
-        router.push(`/checkout/${websiteId}`);
+      console.log("DEBUG Checkout → websiteId:", websiteId);
+
+      if (!websiteId) {
+        console.error("No websiteId found. Falling back to builder checkout step.");
+        goToStep(checkoutIndex);
         return;
       }
 
-      goToStep(checkoutIndex);
+      router.push(`/checkout/${websiteId}`);
     }
   }, [checkoutIndex, goToStep, router, websiteId]);
 
