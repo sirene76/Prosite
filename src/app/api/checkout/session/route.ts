@@ -8,8 +8,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 });
 
+type PlanId = "free" | "pro" | "agency";
+
 type CheckoutRequest = {
-  plan?: "free" | "pro" | "agency";
+  plan?: PlanId;
+};
+
+const PRICE_MAP: Record<PlanId, string> = {
+  free: "price_xxx_free",
+  pro: "price_xxx_pro",
+  agency: "price_xxx_agency",
 };
 
 export async function POST(req: Request) {
@@ -20,19 +28,16 @@ export async function POST(req: Request) {
     }
 
     const { plan } = (await req.json()) as CheckoutRequest;
+    const selectedPlan: PlanId = plan ?? "pro";
 
-    const priceId = {
-      free: "price_xxx_free",
-      pro: "price_xxx_pro",
-      agency: "price_xxx_agency",
-    }[plan ?? ""];
+    const priceId = PRICE_MAP[selectedPlan];
 
     if (!priceId) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
     const checkoutSession = await stripe.checkout.sessions.create({
-      mode: plan === "free" ? "payment" : "subscription",
+      mode: selectedPlan === "free" ? "payment" : "subscription",
       payment_method_types: ["card"],
       customer_email: session.user.email,
       line_items: [{ price: priceId, quantity: 1 }],
