@@ -25,11 +25,12 @@ export default function ThemePage() {
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Colors</p>
             <div className="flex flex-wrap gap-3">
-              {selectedTemplate.colors.map((token) => {
-                const value = theme.colors[token] ?? themeDefaults.colors[token] ?? "";
+              {selectedTemplate.colors.map((color) => {
+                const key = color.id;
+                const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default ?? "";
                 return (
                   <div
-                    key={token}
+                    key={key}
                     className="flex items-center gap-3 rounded-xl border border-slate-800/70 bg-slate-950/60 px-3 py-2"
                   >
                     <span
@@ -37,7 +38,9 @@ export default function ThemePage() {
                       style={{ backgroundColor: value || "transparent" }}
                     />
                     <div className="flex flex-col text-xs text-slate-400">
-                      <span className="font-semibold text-slate-200">{formatTokenLabel(token)}</span>
+                      <span className="font-semibold text-slate-200">
+                        {color.label ?? formatTokenLabel(key)}
+                      </span>
                       <span className="text-[11px] text-slate-500">{value || "Template default"}</span>
                     </div>
                   </div>
@@ -75,14 +78,17 @@ export default function ThemePage() {
           The template ships with these content areas. Use them to plan your storytelling.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
-          {selectedTemplate.sections.map((section) => (
-            <span
-              key={section}
-              className="rounded-full border border-slate-800/70 bg-slate-950/60 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300"
-            >
-              {formatTokenLabel(section)}
-            </span>
-          ))}
+          {selectedTemplate.sections.map((section) => {
+            const label = section.label ?? formatTokenLabel(section.id);
+            return (
+              <span
+                key={section.id}
+                className="rounded-full border border-slate-800/70 bg-slate-950/60 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300"
+              >
+                {label}
+              </span>
+            );
+          })}
           {!selectedTemplate.sections.length ? (
             <p className="text-xs text-slate-500">No sections defined in meta.json.</p>
           ) : null}
