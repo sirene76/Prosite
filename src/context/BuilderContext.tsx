@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import type { TemplateDefinition } from "@/lib/templates";
 
@@ -27,6 +28,10 @@ export type TemplateContentSection = {
   fields: TemplateContentField[];
 };
 
+const BUILDER_STEPS = ["theme", "content", "checkout"] as const;
+
+type BuilderStep = (typeof BUILDER_STEPS)[number];
+
 type BuilderContextValue = {
   templates: TemplateDefinition[];
   device: Device;
@@ -48,6 +53,12 @@ type BuilderContextValue = {
   isPreviewReady: boolean;
   updatePreviewDocument: (html: string) => void;
   openPreview: () => void;
+  steps: readonly BuilderStep[];
+  currentStep: number;
+  currentStepKey: BuilderStep;
+  goToStep: (index: number) => void;
+  nextStep: () => void;
+  prevStep: () => void;
 };
 
 const BuilderContext = createContext<BuilderContextValue | undefined>(undefined);
@@ -234,6 +245,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   const [content, setContent] = useState<Record<string, string>>({});
   const [contentSections, setContentSections] = useState<TemplateContentSection[]>([]);
   const [previewDocument, setPreviewDocument] = useState("");
+  const [currentStep, setCurrentStep] = useState(0);
 
   const fallbackTemplate = useMemo<TemplateDefinition>(
     () =>
@@ -349,6 +361,56 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const isPreviewReady = Boolean(previewDocument);
 
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const goToStep = useCallback(
+    (index: number) => {
+      setCurrentStep((previous) => {
+        const clamped = Math.min(Math.max(index, 0), BUILDER_STEPS.length - 1);
+        if (clamped !== previous) {
+          const stepKey = BUILDER_STEPS[clamped];
+          router.push(`/builder/${stepKey}`);
+        }
+        return clamped;
+      });
+    },
+    [router]
+  );
+
+  const nextStep = useCallback(() => {
+    setCurrentStep((previous) => {
+      const nextIndex = Math.min(previous + 1, BUILDER_STEPS.length - 1);
+      if (nextIndex !== previous) {
+        router.push(`/builder/${BUILDER_STEPS[nextIndex]}`);
+      }
+      return nextIndex;
+    });
+  }, [router]);
+
+  const prevStep = useCallback(() => {
+    setCurrentStep((previous) => {
+      const nextIndex = Math.max(previous - 1, 0);
+      if (nextIndex !== previous) {
+        router.push(`/builder/${BUILDER_STEPS[nextIndex]}`);
+      }
+      return nextIndex;
+    });
+  }, [router]);
+
+  useEffect(() => {
+    if (!pathname) {
+      return;
+    }
+
+    const activeIndex = BUILDER_STEPS.findIndex((step) => pathname.includes(`/builder/${step}`));
+    if (activeIndex >= 0) {
+      setCurrentStep(activeIndex);
+    }
+  }, [pathname]);
+
+  const currentStepKey = BUILDER_STEPS[currentStep] ?? BUILDER_STEPS[0];
+
   const value = useMemo<BuilderContextValue>(
     () => ({
       templates,
@@ -371,6 +433,12 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       isPreviewReady,
       updatePreviewDocument,
       openPreview,
+      steps: BUILDER_STEPS,
+      currentStep,
+      currentStepKey,
+      goToStep,
+      nextStep,
+      prevStep,
     }),
     [
       templates,
@@ -393,6 +461,11 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       isPreviewReady,
       updatePreviewDocument,
       openPreview,
+      currentStep,
+      currentStepKey,
+      goToStep,
+      nextStep,
+      prevStep,
     ]
   );
 

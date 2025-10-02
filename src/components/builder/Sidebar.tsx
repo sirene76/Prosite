@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { useRouter } from "next/navigation";
 import { useBuilder, type TemplateContentSection } from "@/context/BuilderContext";
 import type { TemplateColorDefinition, TemplateModuleDefinition } from "@/lib/templates";
 import { PageList } from "./PageList";
 import { ThemeSelector } from "./ThemeSelector";
 import { ContentForm } from "./ContentForm";
-
-type SidebarProps = {
-  steps: { label: string; href: string }[];
-  currentIndex: number;
-};
 
 const tabs = [
   { id: "pages", label: "Pages" },
@@ -20,18 +14,13 @@ const tabs = [
   { id: "content", label: "Content" },
 ] as const;
 
-const STEP_ORDER = ["templates", "theme", "content", "checkout"] as const;
-
-type StepKey = (typeof STEP_ORDER)[number];
-
-function formatStepLabel(step: StepKey) {
+function formatStepLabel(step: string) {
   return step.charAt(0).toUpperCase() + step.slice(1);
 }
 
 type TabId = (typeof tabs)[number]["id"];
 
-export function Sidebar({ steps, currentIndex }: SidebarProps) {
-  const router = useRouter();
+export function Sidebar() {
   const {
     isSidebarCollapsed,
     toggleSidebar,
@@ -43,30 +32,12 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
     theme,
     themeDefaults,
     updateTheme,
+    steps,
+    currentStep,
   } = useBuilder();
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
-  const currentStepLabel = useMemo(() => steps[currentIndex]?.label ?? "", [currentIndex, steps]);
-
-  const currentStepKey = STEP_ORDER[currentIndex] ?? STEP_ORDER[0];
-  const currentStepPosition = STEP_ORDER.findIndex((step) => step === currentStepKey);
-  const nextStepKey =
-    currentStepPosition >= 0 && currentStepPosition < STEP_ORDER.length - 1
-      ? STEP_ORDER[currentStepPosition + 1]
-      : undefined;
-  const nextButtonLabel =
-    currentStepKey === "checkout"
-      ? "Finish"
-      : nextStepKey
-        ? `Next: ${formatStepLabel(nextStepKey)}`
-        : "Next";
-
-  const handleNavigate = (direction: "prev" | "next") => {
-    const nextIndex = direction === "prev" ? currentIndex - 1 : currentIndex + 1;
-    if (nextIndex >= 0 && nextIndex < steps.length) {
-      router.push(steps[nextIndex].href);
-    }
-  };
+  const currentStepKey = steps[currentStep] ?? steps[0];
 
   return (
     <aside
@@ -88,7 +59,7 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
         <div className="flex h-full flex-1 flex-col overflow-hidden">
           <div className="border-b border-gray-900/60 px-4 pb-4 pt-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">Inspector</p>
-            <p className="text-sm font-medium text-slate-200">{currentStepLabel || "Builder"}</p>
+            <p className="text-sm font-medium text-slate-200">{formatStepLabel(currentStepKey ?? "") || "Builder"}</p>
           </div>
 
           <div className="flex flex-1 flex-col overflow-hidden">
@@ -143,26 +114,6 @@ export function Sidebar({ steps, currentIndex }: SidebarProps) {
             </div>
           </div>
 
-          <div className="border-t border-gray-900/60 px-4 py-4">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => handleNavigate("prev")}
-                disabled={currentIndex === 0}
-                className="flex-1 rounded-full border border-gray-800 bg-gray-900 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-slate-600 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={() => handleNavigate("next")}
-                disabled={currentIndex === steps.length - 1}
-                className="flex-1 rounded-full bg-builder-accent px-4 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {nextButtonLabel}
-              </button>
-            </div>
-          </div>
         </div>
       ) : null}
     </aside>

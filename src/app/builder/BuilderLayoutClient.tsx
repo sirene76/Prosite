@@ -1,45 +1,46 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
 
 import { useBuilder } from "@/context/BuilderContext";
 import { DeviceControls } from "@/components/builder/DeviceControls";
 import { ProgressBar } from "@/components/builder/ProgressBar";
 import { Sidebar } from "@/components/builder/Sidebar";
 import { WebsitePreview } from "@/components/builder/WebsitePreview";
-
-export type BuilderStep = {
-  label: string;
-  href: string;
-};
+import { StepNavigation } from "@/components/builder/StepNavigation";
 
 type BuilderLayoutClientProps = {
-  steps: BuilderStep[];
   children: ReactNode;
 };
 
-export function BuilderLayoutClient({ steps, children }: BuilderLayoutClientProps) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { isSidebarCollapsed } = useBuilder();
+export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
+  const { isSidebarCollapsed, steps, currentStep, goToStep } = useBuilder();
 
-  const currentStep = useMemo(() => {
-    const index = steps.findIndex((step) => pathname.startsWith(step.href));
-    return index === -1 ? 0 : index;
-  }, [pathname, steps]);
+  const progressSteps = useMemo(
+    () =>
+      steps.map((step) => ({
+        key: step,
+        label: step.charAt(0).toUpperCase() + step.slice(1),
+      })),
+    [steps]
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-950 text-slate-100">
       <header className="border-b border-gray-900/70 bg-gray-950/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            <span className="text-slate-200">Prosite Builder</span>
-            <span className="hidden text-slate-600 sm:inline">Templates • Theme • Content • Checkout</span>
+        <div className="mx-auto flex w-full max-w-6xl items-start justify-between gap-6 px-6 py-3">
+          <div className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <div className="flex items-center gap-3">
+              <span className="text-slate-200">Prosite Builder</span>
+              <span className="hidden text-slate-600 sm:inline">Theme • Content • Checkout</span>
+            </div>
           </div>
-          <DeviceControls />
+          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <DeviceControls />
+            <StepNavigation />
+          </div>
         </div>
-        <ProgressBar steps={steps} activeIndex={currentStep} onStepClick={(href) => router.push(href)} />
+        <ProgressBar steps={progressSteps} activeIndex={currentStep} onStepClick={goToStep} />
       </header>
       <main className="flex flex-1 overflow-hidden">
         <section
@@ -48,7 +49,7 @@ export function BuilderLayoutClient({ steps, children }: BuilderLayoutClientProp
         >
           <WebsitePreview />
         </section>
-        <Sidebar steps={steps} currentIndex={currentStep} />
+        <Sidebar />
       </main>
       <div className="sr-only" aria-hidden>
         {children}
