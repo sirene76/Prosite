@@ -55,13 +55,6 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
         <h1 className="text-2xl font-bold text-gray-900">Sign in</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          New here? {""}
-          <Link href="/auth/register" className="font-semibold text-blue-600 hover:underline">
-            Create an account
-          </Link>
-        </p>
-
         {error ? (
           <p className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             {error}
@@ -109,6 +102,13 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Don&apos;t have an account?{' '}
+          <Link href="/auth/register" className="font-semibold text-blue-600 hover:underline">
+            Sign up
+          </Link>
+        </p>
       </div>
     </main>
   );
