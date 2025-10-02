@@ -1,24 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 
-const navLinks = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/builder/templates", label: "Builder" },
-];
-
-function isActive(pathname: string, href: string) {
-  if (href.startsWith("/builder")) {
-    return pathname.startsWith("/builder");
-  }
-  return pathname === href;
-}
-
 export default function Navbar() {
-  const { data: session, status } = useSession();
-  const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur">
@@ -27,40 +13,41 @@ export default function Navbar() {
           Prosite
         </Link>
 
-        <div className="flex items-center gap-6">
-          <div className="hidden items-center gap-4 text-sm font-medium text-slate-300 sm:flex">
-            {navLinks.map((link) => (
+        <div className="flex items-center gap-4 text-sm font-medium">
+          {!session ? (
+            <>
               <Link
-                key={link.href}
-                href={link.href}
-                className={`transition hover:text-white ${
-                  isActive(pathname, link.href) ? "text-white" : "text-slate-300"
-                }`}
+                href="/auth/login"
+                className="rounded bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
               >
-                {link.label}
+                Sign in
               </Link>
-            ))}
-          </div>
-
-          {status === "loading" ? (
-            <span className="h-9 w-24 animate-pulse rounded bg-slate-800" aria-hidden />
-          ) : session ? (
-            <button
-              type="button"
-              onClick={() => {
-                void signOut({ callbackUrl: "/" });
-              }}
-              className="rounded bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-            >
-              Sign out
-            </button>
+              <Link
+                href="/auth/register"
+                className="rounded bg-green-600 px-4 py-2 text-white transition hover:bg-green-700"
+              >
+                Sign up
+              </Link>
+            </>
           ) : (
-            <Link
-              href="/auth/login"
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
-            >
-              Sign in
-            </Link>
+            <>
+              <Link href="/dashboard" className="text-slate-300 transition hover:text-white">
+                Dashboard
+              </Link>
+              <Link href="/builder" className="text-slate-300 transition hover:text-white">
+                Builder
+              </Link>
+              <span className="text-slate-300">Hello, {session.user?.email}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  void signOut({ callbackUrl: "/" });
+                }}
+                className="rounded bg-red-500 px-4 py-2 text-white transition hover:bg-red-600"
+              >
+                Sign out
+              </button>
+            </>
           )}
         </div>
       </nav>
