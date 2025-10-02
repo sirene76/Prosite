@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+
 import { useBuilder } from "@/context/BuilderContext";
 
 function classNames(...classes: (string | false | null | undefined)[]) {
@@ -13,8 +15,15 @@ type TemplateSelectionProps = {
   initialTemplateId?: string;
 };
 
+type CreateWebsiteResponse = {
+  _id: string;
+};
+
 export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps) {
-  const { templates, selectedTemplate, selectTemplate, nextStep } = useBuilder();
+  const { templates, selectedTemplate, selectTemplate, websiteId, setWebsiteId } = useBuilder();
+  const router = useRouter();
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+  const [isCreatingWebsite, setIsCreatingWebsite] = useState(false);
 
   useEffect(() => {
     if (!initialTemplateId) {
@@ -41,6 +50,42 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
     window.open(previewUrl, "_blank", "noopener,noreferrer");
   };
 
+  const handleSelectTemplate = async (templateId: string) => {
+    if (isCreatingWebsite) {
+      return;
+    }
+
+    selectTemplate(templateId);
+    setPendingTemplateId(templateId);
+    setIsCreatingWebsite(true);
+
+    try {
+      const response = await fetch("/api/websites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create website (status ${response.status})`);
+      }
+
+      const website: CreateWebsiteResponse = await response.json();
+
+      if (!website?._id) {
+        throw new Error("Website response did not include an _id");
+      }
+
+      setWebsiteId(website._id);
+      router.replace(`/builder/${website._id}/theme`);
+    } catch (error) {
+      console.error("Failed to create website from template", error);
+    } finally {
+      setPendingTemplateId(null);
+      setIsCreatingWebsite(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-3">
@@ -51,8 +96,9 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {templates.map((template) => {
+        {templates.map((template, index) => {
           const isActive = template.id === selectedTemplate.id;
+          const isPending = pendingTemplateId === template.id;
 
           return (
             <div
@@ -62,12 +108,13 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                 isActive ? "border-builder-accent/60 shadow-[0_16px_45px_-24px_rgba(14,165,233,0.6)]" : "border-gray-800/80 hover:border-builder-accent/40"
               )}
             >
-              <div className="relative aspect-[4/3] bg-gray-900">
+              <div className="relative h-64 w-full bg-gray-900">
                 {template.previewImage ? (
                   <Image
                     src={template.previewImage}
                     alt={template.name}
                     fill
+                    priority={index < 3}
                     className="object-cover"
                     sizes="(min-width: 1280px) 320px, (min-width: 768px) 260px, 100vw"
                   />
@@ -95,15 +142,17 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                 <div className="mt-auto flex flex-wrap gap-3">
                   <button
                     type="button"
-                    onClick={() => selectTemplate(template.id)}
+                    onClick={() => handleSelectTemplate(template.id)}
                     className={classNames(
                       "flex-1 rounded-full border px-4 py-2 text-sm font-semibold transition",
                       isActive
                         ? "border-builder-accent bg-builder-accent text-slate-950 hover:brightness-110"
                         : "border-gray-800 bg-gray-950/70 text-slate-200 hover:border-builder-accent/60 hover:text-white"
                     )}
+                    disabled={isCreatingWebsite}
+                    aria-busy={isPending}
                   >
-                    {isActive ? "Using template" : "Use template"}
+                    {isPending ? "Creating website..." : isActive ? "Using template" : "Use template"}
                   </button>
                   <button
                     type="button"
@@ -115,8 +164,16 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                   {isActive ? (
                     <button
                       type="button"
-                      onClick={nextStep}
+                      onClick={() => {
+                        if (websiteId) {
+                          router.replace(`/builder/${websiteId}/theme`);
+                          return;
+                        }
+
+                        void handleSelectTemplate(template.id);
+                      }}
                       className="flex-1 rounded-full border border-builder-accent/70 bg-builder-accent/10 px-4 py-2 text-sm font-semibold text-builder-accent transition hover:bg-builder-accent/20"
+                      disabled={isCreatingWebsite}
                     >
                       Continue to theme
                     </button>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function BuilderCheckoutRedirect({ params }: { params: { websiteId: string } }) {
-  redirect(`/checkout/${params.websiteId}`);
+export default async function BuilderCheckoutRedirect({ params }: { params: Promise<{ websiteId: string }> }) {
+  const { websiteId } = await params;
+  redirect(`/checkout/${websiteId}`);
 }
