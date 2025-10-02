@@ -8,8 +8,8 @@ import { isValidObjectId } from "mongoose";
 const FALLBACK_IMAGE = "/placeholder-template.svg";
 
 type CheckoutPageProps = {
-  params: { websiteId: string };
-  searchParams?: { canceled?: string };
+  params: Promise<{ websiteId: string }>;
+  searchParams?: Promise<{ canceled?: string }>;
 };
 
 async function loadWebsite(websiteId: string) {
@@ -47,19 +47,21 @@ async function loadWebsite(websiteId: string) {
 }
 
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
-  const details = await loadWebsite(params.websiteId);
+  const { websiteId } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const details = await loadWebsite(websiteId);
 
   if (!details) {
     notFound();
   }
 
-  const initialError = searchParams?.canceled ? "Checkout canceled. You can try again when you're ready." : null;
+  const initialError = resolvedSearchParams?.canceled ? "Checkout canceled. You can try again when you're ready." : null;
 
   return (
     <main className="min-h-screen bg-slate-950 pb-16 pt-20 text-white">
       <div className="mx-auto w-full max-w-6xl px-6">
         <CheckoutClient
-          websiteId={params.websiteId}
+          websiteId={websiteId}
           websiteName={details.name}
           templateName={details.templateName}
           themeName={details.themeName}

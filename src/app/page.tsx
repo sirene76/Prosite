@@ -21,7 +21,7 @@ export default async function HomePage() {
       </section>
 
       <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-3">
-        {templates.map((template) => {
+        {templates.map((template, index) => {
           const previewImage = template.previewImage || "/placeholder-template.svg";
 
           return (
@@ -29,11 +29,12 @@ export default async function HomePage() {
               key={template.id}
               className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 shadow-lg shadow-slate-900/20 backdrop-blur transition hover:-translate-y-1 hover:shadow-xl"
             >
-              <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-800">
+              <div className="relative h-64 w-full overflow-hidden bg-slate-800">
                 <Image
                   src={previewImage}
                   alt={`${template.name} preview`}
                   fill
+                  priority={index < 3}
                   sizes="(min-width: 1280px) 384px, (min-width: 640px) 50vw, 100vw"
                   className="h-full w-full object-cover"
                 />
