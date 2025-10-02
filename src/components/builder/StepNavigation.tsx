@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 import { useBuilder } from "@/context/BuilderContext";
 import { getBuilderStepLabel } from "@/lib/builderSteps";
 
 export function StepNavigation() {
-  const { steps, currentStep, prevStep, goToStep } = useBuilder();
+  const { steps, currentStep, prevStep, goToStep, websiteId } = useBuilder();
+  const router = useRouter();
 
   const checkoutIndex = useMemo(() => steps.indexOf("checkout"), [steps]);
 
@@ -18,16 +20,21 @@ export function StepNavigation() {
 
     return {
       hasPrevious: previous,
-      canGoToCheckout: hasCheckoutStep && !onCheckoutStep,
+      canGoToCheckout: hasCheckoutStep && !onCheckoutStep && Boolean(websiteId),
       nextButtonLabel: hasCheckoutStep ? `Next: ${checkoutLabel}` : "Next",
     };
-  }, [checkoutIndex, currentStep]);
+  }, [checkoutIndex, currentStep, websiteId]);
 
   const handleNext = useCallback(() => {
     if (checkoutIndex >= 0) {
+      if (websiteId) {
+        router.push(`/checkout/${websiteId}`);
+        return;
+      }
+
       goToStep(checkoutIndex);
     }
-  }, [checkoutIndex, goToStep]);
+  }, [checkoutIndex, goToStep, router, websiteId]);
 
   return (
     <div className="flex justify-end gap-2">
