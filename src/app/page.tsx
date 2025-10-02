@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { loadTemplates } from "@/lib/templates";
+import { getTemplates } from "@/lib/templates";
 
-export default function HomePage() {
-  const templates = loadTemplates();
+export default async function HomePage() {
+  const templates = await getTemplates();
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-12">
@@ -45,7 +45,7 @@ export default function HomePage() {
                 </div>
                 {template.sections.length > 0 && (
                   <div className="mt-auto text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Includes: {template.sections.join(", ")}
+                    Includes: {template.sections.map((section) => section.label).join(", ")}
                   </div>
                 )}
                 <div className="mt-4 flex items-center justify-between">

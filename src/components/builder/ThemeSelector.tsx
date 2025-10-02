@@ -6,7 +6,8 @@ import { useBuilder } from "@/context/BuilderContext";
 export function ThemeSelector() {
   const { selectedTemplate, theme, themeDefaults, updateTheme } = useBuilder();
 
-  const colorKeys = selectedTemplate.colors;
+  const colorDefinitions = selectedTemplate.colors;
+  const colorKeys = colorDefinitions.map((color) => color.id);
   const fontKeys = selectedTemplate.fonts;
 
   const palettes = useMemo(() => buildPalettes(colorKeys), [colorKeys]);
@@ -45,8 +46,10 @@ export function ThemeSelector() {
         <div className="space-y-3">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Fine tune colors</p>
           <div className="space-y-3">
-            {colorKeys.map((key) => {
-              const appliedValue = theme.colors[key] ?? themeDefaults.colors[key] ?? "";
+            {colorDefinitions.map((color) => {
+              const key = color.id;
+              const appliedValue =
+                theme.colors[key] ?? themeDefaults.colors[key] ?? color.default ?? "";
               return (
                 <label key={key} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
                   <div
@@ -54,18 +57,22 @@ export function ThemeSelector() {
                     style={{ backgroundColor: appliedValue || "transparent" }}
                   />
                   <div className="flex-1 space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{formatTokenLabel(key)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      {color.label ?? formatTokenLabel(key)}
+                    </p>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        value={ensureColorValue(theme.colors[key] ?? themeDefaults.colors[key])}
+                        value={ensureColorValue(
+                          theme.colors[key] ?? themeDefaults.colors[key] ?? color.default
+                        )}
                         onChange={(event) => updateTheme({ colors: { [key]: event.target.value } })}
                         className="h-8 w-16 cursor-pointer rounded border border-gray-800 bg-gray-900"
                       />
                       <input
                         type="text"
                         value={theme.colors[key] ?? ""}
-                        placeholder={themeDefaults.colors[key] ?? "#000000"}
+                        placeholder={themeDefaults.colors[key] ?? color.default ?? "#000000"}
                         onChange={(event) => updateTheme({ colors: { [key]: event.target.value } })}
                         className="flex-1 rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
                       />

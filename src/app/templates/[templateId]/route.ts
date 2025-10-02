@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { loadTemplateAssets, loadTemplates } from "@/lib/templates";
+import { getTemplateAssets, getTemplates } from "@/lib/templates";
 import { renderTemplate } from "@/lib/renderTemplate";
 
 export async function GET(
@@ -9,8 +9,8 @@ export async function GET(
 ): Promise<Response> {
   try {
     const { templateId } = params;
-    const assets = await loadTemplateAssets(templateId);
-    const templates = loadTemplates();
+    const assets = await getTemplateAssets(templateId);
+    const templates = await getTemplates();
 
     const templateMeta = templates.find((template) => template.id === templateId);
     const placeholders = extractPlaceholders(assets.html);
@@ -21,7 +21,11 @@ export async function GET(
       })
     );
 
-    const html = renderTemplate(assets.html, sampleData);
+    const html = renderTemplate({
+      html: assets.html,
+      values: sampleData,
+      modules: templateMeta?.modules ?? [],
+    });
     const document = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
 <title>${templateMeta?.name ?? "Template preview"}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />

@@ -29,3 +29,44 @@ a {
 a:hover {
   background: #2563eb;
 }
+
+.module {
+  margin-top: 2rem;
+  padding: 2rem;
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  backdrop-filter: blur(6px);
+}
+
+.module form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.module input[type="email"],
+.module input[type="text"] {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  min-width: 240px;
+}
+
+.module button {
+  padding: 0.85rem 1.6rem;
+  border-radius: 999px;
+  border: none;
+  background: #22d3ee;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.module iframe {
+  width: 100%;
+  min-height: 320px;
+  border: none;
+  border-radius: 1rem;
+}

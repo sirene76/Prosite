@@ -1,20 +1,22 @@
 "use client";
 
 import { useCallback } from "react";
-import { useBuilder } from "@/context/BuilderContext";
 
-const defaultPages: string[] = [];
+import { useBuilder } from "@/context/BuilderContext";
+import type { TemplateSectionDefinition } from "@/lib/templates";
+
+const defaultPages: TemplateSectionDefinition[] = [];
 
 type PageListProps = {
-  pages?: string[];
+  pages?: TemplateSectionDefinition[];
 };
 
 export function PageList({ pages = defaultPages }: PageListProps) {
   const { previewFrame } = useBuilder();
 
   const handleNavigate = useCallback(
-    (page: string) => {
-      const id = toSectionId(page);
+    (page: TemplateSectionDefinition) => {
+      const id = toSectionId(page.id);
       previewFrame?.contentWindow?.postMessage({ type: "scroll-to", id }, "*");
     },
     [previewFrame]
@@ -35,11 +37,11 @@ export function PageList({ pages = defaultPages }: PageListProps) {
         {pages.map((page) => (
           <button
             type="button"
-            key={page}
+            key={page.id}
             onClick={() => handleNavigate(page)}
             className="whitespace-nowrap rounded-full border border-gray-800 bg-gray-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
           >
-            {toDisplayLabel(page)}
+            {page.label}
           </button>
         ))}
       </div>
@@ -54,11 +56,3 @@ function toSectionId(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function toDisplayLabel(value: string) {
-  return value
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/[-_]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^./, (match) => match.toUpperCase());
-}
