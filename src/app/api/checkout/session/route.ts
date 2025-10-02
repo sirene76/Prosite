@@ -4,12 +4,34 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-});
+type PlanId = "free" | "pro" | "agency";
+
+function resolvePriceId(plan: PlanId) {
+  const priceMap: Record<PlanId, string | undefined> = {
+    free: process.env.STRIPE_PRICE_ID_FREE,
+    pro: process.env.STRIPE_PRICE_ID_PRO,
+    agency: process.env.STRIPE_PRICE_ID_AGENCY,
+  };
+
+  return priceMap[plan];
+}
+
+function isSupportedPlan(value: string | undefined): value is PlanId {
+  return value === "free" || value === "pro" || value === "agency";
+}
 
 export async function POST(req: Request) {
   try {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY;
+
+    if (!stripeSecret) {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 });
+    }
+
+    const stripe = new Stripe(stripeSecret, {
+      apiVersion: "2024-06-20",
+    });
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -17,16 +39,14 @@ export async function POST(req: Request) {
 
     const { plan } = (await req.json()) as { plan?: string };
 
-    const priceMap = {
-      free: "price_xxx_free",
-      pro: "price_xxx_pro",
-      agency: "price_xxx_agency",
-    } as const;
+    if (!isSupportedPlan(plan)) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    }
 
-    const priceId = plan && plan in priceMap ? priceMap[plan as keyof typeof priceMap] : null;
+    const priceId = resolvePriceId(plan);
 
     if (!priceId) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+      return NextResponse.json({ error: "Plan is not configured" }, { status: 400 });
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
