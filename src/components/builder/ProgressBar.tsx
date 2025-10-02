@@ -2,10 +2,15 @@
 
 import clsx from "clsx";
 
+type ProgressBarStep = {
+  key: string;
+  label: string;
+};
+
 type ProgressBarProps = {
-  steps: { label: string; href: string }[];
+  steps: ProgressBarStep[];
   activeIndex: number;
-  onStepClick?: (href: string) => void;
+  onStepClick?: (index: number) => void;
 };
 
 export function ProgressBar({ steps, activeIndex, onStepClick }: ProgressBarProps) {
@@ -16,10 +21,10 @@ export function ProgressBar({ steps, activeIndex, onStepClick }: ProgressBarProp
         const isCompleted = activeIndex > index;
 
         return (
-          <div key={step.href} className="flex flex-1 items-center gap-4">
+          <div key={step.key} className="flex flex-1 items-center gap-4">
             <button
               type="button"
-              onClick={() => onStepClick?.(step.href)}
+              onClick={() => onStepClick?.(index)}
               className="group flex items-center gap-3 text-left transition-colors"
             >
               <span className="relative flex h-4 w-4 items-center justify-center">

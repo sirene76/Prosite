@@ -3,25 +3,18 @@ import type { ReactNode } from "react";
 import { BuilderProvider } from "@/context/BuilderContext";
 import { getTemplates } from "@/lib/templates";
 
-import { BuilderLayoutClient, type BuilderStep } from "./BuilderLayoutClient";
+import { BuilderLayoutClient } from "./BuilderLayoutClient";
 
 type BuilderRootProps = {
   children: ReactNode;
 };
-
-const steps: BuilderStep[] = [
-  { label: "Templates", href: "/builder/templates" },
-  { label: "Theme", href: "/builder/theme" },
-  { label: "Content", href: "/builder/content" },
-  { label: "Checkout", href: "/builder/checkout" },
-];
 
 export default async function BuilderRoot({ children }: BuilderRootProps) {
   const templates = await getTemplates();
 
   return (
     <BuilderProvider templates={templates}>
-      <BuilderLayoutClient steps={steps}>{children}</BuilderLayoutClient>
+      <BuilderLayoutClient>{children}</BuilderLayoutClient>
     </BuilderProvider>
   );
 }
