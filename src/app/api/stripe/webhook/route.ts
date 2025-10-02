@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 
@@ -10,11 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const sig = req.headers.get("stripe-signature");
-
-  if (!sig) {
-    return NextResponse.json({ error: "Missing stripe signature" }, { status: 400 });
-  }
+  const sig = req.headers.get("stripe-signature")!;
 
   try {
     const event = stripe.webhooks.constructEvent(
@@ -26,27 +21,34 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (!session.customer_email) {
-          break;
-        }
+
         await connectDB();
         await User.findOneAndUpdate(
           { email: session.customer_email },
           {
-            stripeCustomerId: session.customer as string | undefined,
+            stripeCustomerId: session.customer,
             subscriptionStatus: "active",
           }
         );
+
         break;
       }
-      default:
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
+
+        await connectDB();
+        await User.findOneAndUpdate(
+          { stripeCustomerId: customerId },
+          { subscriptionStatus: "canceled" }
+        );
         break;
+      }
     }
 
     return NextResponse.json({ received: true });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("Webhook error:", message);
+  } catch (err: any) {
+    console.error("Webhook error:", err.message);
     return NextResponse.json({ error: "Webhook error" }, { status: 400 });
   }
 }

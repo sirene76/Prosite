@@ -1,10 +1,22 @@
-export default function CheckoutSuccessPage() {
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+export default function SuccessPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push("/dashboard");
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [router]);
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-6 py-12 text-center text-gray-900">
-      <div className="max-w-md space-y-4">
-        <h1 className="text-3xl font-semibold">Payment Successful</h1>
-        <p className="text-sm text-gray-600">Thank you for your purchase. Your checkout session has been completed.</p>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <h1 className="text-2xl font-bold text-green-600">✅ Payment Successful</h1>
+      <p className="mt-4">Redirecting you to your dashboard...</p>
+
     </div>
   );
 }
