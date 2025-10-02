@@ -21,10 +21,11 @@ export function StepNavigation() {
     return {
       hasPrevious: previous,
       // ✅ allow going to checkout step without requiring websiteId immediately
-      canGoToCheckout: hasCheckoutStep && !onCheckoutStep,
+      canGoToCheckout:
+        hasCheckoutStep && !onCheckoutStep && Boolean(websiteId),
       nextButtonLabel: hasCheckoutStep ? `Next: ${checkoutLabel}` : "Next",
     };
-  }, [checkoutIndex, currentStep]);
+  }, [checkoutIndex, currentStep, websiteId]);
 
 
   const handleNext = useCallback(() => {
