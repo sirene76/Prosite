@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import type { TemplateDefinition } from "@/lib/templates";
@@ -375,49 +383,60 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     [pathname]
   );
 
+  const navigationTargetRef = useRef<
+    | {
+        stepKey: BuilderStep;
+        targetBasePath: string;
+      }
+    | null
+  >(null);
+
+  const getStepNavigationTarget = useCallback(
+    (index: number) => {
+      const clamped = Math.min(Math.max(index, 0), BUILDER_STEPS.length - 1);
+      const stepKey = BUILDER_STEPS[clamped];
+      const targetBasePath =
+        stepKey === "checkout" && !websiteId
+          ? `/builder/${selectedTemplateIdRef}`
+          : builderBasePath;
+
+      return { clamped, stepKey, targetBasePath };
+    },
+    [builderBasePath, selectedTemplateIdRef, websiteId]
+  );
+
   const goToStep = useCallback(
     (index: number) => {
-      setCurrentStep((previous) => {
-        const clamped = Math.min(Math.max(index, 0), BUILDER_STEPS.length - 1);
-        if (clamped !== previous) {
-          const stepKey = BUILDER_STEPS[clamped];
-          const targetBasePath =
-            stepKey === "checkout" && !websiteId
-              ? `/builder/${selectedTemplateIdRef}`
-              : builderBasePath;
-          router.push(buildBuilderStepPath(targetBasePath, stepKey));
-        }
-        return clamped;
-      });
+      const { clamped, stepKey, targetBasePath } = getStepNavigationTarget(index);
+
+      if (clamped === currentStep) {
+        navigationTargetRef.current = null;
+        return;
+      }
+
+      navigationTargetRef.current = { stepKey, targetBasePath };
+      setCurrentStep(clamped);
     },
-    [builderBasePath, router, selectedTemplateIdRef, websiteId]
+    [currentStep, getStepNavigationTarget]
   );
 
   const nextStep = useCallback(() => {
-    setCurrentStep((previous) => {
-      const nextIndex = Math.min(previous + 1, BUILDER_STEPS.length - 1);
-      if (nextIndex !== previous) {
-        const stepKey = BUILDER_STEPS[nextIndex];
-        const targetBasePath =
-          stepKey === "checkout" && !websiteId
-            ? `/builder/${selectedTemplateIdRef}`
-            : builderBasePath;
-        router.push(buildBuilderStepPath(targetBasePath, stepKey));
-      }
-      return nextIndex;
-    });
-  }, [builderBasePath, router, selectedTemplateIdRef, websiteId]);
+    goToStep(currentStep + 1);
+  }, [currentStep, goToStep]);
 
   const prevStep = useCallback(() => {
-    setCurrentStep((previous) => {
-      const nextIndex = Math.max(previous - 1, 0);
-      if (nextIndex !== previous) {
-        const stepKey = BUILDER_STEPS[nextIndex];
-        router.push(buildBuilderStepPath(builderBasePath, stepKey));
-      }
-      return nextIndex;
-    });
-  }, [builderBasePath, router]);
+    goToStep(currentStep - 1);
+  }, [currentStep, goToStep]);
+
+  useEffect(() => {
+    const pendingNavigation = navigationTargetRef.current;
+    if (!pendingNavigation) {
+      return;
+    }
+
+    navigationTargetRef.current = null;
+    router.push(buildBuilderStepPath(pendingNavigation.targetBasePath, pendingNavigation.stepKey));
+  }, [currentStep, router]);
 
   useEffect(() => {
     if (!pathname) {
