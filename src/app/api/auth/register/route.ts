@@ -6,7 +6,7 @@ import { connectDB } from "@/lib/db";
 import { User } from "@/models/user";
 
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
   password: z.string().min(6),
 });
 
@@ -23,17 +23,18 @@ export async function POST(request: Request) {
     }
 
     const { email, password } = parsed.data;
+    const normalizedEmail = email.trim().toLowerCase();
 
     await connectDB();
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return NextResponse.json({ error: "Email already in use" }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({ email, password: hashedPassword });
+    await User.create({ email: normalizedEmail, password: hashedPassword });
 
     return NextResponse.json({ ok: true, message: "Account created" }, { status: 201 });
   } catch (error) {
