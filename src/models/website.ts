@@ -24,6 +24,11 @@ const websiteSchema = new Schema(
     templateId: { type: String, required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User" },
     theme: { type: themeSchema, default: undefined },
+    content: {
+      type: Map,
+      of: String,
+      default: () => new Map<string, string>(),
+    },
     thumbnailUrl: { type: String },
     previewImage: { type: String },
     status: {

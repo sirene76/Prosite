@@ -74,6 +74,7 @@ type BuilderContextValue = {
   builderBasePath: string;
   websiteId?: string;
   setWebsiteId: (websiteId: string | undefined) => void;
+  saveWebsiteChanges: (websiteId: string, updates: Record<string, unknown>) => Promise<unknown | undefined>;
 };
 
 const BuilderContext = createContext<BuilderContextValue | undefined>(undefined);
@@ -262,6 +263,33 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   const [previewDocument, setPreviewDocument] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
   const [websiteIdState, setWebsiteIdState] = useState<string | undefined>();
+  const websiteId = websiteIdState;
+
+  const saveWebsiteChanges = useCallback(
+    async (targetWebsiteId: string, updates: Record<string, unknown>) => {
+      try {
+        if (!targetWebsiteId) {
+          return undefined;
+        }
+
+        const res = await fetch(`/api/websites/${targetWebsiteId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updates),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to save website changes: ${res.status}`);
+        }
+
+        return await res.json();
+      } catch (err) {
+        console.error("Save error:", err);
+        return undefined;
+      }
+    },
+    []
+  );
 
   const fallbackTemplate = useMemo<TemplateDefinition>(
     () =>
@@ -287,12 +315,23 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const toggleSidebar = useCallback(() => setIsSidebarCollapsed((prev) => !prev), []);
 
-  const updateTheme = useCallback((changes: Partial<ThemeState>) => {
-    setTheme((prev) => ({
-      colors: { ...prev.colors, ...(changes.colors ?? {}) },
-      fonts: { ...prev.fonts, ...(changes.fonts ?? {}) },
-    }));
-  }, []);
+  const updateTheme = useCallback(
+    (changes: Partial<ThemeState>) => {
+      setTheme((prev) => {
+        const next = {
+          colors: { ...prev.colors, ...(changes.colors ?? {}) },
+          fonts: { ...prev.fonts, ...(changes.fonts ?? {}) },
+        } satisfies ThemeState;
+
+        if (websiteId) {
+          void saveWebsiteChanges(websiteId, { theme: next });
+        }
+
+        return next;
+      });
+    },
+    [saveWebsiteChanges, websiteId]
+  );
 
   const registerThemeDefaults = useCallback((defaults: Partial<ThemeState>) => {
     setThemeDefaults((prev) => ({
@@ -322,9 +361,20 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     });
   }, []);
 
-  const updateContent = useCallback((changes: Record<string, string>) => {
-    setContent((prev) => ({ ...prev, ...changes }));
-  }, []);
+  const updateContent = useCallback(
+    (changes: Record<string, string>) => {
+      setContent((prev) => {
+        const next = { ...prev, ...changes };
+
+        if (websiteId) {
+          void saveWebsiteChanges(websiteId, { content: next });
+        }
+
+        return next;
+      });
+    },
+    [saveWebsiteChanges, websiteId]
+  );
 
   const selectTemplate = useCallback((templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -384,8 +434,6 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     () => resolveBuilderBasePath(pathname),
     [pathname]
   );
-
-  const websiteId = websiteIdState;
 
   const setWebsiteId = useCallback((nextWebsiteId: string | undefined) => {
     console.log("DEBUG BuilderContext → setWebsiteId:", nextWebsiteId);
@@ -515,6 +563,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       builderBasePath,
       websiteId,
       setWebsiteId,
+      saveWebsiteChanges,
     }),
     [
       templates,
@@ -545,6 +594,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       builderBasePath,
       websiteId,
       setWebsiteId,
+      saveWebsiteChanges,
     ]
   );
 
