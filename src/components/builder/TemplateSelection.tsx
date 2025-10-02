@@ -17,6 +17,8 @@ type TemplateSelectionProps = {
 
 type CreateWebsiteResponse = {
   _id: string;
+  templateId: string;
+  status: "draft" | "published";
 };
 
 export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps) {

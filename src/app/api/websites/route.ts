@@ -1,5 +1,10 @@
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { loadTemplateAssets } from "@/lib/templates";
+
+import { authOptions } from "@/lib/auth";
+import { connectDB } from "@/lib/mongodb";
+import { Website } from "@/models/website";
+import { getTemplateAssets, getTemplateById } from "@/lib/templates";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -10,10 +15,47 @@ export async function GET(request: Request) {
   }
 
   try {
-    const assets = await loadTemplateAssets(templateId);
+    const assets = await getTemplateAssets(templateId);
     return NextResponse.json(assets);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Unable to load template" }, { status: 404 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => null);
+    const templateId = typeof body?.templateId === "string" ? body.templateId.trim() : "";
+
+    if (!templateId) {
+      return NextResponse.json({ error: "templateId is required" }, { status: 400 });
+    }
+
+    await connectDB();
+
+    const template = await getTemplateById(templateId);
+    if (!template) {
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
+
+    const sessionWithId = session as typeof session & { userId?: string };
+
+    const website = await Website.create({
+      name: template.name,
+      templateId: template.id,
+      userId: sessionWithId.userId,
+      status: "draft",
+    });
+
+    return NextResponse.json(website.toJSON(), { status: 201 });
+  } catch (error) {
+    console.error("Failed to create website:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
