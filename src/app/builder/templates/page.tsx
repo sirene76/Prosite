@@ -1,13 +1,14 @@
 import { TemplateSelection } from "@/components/builder/TemplateSelection";
 
 type TemplateSelectionPageProps = {
-  searchParams?: {
+  searchParams: Promise<{
     template?: string | string[];
-  };
+  }>;
 };
 
-export default function TemplateSelectionPage({ searchParams }: TemplateSelectionPageProps) {
-  const templateParam = searchParams?.template;
+export default async function TemplateSelectionPage({ searchParams }: TemplateSelectionPageProps) {
+  const params = await searchParams;
+  const templateParam = params?.template;
   const initialTemplateId = Array.isArray(templateParam) ? templateParam[0] : templateParam;
 
   return (
