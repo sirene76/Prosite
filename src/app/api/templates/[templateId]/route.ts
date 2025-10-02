@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { loadTemplateAssets } from "@/lib/templates";
+import { getTemplateAssets } from "@/lib/templates";
 
 export async function GET(
   _request: Request,
@@ -12,7 +12,7 @@ export async function GET(
     if (!templateId) {
       return NextResponse.json({ html: "", css: "" }, { status: 400 });
     }
-    const assets = await loadTemplateAssets(templateId);
+    const assets = await getTemplateAssets(templateId);
     return NextResponse.json(assets, {
       headers: {
         "Cache-Control": "s-maxage=60, stale-while-revalidate=300",

@@ -3,7 +3,68 @@
   "name": "SaaS Starter",
   "description": "A clean landing page template for SaaS products.",
   "previewImage": "/thumbnails/saas-starter.png",
-  "sections": ["hero", "features", "pricing", "faq", "contact"],
-  "colors": ["primary", "secondary", "accent"],
-  "fonts": ["heading", "body"]
+  "sections": [
+    {
+      "id": "hero",
+      "label": "Hero",
+      "fields": [
+        { "id": "productName", "type": "text", "label": "Product name", "default": "Flowwave" },
+        { "id": "headline", "type": "text", "label": "Headline", "default": "Supercharge customer onboarding" },
+        { "id": "subheadline", "type": "textarea", "label": "Subheadline", "default": "Automate your customer journeys with a single, collaborative workspace." },
+        { "id": "cta", "type": "text", "label": "Primary CTA", "default": "Get started free" }
+      ]
+    },
+    {
+      "id": "features",
+      "label": "Features",
+      "fields": [
+        { "id": "features", "type": "textarea", "label": "Features copy", "default": "Highlight three killer features that show how your platform saves time." }
+      ]
+    },
+    {
+      "id": "pricing",
+      "label": "Pricing",
+      "fields": [
+        { "id": "pricing", "type": "textarea", "label": "Pricing copy", "default": "Start for free, then scale to pro with collaboration tools and automation." }
+      ]
+    },
+    {
+      "id": "faq",
+      "label": "FAQ",
+      "fields": [
+        { "id": "faq", "type": "textarea", "label": "FAQ copy", "default": "Answer the top questions your prospects usually have about integrations, billing, and support." }
+      ]
+    },
+    {
+      "id": "contact",
+      "label": "Contact",
+      "fields": [
+        { "id": "contactEmail", "type": "text", "label": "Support email", "default": "hey@flowwave.io" }
+      ]
+    }
+  ],
+  "colors": [
+    { "id": "primary", "label": "Primary", "default": "#6366f1" },
+    { "id": "secondary", "label": "Secondary", "default": "#22d3ee" },
+    { "id": "accent", "label": "Accent", "default": "#f97316" },
+    { "id": "background", "label": "Background", "default": "#0f172a" },
+    { "id": "surface", "label": "Surface", "default": "#111827" }
+  ],
+  "fonts": ["heading", "body"],
+  "modules": [
+    {
+      "id": "heroForm",
+      "label": "Hero signup form",
+      "type": "form",
+      "description": "Capture leads above the fold."
+    },
+    {
+      "id": "productDemo",
+      "label": "Product demo embed",
+      "type": "iframe",
+      "description": "Drop in a Loom or Vimeo demo to showcase the product in action.",
+      "url": "https://player.vimeo.com/video/327331758?h=cb6b2c1f6e",
+      "height": 360
+    }
+  ]
 }

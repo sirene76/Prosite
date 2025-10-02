@@ -44,6 +44,7 @@ export function WebsitePreview() {
   const [isLoading, setIsLoading] = useState(false);
   const [zoom, setZoom] = useState(0.6);
   const [isAutoFit, setIsAutoFit] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const setIframeRef = useCallback(
@@ -71,7 +72,10 @@ export function WebsitePreview() {
         const data = (await response.json()) as TemplatePayload;
         if (isMounted) {
           const placeholders = extractPlaceholders(data.html);
-          const colorDefaults = extractColorDefaults(data.css, selectedTemplate.colors);
+          const colorDefaults = extractColorDefaults(
+            data.css,
+            selectedTemplate.colors.map((color) => color.id)
+          );
           const fontDefaults = extractFontDefaults(data.css, selectedTemplate.fonts);
 
           registerContentPlaceholders(placeholders);
@@ -102,8 +106,9 @@ export function WebsitePreview() {
     }
 
     const colorVariables = selectedTemplate.colors
-      .map((key) => {
-        const value = theme.colors[key] ?? themeDefaults.colors[key];
+      .map((color) => {
+        const key = color.id;
+        const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
         if (!value) {
           return null;
         }
@@ -125,10 +130,26 @@ export function WebsitePreview() {
 
     const themedCss = `:root { ${colorVariables} ${fontVariables} }\n${assets.css}`;
 
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><style>${themedCss}</style></head><body>${renderTemplate(assets.html, mergedData)}</body></html>`;
+    const rendered = renderTemplate({
+      html: assets.html,
+      values: mergedData,
+      modules: selectedTemplate.modules,
+    });
+
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><style>${themedCss}</style></head><body>${rendered}</body></html>`;
 
     return html;
-  }, [assets, mergedData, selectedTemplate.colors, selectedTemplate.fonts, theme.colors, theme.fonts, themeDefaults.colors, themeDefaults.fonts]);
+  }, [
+    assets,
+    mergedData,
+    selectedTemplate.colors,
+    selectedTemplate.fonts,
+    selectedTemplate.modules,
+    theme.colors,
+    theme.fonts,
+    themeDefaults.colors,
+    themeDefaults.fonts,
+  ]);
 
   useEffect(() => {
     updatePreviewDocument(srcDoc);
@@ -239,6 +260,46 @@ export function WebsitePreview() {
     };
   }, [handleFitToScreen, isAutoFit]);
 
+  const handleExport = useCallback(async () => {
+    if (isExporting) {
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      const response = await fetch("/api/templates/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          templateId: selectedTemplate.id,
+          content,
+          theme,
+          themeDefaults,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${selectedTemplate.id}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Unable to export template", error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [content, isExporting, selectedTemplate.id, theme, themeDefaults]);
+
   const currentWidth = DEVICE_WIDTHS[device];
   const currentHeight = DEVICE_HEIGHTS[device];
   const zoomLabel = `${Math.round(zoom * 100)}%`;
@@ -341,6 +402,14 @@ export function WebsitePreview() {
                 className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-builder-accent/60 bg-gray-950/80 px-3 text-sm font-medium text-builder-accent transition hover:border-builder-accent hover:bg-builder-accent/10 hover:text-builder-accent disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Full Preview
+              </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={!isPreviewReady || isExporting}
+                className="pointer-events-auto flex h-9 items-center justify-center rounded-full border border-emerald-500/40 bg-gray-950/80 px-3 text-sm font-medium text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isExporting ? "Exporting…" : "Export"}
               </button>
             </div>
           </div>

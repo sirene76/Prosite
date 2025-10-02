@@ -264,6 +264,52 @@ a {
   resize: vertical;
 }
 
+.module {
+  margin-top: 2rem;
+  padding: 1.75rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(2, 6, 23, 0.55);
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.35);
+}
+
+.module h3 {
+  margin-top: 0;
+  color: var(--color-text);
+}
+
+.module p {
+  margin-bottom: 1.5rem;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.module form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.module form input,
+.module form button {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.85rem 1.1rem;
+  font-size: 0.95rem;
+}
+
+.module form button {
+  background: var(--color-primary);
+  color: #020617;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.module iframe {
+  width: 100%;
+  min-height: 300px;
+  border: none;
+  border-radius: 1rem;
+}
+
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: 1fr;

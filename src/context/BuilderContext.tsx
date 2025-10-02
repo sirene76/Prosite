@@ -14,12 +14,16 @@ type ThemeState = {
 export type TemplateContentField = {
   key: string;
   label: string;
-  type: "text" | "textarea" | "email";
+  type: "text" | "textarea" | "email" | "image" | "color";
+  placeholder?: string;
+  description?: string;
+  defaultValue?: string;
 };
 
 export type TemplateContentSection = {
   id: string;
   label: string;
+  description?: string;
   fields: TemplateContentField[];
 };
 
@@ -49,7 +53,7 @@ type BuilderContextValue = {
 const BuilderContext = createContext<BuilderContextValue | undefined>(undefined);
 
 function createInitialTheme(template: TemplateDefinition | undefined): ThemeState {
-  const colorEntries = (template?.colors ?? []).map((color) => [color, ""] as const);
+  const colorEntries = (template?.colors ?? []).map((color) => [color.id, color.default ?? ""] as const);
   const fontEntries = (template?.fonts ?? []).map((font) => [font, ""] as const);
   return {
     colors: Object.fromEntries(colorEntries),
@@ -86,34 +90,49 @@ function inferFieldType(key: string): "text" | "textarea" | "email" {
 function buildContentSections(
   placeholders: string[],
   template: TemplateDefinition | undefined
-): { sections: TemplateContentSection[]; keys: string[] } {
-  const sectionOrder = (template?.sections ?? []).map((section) => ({
-    id: toSlug(section) || section.toLowerCase(),
-    label: section,
-  }));
-
-  const sectionsMap = new Map<string, TemplateContentSection>();
-  sectionOrder.forEach((section) => {
-    sectionsMap.set(section.id, { id: section.id, label: section.label, fields: [] });
-  });
-
-  const ensureSection = (sectionId: string, sectionLabel?: string) => {
-    const existing = sectionsMap.get(sectionId);
-    if (existing) {
-      return existing;
-    }
-
-    const label = sectionLabel ?? toSentence(sectionId);
-    const section: TemplateContentSection = { id: sectionId, label, fields: [] };
-    sectionsMap.set(sectionId, section);
-    return section;
-  };
-
+): { sections: TemplateContentSection[]; keys: string[]; defaults: Record<string, string> } {
   const seenKeys = new Set<string>();
+  const defaults: Record<string, string> = {};
+
+  const sectionMap = new Map<string, TemplateContentSection>();
+  const templateSections = template?.sections ?? [];
+
+  templateSections.forEach((section) => {
+    const fields = section.fields
+      .map((field) => {
+        const key = field.id.trim();
+        if (!key) {
+          return null;
+        }
+
+        seenKeys.add(key);
+
+        if (typeof field.default === "string") {
+          defaults[key] = field.default;
+        }
+
+        return {
+          key,
+          label: field.label ?? toSentence(key.split(".").pop() ?? key),
+          type: mapFieldType(field.type, key),
+          placeholder: field.placeholder,
+          description: field.description,
+          defaultValue: field.default,
+        } satisfies TemplateContentField;
+      })
+      .filter((field): field is TemplateContentField => Boolean(field));
+
+    sectionMap.set(section.id, {
+      id: section.id,
+      label: section.label ?? toSentence(section.id),
+      description: section.description,
+      fields,
+    });
+  });
 
   placeholders.forEach((placeholder) => {
     const trimmed = placeholder.trim();
-    if (!trimmed || seenKeys.has(trimmed)) {
+    if (!trimmed || seenKeys.has(trimmed) || trimmed.startsWith("modules.")) {
       return;
     }
 
@@ -123,7 +142,19 @@ function buildContentSections(
     const hasSection = fieldParts.length > 0;
     const sectionId = hasSection ? toSlug(rawSection) : "general";
     const fieldKey = hasSection ? fieldParts.join(".") : rawSection;
-    const section = ensureSection(sectionId, hasSection ? rawSection : "General");
+
+    if (!sectionMap.has(sectionId)) {
+      sectionMap.set(sectionId, {
+        id: sectionId,
+        label: hasSection ? toSentence(rawSection) : "General",
+        fields: [],
+      });
+    }
+
+    const section = sectionMap.get(sectionId);
+    if (!section) {
+      return;
+    }
 
     section.fields.push({
       key: trimmed,
@@ -132,30 +163,54 @@ function buildContentSections(
     });
   });
 
-  const orderedSections: TemplateContentSection[] = [];
-  sectionOrder.forEach((section) => {
-    const match = sectionsMap.get(section.id);
-    if (match && match.fields.length > 0) {
-      orderedSections.push(match);
-      sectionsMap.delete(section.id);
-    }
+  const sections = Array.from(sectionMap.values()).filter((section) => section.fields.length > 0);
+
+  if (templateSections.length) {
+    const order = new Map(templateSections.map((section, index) => [section.id, index] as const));
+    sections.sort((a, b) => {
+      const aIndex = order.has(a.id) ? order.get(a.id)! : Number.MAX_SAFE_INTEGER;
+      const bIndex = order.has(b.id) ? order.get(b.id)! : Number.MAX_SAFE_INTEGER;
+      if (aIndex === bIndex) {
+        return a.label.localeCompare(b.label);
+      }
+      return aIndex - bIndex;
+    });
+  } else {
+    sections.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  sections.forEach((section) => {
+    section.fields = section.fields.filter(
+      (field, index, array) => array.findIndex((item) => item.key === field.key) === index
+    );
   });
 
-  const remaining = Array.from(sectionsMap.values())
-    .filter((section) => !sectionOrder.some((item) => item.id === section.id) && section.fields.length > 0)
-    .sort((a, b) => a.label.localeCompare(b.label));
-
   return {
-    sections: [...orderedSections, ...remaining],
+    sections,
     keys: Array.from(seenKeys),
+    defaults,
   };
 }
 
-function createDefaultContent(placeholders: string[]) {
+function mapFieldType(fieldType: TemplateContentField["type"] | string | undefined, key: string) {
+  if (fieldType === "textarea" || fieldType === "image" || fieldType === "color") {
+    return fieldType;
+  }
+  if (fieldType === "email") {
+    return "email";
+  }
+  return inferFieldType(key);
+}
+
+function createDefaultContent(placeholders: string[], defaults: Record<string, string>) {
   const result: Record<string, string> = {};
   placeholders.forEach((placeholder) => {
     const key = placeholder.trim();
     if (!key) {
+      return;
+    }
+    if (typeof defaults[key] === "string") {
+      result[key] = defaults[key];
       return;
     }
     const label = key.split(".").pop() ?? key;
@@ -191,6 +246,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         sections: [],
         colors: [],
         fonts: [],
+        modules: [],
       },
     [templates]
   );
@@ -256,14 +312,14 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const registerContentPlaceholders = useCallback(
     (placeholders: string[]) => {
-      const { sections, keys } = buildContentSections(placeholders, selectedTemplate);
+      const { sections, keys, defaults } = buildContentSections(placeholders, selectedTemplate);
       setContentSections(sections);
 
       setContent((prev) => {
-        const defaults = createDefaultContent(keys);
+        const fallback = createDefaultContent(keys, defaults);
         const next: Record<string, string> = {};
         keys.forEach((key) => {
-          next[key] = prev[key] ?? defaults[key] ?? "";
+          next[key] = prev[key] ?? fallback[key] ?? "";
         });
         return next;
       });
