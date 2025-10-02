@@ -7,7 +7,7 @@ export default function BuilderPage() {
   const params = useParams<{ websiteId: string }>();
 
   const handleNext = () => {
-    router.push(`/builder/${params.websiteId}/checkout`);
+    router.push(`/checkout/${params.websiteId}`);
   };
 
   return (
