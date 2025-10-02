@@ -16,7 +16,7 @@ export async function connectDB(): Promise<typeof mongoose> {
     return cached.conn;
   }
 
-  const uri = process.env.DATABASE_URL;
+  const uri = process.env.DATABASE_URI;
   if (!uri) {
     throw new Error("Missing DATABASE_URL");
   }
