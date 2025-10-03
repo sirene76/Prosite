@@ -22,7 +22,13 @@ export function ThemeSelector() {
               <button
                 type="button"
                 key={preset.name}
-                onClick={() => updateTheme({ colors: preset.colors })}
+                onClick={() =>
+                  updateTheme({
+                    colors: preset.colors,
+                    name: preset.name,
+                    label: preset.label ?? preset.name,
+                  })
+                }
                 className="flex w-full items-center justify-between rounded-2xl border border-gray-800 bg-gray-900/40 px-4 py-3 text-left transition hover:border-builder-accent/40"
               >
                 <div>
@@ -128,9 +134,15 @@ const basePalettes = [
   ["#34d399", "#10b981", "#86efac", "#022c22", "#ecfdf5"],
 ];
 
-function buildPalettes(colorKeys: string[]) {
+type PaletteDefinition = {
+  name: string;
+  label?: string;
+  colors: Record<string, string>;
+};
+
+function buildPalettes(colorKeys: string[]): PaletteDefinition[] {
   if (!colorKeys.length) {
-    return [] as { name: string; colors: Record<string, string> }[];
+    return [];
   }
 
   return basePalettes.map((paletteValues, paletteIndex) => {
@@ -140,9 +152,11 @@ function buildPalettes(colorKeys: string[]) {
       colors[key] = value;
     });
     const names = ["Aurora", "Luxe", "Verdant"];
+    const name = names[paletteIndex] ?? `Palette ${paletteIndex + 1}`;
     return {
-      name: names[paletteIndex] ?? `Palette ${paletteIndex + 1}`,
+      name,
+      label: name,
       colors,
-    };
+    } satisfies PaletteDefinition;
   });
 }

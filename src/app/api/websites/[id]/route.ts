@@ -24,6 +24,14 @@ export async function GET(
   }
 }
 
+type ThemeUpdatePayload = {
+  name?: string;
+  label?: string;
+  colors?: Record<string, string> | Map<string, string>;
+  fonts?: Record<string, string> | Map<string, string>;
+  [key: string]: unknown;
+};
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -37,11 +45,7 @@ export async function PATCH(
 
     const { id } = await params;
     const updates = (await req.json()) as {
-      theme?: {
-        colors?: Record<string, string> | Map<string, string>;
-        fonts?: Record<string, string> | Map<string, string>;
-        [key: string]: unknown;
-      };
+      theme?: ThemeUpdatePayload;
       content?: Record<string, string> | Map<string, string>;
       name?: string;
       [key: string]: unknown;
@@ -65,9 +69,9 @@ export async function PATCH(
           ? (website.theme as unknown as { toObject: () => unknown }).toObject()
           : website.theme
         : {};
-      const existingTheme = existingThemeRaw as Record<string, any>;
+      const existingTheme = existingThemeRaw as ThemeUpdatePayload;
 
-      const mergedTheme: Record<string, unknown> = {
+      const mergedTheme: ThemeUpdatePayload = {
         ...existingTheme,
         ...updates.theme,
       };
