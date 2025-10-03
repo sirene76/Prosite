@@ -1,0 +1,78 @@
+{
+  "id": "restaurant-classic",
+  "name": "Restaurant Classic",
+  "description": "Bold restaurant theme with menu grid and food imagery.",
+  "previewImage": "/templates/restaurant-classic/preview.png",
+  "sections": [
+    {
+      "id": "hero",
+      "label": "Hero",
+      "fields": [
+        { "id": "hero.title", "type": "text", "label": "Headline", "default": "Classic flavors. Crafted with heart." },
+        {
+          "id": "hero.subtitle",
+          "type": "textarea",
+          "label": "Subtitle",
+          "default": "Burgers char-grilled to perfection, hand-cut fries, and seasonal plates served in a warm neighborhood setting."
+        },
+        { "id": "hero.cta", "type": "text", "label": "CTA", "default": "Order now" }
+      ]
+    },
+    {
+      "id": "menu",
+      "label": "Menu",
+      "fields": [
+        { "id": "menu.heading", "type": "text", "label": "Heading", "default": "Menu favorites" },
+        {
+          "id": "menu.description",
+          "type": "textarea",
+          "label": "Description",
+          "default": "All plates made to order with locally sourced ingredients and house-made sauces."
+        }
+      ]
+    },
+    {
+      "id": "specials",
+      "label": "Specials",
+      "fields": [
+        { "id": "specials.heading", "type": "text", "label": "Heading", "default": "Chef’s fireside special" },
+        {
+          "id": "specials.description",
+          "type": "textarea",
+          "label": "Description",
+          "default": "A limited-time wood-fired ribeye served with charred broccolini, fingerling potatoes, and rosemary jus."
+        },
+        { "id": "specials.cta", "type": "text", "label": "CTA", "default": "Reserve a table" }
+      ]
+    },
+    {
+      "id": "reviews",
+      "label": "Testimonials",
+      "fields": [
+        { "id": "reviews.heading", "type": "text", "label": "Heading", "default": "What guests are saying" }
+      ]
+    },
+    {
+      "id": "contact",
+      "label": "Footer",
+      "fields": [
+        { "id": "contact.heading", "type": "text", "label": "Heading", "default": "Visit Restaurant Classic" },
+        {
+          "id": "contact.description",
+          "type": "textarea",
+          "label": "Description",
+          "default": "402 Market Street, Portland · (503) 555-0199 · hello@classicdining.com"
+        },
+        { "id": "contact.cta", "type": "text", "label": "CTA", "default": "Call now" }
+      ]
+    }
+  ],
+  "colors": [
+    { "id": "primary", "label": "Primary", "default": "#d92d20" },
+    { "id": "secondary", "label": "Secondary", "default": "#f79009" },
+    { "id": "background", "label": "Background", "default": "#0b0d12" },
+    { "id": "text", "label": "Text", "default": "#f8f8f8" }
+  ],
+  "fonts": ["heading", "body"],
+  "modules": []
+}

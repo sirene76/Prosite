@@ -4,6 +4,34 @@ import path from "path";
 
 const templatesRoot = path.join(process.cwd(), "templates");
 
+export type TemplateSummary = {
+  id: string;
+  name: string;
+  description: string;
+  thumbnail: string;
+};
+
+export const templates: TemplateSummary[] = [
+  {
+    id: "portfolio-creative",
+    name: "Portfolio Creative",
+    description: "Modern portfolio layout with clean typography.",
+    thumbnail: "/templates/portfolio-creative/preview.png",
+  },
+  {
+    id: "agency-starter",
+    name: "Agency Starter",
+    description: "Professional agency design with services, projects, testimonials, and FAQ.",
+    thumbnail: "/templates/agency-starter/preview.png",
+  },
+  {
+    id: "restaurant-classic",
+    name: "Restaurant Classic",
+    description: "Bold restaurant theme with menu grid and food imagery.",
+    thumbnail: "/templates/restaurant-classic/preview.png",
+  },
+];
+
 export type TemplateFieldType = "text" | "textarea" | "image" | "color";
 
 export type TemplateFieldDefinition = {

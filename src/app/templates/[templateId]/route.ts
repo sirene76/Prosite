@@ -5,10 +5,10 @@ import { renderTemplate } from "@/lib/renderTemplate";
 
 export async function GET(
   request: Request,
-  { params }: { params: { templateId: string } }
+  { params }: { params: Promise<{ templateId: string }> }
 ): Promise<Response> {
   try {
-    const { templateId } = params;
+    const { templateId } = await params;
     const assets = await getTemplateAssets(templateId);
     const templates = await getTemplates();
 
