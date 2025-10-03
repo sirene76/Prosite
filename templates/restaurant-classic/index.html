@@ -1,0 +1,165 @@
+<section class="hero">
+  <div class="hero__content">
+    <p class="hero__eyebrow">EST. 1998</p>
+    <h1>{{hero.title}}</h1>
+    <p class="hero__subtitle">{{hero.subtitle}}</p>
+    <div class="hero__price">
+      <span class="hero__price-label">Featured Burger</span>
+      <span class="hero__price-value">$14</span>
+    </div>
+    <a class="button" href="#menu">{{hero.cta}}</a>
+  </div>
+  <div class="hero__image">
+    <img src="./assets/restaurant-hero.jpg" alt="Signature burger with fries" />
+  </div>
+</section>
+
+<main>
+  <section class="menu" id="menu">
+    <div class="section-heading">
+      <h2>{{menu.heading}}</h2>
+      <p>{{menu.description}}</p>
+    </div>
+    <div class="menu__grid">
+      <article class="menu-item">
+        <img src="./assets/burger1.jpg" alt="Smoked cheddar burger" />
+        <div>
+          <header>
+            <h3>Smoked Cheddar Burger</h3>
+            <span class="menu-item__price">$15</span>
+          </header>
+          <p>Grass-fed beef, smoked cheddar, caramelized onions, brioche bun.</p>
+        </div>
+      </article>
+      <article class="menu-item">
+        <img src="./assets/burger2.jpg" alt="Black garlic burger" />
+        <div>
+          <header>
+            <h3>Black Garlic Burger</h3>
+            <span class="menu-item__price">$16</span>
+          </header>
+          <p>Roasted mushrooms, black garlic aioli, baby arugula.</p>
+        </div>
+      </article>
+      <article class="menu-item">
+        <img src="./assets/salad.jpg" alt="Market greens salad" />
+        <div>
+          <header>
+            <h3>Market Greens Salad</h3>
+            <span class="menu-item__price">$12</span>
+          </header>
+          <p>Seasonal greens, citrus segments, toasted almonds, vinaigrette.</p>
+        </div>
+      </article>
+      <article class="menu-item">
+        <img src="./assets/fries.jpg" alt="Truffle fries" />
+        <div>
+          <header>
+            <h3>Parmesan Truffle Fries</h3>
+            <span class="menu-item__price">$8</span>
+          </header>
+          <p>Hand-cut russets, truffle salt, parmesan, roasted garlic aioli.</p>
+        </div>
+      </article>
+      <article class="menu-item">
+        <img src="./assets/dessert.jpg" alt="Chocolate torte" />
+        <div>
+          <header>
+            <h3>Dark Chocolate Torte</h3>
+            <span class="menu-item__price">$9</span>
+          </header>
+          <p>Flourless chocolate torte, bourbon caramel, whipped cream.</p>
+        </div>
+      </article>
+      <article class="menu-item">
+        <img src="./assets/drink.jpg" alt="House lemonade" />
+        <div>
+          <header>
+            <h3>House Citrus Lemonade</h3>
+            <span class="menu-item__price">$6</span>
+          </header>
+          <p>Fresh squeezed lemons, rosemary syrup, sparkling water.</p>
+        </div>
+      </article>
+      <article class="menu-item">
+        <img src="./assets/interior.jpg" alt="Weekend brunch" />
+        <div>
+          <header>
+            <h3>Weekend Brunch Board</h3>
+            <span class="menu-item__price">$18</span>
+          </header>
+          <p>Avocado toast, smoked salmon, farm eggs, seasonal fruit.</p>
+        </div>
+      </article>
+      <article class="menu-item">
+        <img src="./assets/special.jpg" alt="Seasonal soup" />
+        <div>
+          <header>
+            <h3>Seasonal Soup</h3>
+            <span class="menu-item__price">$11</span>
+          </header>
+          <p>Chef’s rotating soup featuring farmers market produce.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="specials" id="specials">
+    <div class="specials__image">
+      <img src="./assets/special.jpg" alt="Chef special plate" />
+    </div>
+    <div class="specials__content">
+      <h2>{{specials.heading}}</h2>
+      <p>{{specials.description}}</p>
+      <a class="button button--outline" href="#contact">{{specials.cta}}</a>
+    </div>
+  </section>
+
+  <section class="reviews" id="reviews">
+    <div class="section-heading">
+      <h2>{{reviews.heading}}</h2>
+    </div>
+    <div class="reviews__grid">
+      <article class="review">
+        <p>
+          “Every bite was incredible. The black garlic burger is the best in the city and the team made us feel right at home.”
+        </p>
+        <p class="review__author">— Morgan A.</p>
+      </article>
+      <article class="review">
+        <p>
+          “Cozy vibes, attentive staff, and the seasonal cocktails are perfection. Highly recommend the weekend brunch.”
+        </p>
+        <p class="review__author">— Lena S.</p>
+      </article>
+      <article class="review">
+        <p>
+          “From the char on the burger to the dessert selection, everything tasted thoughtfully prepared and balanced.”
+        </p>
+        <p class="review__author">— Diego F.</p>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer class="footer" id="contact">
+  <div class="footer__grid">
+    <div>
+      <h2>{{contact.heading}}</h2>
+      <p>{{contact.description}}</p>
+    </div>
+    <div class="hours">
+      <h3>Hours</h3>
+      <ul>
+        <li><span>Mon – Thu</span><span>11am – 10pm</span></li>
+        <li><span>Fri – Sat</span><span>11am – Midnight</span></li>
+        <li><span>Sunday</span><span>10am – 8pm</span></li>
+      </ul>
+    </div>
+    <div class="footer__cta">
+      <p>Reserve online or call us to plan your next gathering.</p>
+      <a class="button" href="tel:5035550199">Call now</a>
+    </div>
+  </div>
+  <p class="footer__note">© {year} Restaurant Classic. Crafted with local ingredients.</p>
+</footer>

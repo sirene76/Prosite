@@ -1,0 +1,112 @@
+{
+  "id": "agency-starter",
+  "name": "Agency Starter",
+  "description": "Professional agency design with services, projects, testimonials, and FAQ.",
+  "previewImage": "/templates/agency-starter/preview.png",
+  "sections": [
+    {
+      "id": "hero",
+      "label": "Hero",
+      "fields": [
+        { "id": "hero.title", "type": "text", "label": "Headline", "default": "We craft human-centered digital experiences." },
+        {
+          "id": "hero.subtitle",
+          "type": "textarea",
+          "label": "Subtitle",
+          "default": "From strategy to launch, we help ambitious brands unlock growth through design, technology, and storytelling."
+        },
+        { "id": "hero.primaryCta", "type": "text", "label": "Primary CTA", "default": "Start a project" },
+        { "id": "hero.secondaryCta", "type": "text", "label": "Secondary CTA", "default": "View our work" }
+      ]
+    },
+    {
+      "id": "services",
+      "label": "Services",
+      "fields": [
+        {
+          "id": "services.heading",
+          "type": "text",
+          "label": "Heading",
+          "default": "Services tailored to your growth goals"
+        },
+        {
+          "id": "services.description",
+          "type": "textarea",
+          "label": "Description",
+          "default": "Our multidisciplinary team blends strategic thinking and craft execution to deliver measurable results across every touchpoint."
+        }
+      ]
+    },
+    {
+      "id": "portfolio",
+      "label": "Portfolio",
+      "fields": [
+        { "id": "portfolio.heading", "type": "text", "label": "Heading", "default": "Projects that move the needle" },
+        {
+          "id": "portfolio.description",
+          "type": "textarea",
+          "label": "Description",
+          "default": "A glimpse at recent collaborations across SaaS, e-commerce, and emerging brands."
+        }
+      ]
+    },
+    {
+      "id": "testimonials",
+      "label": "Testimonials",
+      "fields": [
+        {
+          "id": "testimonials.headline",
+          "type": "text",
+          "label": "Headline",
+          "default": "Trusted by teams who demand results"
+        },
+        {
+          "id": "testimonials.quote",
+          "type": "textarea",
+          "label": "Featured Quote",
+          "default": "The Agency Starter team helped us ship a reimagined product experience that increased customer retention by 35%."
+        }
+      ]
+    },
+    {
+      "id": "faq",
+      "label": "FAQ",
+      "fields": [
+        {
+          "id": "faq.heading",
+          "type": "text",
+          "label": "Heading",
+          "default": "Frequently asked questions"
+        },
+        {
+          "id": "faq.description",
+          "type": "textarea",
+          "label": "Description",
+          "default": "Here’s what clients ask before we kick off a new engagement."
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "label": "Contact",
+      "fields": [
+        { "id": "contact.heading", "type": "text", "label": "Heading", "default": "Ready to build what’s next?" },
+        {
+          "id": "contact.description",
+          "type": "textarea",
+          "label": "Description",
+          "default": "Let’s align on goals and create a roadmap tailored to your business."
+        },
+        { "id": "contact.cta", "type": "text", "label": "CTA", "default": "Schedule a consultation" }
+      ]
+    }
+  ],
+  "colors": [
+    { "id": "primary", "label": "Primary", "default": "#2563eb" },
+    { "id": "secondary", "label": "Secondary", "default": "#a855f7" },
+    { "id": "background", "label": "Background", "default": "#f8fafc" },
+    { "id": "text", "label": "Text", "default": "#111827" }
+  ],
+  "fonts": ["heading", "body"],
+  "modules": []
+}

@@ -163,7 +163,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                     disabled={isCreatingWebsite}
                     aria-busy={isPending}
                   >
-                    {isPending ? "Creating website..." : isActive ? "Using template" : "Use template"}
+                    {isPending ? "Creating website..." : isActive ? "Using template" : "Select template"}
                   </button>
                   <button
                     type="button"

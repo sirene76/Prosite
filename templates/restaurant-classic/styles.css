@@ -1,0 +1,321 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap");
+
+:root {
+  --primary: #d92d20;
+  --secondary: #f79009;
+  --text: #f8f8f8;
+  --background: #0b0d12;
+  --surface: #151821;
+  --muted: #9ca3af;
+  font-family: "Work Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top left, rgba(217, 45, 32, 0.2), transparent 45%), var(--background);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+  border-radius: 18px;
+}
+
+.hero {
+  display: grid;
+  gap: 3rem;
+  padding: 5rem clamp(1.5rem, 6vw, 5rem) 4rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: center;
+}
+
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero__eyebrow {
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--secondary);
+}
+
+.hero h1 {
+  font-family: "Playfair Display", serif;
+  font-size: clamp(2.8rem, 5vw, 4rem);
+  margin: 0;
+}
+
+.hero__subtitle {
+  margin: 0;
+  max-width: 42ch;
+  color: rgba(248, 248, 248, 0.75);
+}
+
+.hero__price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  background: rgba(217, 45, 32, 0.15);
+  border: 1px solid rgba(217, 45, 32, 0.35);
+}
+
+.hero__price-label {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+}
+
+.hero__price-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.hero__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.75);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.8rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 16px 35px -20px rgba(217, 45, 32, 0.8);
+}
+
+.button:hover {
+  transform: translateY(-2px);
+}
+
+.button--outline {
+  background: transparent;
+  border: 1px solid rgba(248, 248, 248, 0.5);
+  color: #fff;
+  box-shadow: none;
+}
+
+.section-heading {
+  text-align: center;
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: 1rem clamp(1.5rem, 6vw, 5rem) 0;
+}
+
+.section-heading h2 {
+  font-family: "Playfair Display", serif;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  margin-bottom: 0.75rem;
+}
+
+.section-heading p {
+  color: rgba(248, 248, 248, 0.7);
+  margin: 0 auto;
+}
+
+.menu {
+  padding-bottom: 4rem;
+}
+
+.menu__grid {
+  width: min(1080px, 100%);
+  margin: 2.5rem auto 0;
+  padding: 0 clamp(1.5rem, 6vw, 5rem);
+  display: grid;
+  gap: 1.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.menu-item {
+  display: grid;
+  gap: 1rem;
+  background: rgba(21, 24, 33, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 22px;
+  padding: 1.25rem;
+  box-shadow: 0 30px 60px -45px rgba(0, 0, 0, 0.8);
+}
+
+.menu-item header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.menu-item h3 {
+  font-family: "Playfair Display", serif;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.menu-item__price {
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+.menu-item p {
+  margin: 0;
+  color: rgba(248, 248, 248, 0.7);
+}
+
+.specials {
+  margin: 5rem auto;
+  width: min(1080px, 100%);
+  padding: 0 clamp(1.5rem, 6vw, 5rem);
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: center;
+}
+
+.specials__image img {
+  height: 100%;
+  object-fit: cover;
+  box-shadow: 0 35px 70px -45px rgba(217, 45, 32, 0.6);
+}
+
+.specials__content h2 {
+  font-family: "Playfair Display", serif;
+  font-size: clamp(2.4rem, 4vw, 3.2rem);
+  margin-bottom: 1rem;
+}
+
+.specials__content p {
+  margin-bottom: 2rem;
+  color: rgba(248, 248, 248, 0.75);
+}
+
+.reviews {
+  padding: 4rem 0 5rem;
+  background: linear-gradient(180deg, rgba(21, 24, 33, 0.85), transparent);
+}
+
+.reviews__grid {
+  width: min(1080px, 100%);
+  margin: 2.5rem auto 0;
+  padding: 0 clamp(1.5rem, 6vw, 5rem);
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.review {
+  background: rgba(11, 13, 18, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: 0 25px 50px -40px rgba(0, 0, 0, 0.9);
+}
+
+.review p {
+  margin: 0;
+}
+
+.review__author {
+  margin-top: 1rem;
+  font-weight: 600;
+  color: var(--secondary);
+}
+
+.footer {
+  background: #08090d;
+  padding: 4rem clamp(1.5rem, 6vw, 5rem) 3rem;
+}
+
+.footer__grid {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.footer h2 {
+  font-family: "Playfair Display", serif;
+  margin: 0 0 1rem;
+}
+
+.footer p {
+  margin: 0;
+  color: rgba(248, 248, 248, 0.7);
+}
+
+.hours h3 {
+  margin: 0 0 0.75rem;
+  font-family: "Playfair Display", serif;
+}
+
+.hours ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.hours li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+}
+
+.footer__cta {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.footer__note {
+  margin: 2rem 0 0;
+  text-align: center;
+  color: rgba(248, 248, 248, 0.45);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding-top: 4rem;
+  }
+
+  .hero__price {
+    align-items: center;
+  }
+
+  .menu-item {
+    text-align: left;
+  }
+
+  .hours li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}

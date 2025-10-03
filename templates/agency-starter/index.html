@@ -1,0 +1,126 @@
+<section class="hero">
+  <div class="container hero__content">
+    <p class="eyebrow">Creative agency</p>
+    <h1>{{hero.title}}</h1>
+    <p class="subtitle">{{hero.subtitle}}</p>
+    <div class="hero__actions">
+      <a class="button button--primary" href="#contact">{{hero.primaryCta}}</a>
+      <a class="button button--ghost" href="#portfolio">{{hero.secondaryCta}}</a>
+    </div>
+  </div>
+  <div class="hero__image">
+    <img src="./assets/agency-hero.jpg" alt="Team collaborating in studio" />
+  </div>
+</section>
+
+<main>
+  <section class="services" id="services">
+    <div class="container section-heading">
+      <h2>{{services.heading}}</h2>
+      <p>{{services.description}}</p>
+    </div>
+    <div class="container services__grid">
+      <article class="service-card">
+        <div class="service-card__icon">🎯</div>
+        <h3>Brand Strategy</h3>
+        <p>Clarify your positioning, voice, and story to stand out in competitive markets.</p>
+      </article>
+      <article class="service-card">
+        <div class="service-card__icon">🛠️</div>
+        <h3>Product Design</h3>
+        <p>Translate complex ideas into intuitive digital products that customers love.</p>
+      </article>
+      <article class="service-card">
+        <div class="service-card__icon">🚀</div>
+        <h3>Growth Marketing</h3>
+        <p>Launch targeted campaigns that amplify reach, engagement, and conversions.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="portfolio" id="portfolio">
+    <div class="container section-heading">
+      <h2>{{portfolio.heading}}</h2>
+      <p>{{portfolio.description}}</p>
+    </div>
+    <div class="container portfolio__grid">
+      <figure class="portfolio__item">
+        <img src="./assets/agency-project-1.jpg" alt="Agency project mockup one" />
+        <figcaption>Nova CRM Brand &amp; Product Design</figcaption>
+      </figure>
+      <figure class="portfolio__item">
+        <img src="./assets/agency-project-2.jpg" alt="Agency project mockup two" />
+        <figcaption>Echo Commerce Growth Campaign</figcaption>
+      </figure>
+      <figure class="portfolio__item">
+        <img src="./assets/agency-project-3.jpg" alt="Agency project mockup three" />
+        <figcaption>Summit Labs Website Relaunch</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="testimonials" id="testimonials">
+    <div class="container testimonials__inner">
+      <div class="testimonials__copy">
+        <h2>{{testimonials.headline}}</h2>
+        <p>{{testimonials.quote}}</p>
+        <p class="testimonials__author">— Jamie Chen, VP Product at Lumen</p>
+      </div>
+      <div class="testimonials__carousel">
+        <article class="testimonial">
+          <p>
+            “From concept to launch, they guided us with clarity and delivered a site that doubled our conversion rate.”
+          </p>
+          <p class="testimonial__author">Alex Rivera · Founder, Brightside</p>
+        </article>
+        <article class="testimonial">
+          <p>“A strategic partner that blends creativity with performance. Our brand has never felt more cohesive.”</p>
+          <p class="testimonial__author">Priya Patel · COO, Northwind</p>
+        </article>
+        <article class="testimonial">
+          <p>
+            “They understand how to design for impact. The new onboarding flow boosted activation by 25% in a week.”
+          </p>
+          <p class="testimonial__author">Daniel Price · Head of Growth, Vector</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq" id="faq">
+    <div class="container section-heading">
+      <h2>{{faq.heading}}</h2>
+      <p>{{faq.description}}</p>
+    </div>
+    <div class="container faq__items">
+      <details class="faq__item" open>
+        <summary>How quickly can we start?</summary>
+        <p>We typically begin discovery within two weeks. Rush engagements are available depending on team capacity.</p>
+      </details>
+      <details class="faq__item">
+        <summary>What industries do you specialize in?</summary>
+        <p>
+          We partner with SaaS, fintech, consumer brands, and mission-driven organizations that value design as a growth lever.
+        </p>
+      </details>
+      <details class="faq__item">
+        <summary>Do you offer ongoing support?</summary>
+        <p>
+          Yes. After launch we offer retainers for iterative design, CRO experiments, and marketing enablement to keep momentum
+          going.
+        </p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer class="footer" id="contact">
+  <div class="container footer__inner">
+    <div>
+      <h2>{{contact.heading}}</h2>
+      <p>{{contact.description}}</p>
+    </div>
+    <a class="button button--primary" href="mailto:hello@agencystarter.com">{{contact.cta}}</a>
+  </div>
+  <p class="footer__note">© {year} Agency Starter. All rights reserved.</p>
+</footer>
