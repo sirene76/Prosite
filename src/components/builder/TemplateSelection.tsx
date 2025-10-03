@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession, signIn } from "next-auth/react";
 
 import { useBuilder } from "@/context/BuilderContext";
 
@@ -26,6 +27,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
   const router = useRouter();
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const [isCreatingWebsite, setIsCreatingWebsite] = useState(false);
+  const { data: session } = useSession();
 
   useEffect(() => {
     if (!initialTemplateId) {
@@ -54,6 +56,13 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
 
   const handleSelectTemplate = async (templateId: string) => {
     if (isCreatingWebsite) {
+      return;
+    }
+
+    if (!session) {
+      await signIn(undefined, {
+        callbackUrl: `/builder/templates?selected=${encodeURIComponent(templateId)}`,
+      });
       return;
     }
 
