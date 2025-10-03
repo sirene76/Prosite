@@ -1,13 +1,13 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email", placeholder: "you@example.com" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email) {
@@ -18,14 +18,16 @@ const handler = NextAuth({
         return {
           id: "demo-user",
           name: "Demo User",
-          email: credentials.email
+          email: credentials.email,
         };
-      }
-    })
+      },
+    }),
   ],
   session: {
-    strategy: "jwt"
-  }
-});
+    strategy: "jwt",
+  },
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
