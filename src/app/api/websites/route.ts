@@ -53,6 +53,15 @@ export async function POST(request: Request) {
       user: session.user.email,
       status: "draft",
       plan: "free",
+      theme: {
+        colors: {
+          primary: "#3B82F6",
+          secondary: "#10B981",
+          background: "#FFFFFF",
+          text: "#1F2937",
+        },
+        fonts: {},
+      },
     });
 
     return NextResponse.json(website.toJSON(), { status: 201 });
