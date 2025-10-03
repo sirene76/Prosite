@@ -50,7 +50,9 @@ export async function POST(request: Request) {
       name: template.name,
       templateId: template.id,
       userId: sessionWithId.userId,
+      user: session.user.email,
       status: "draft",
+      plan: "free",
     });
 
     return NextResponse.json(website.toJSON(), { status: 201 });

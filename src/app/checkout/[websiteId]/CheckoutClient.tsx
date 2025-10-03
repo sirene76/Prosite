@@ -5,11 +5,11 @@ import Image from "next/image";
 
 const PLAN_PRICING: Record<PlanId, { price: string; description: string }> = {
   free: { price: "$0/mo", description: "Basic hosting with limited features" },
-  pro: { price: "$29/mo", description: "Full access to Prosite tools and analytics" },
+  export: { price: "$49 one-time", description: "Export your site code for external hosting" },
   agency: { price: "$99/mo", description: "Advanced collaboration and priority support" },
 };
 
-type PlanId = "free" | "pro" | "agency";
+type PlanId = "free" | "export" | "agency";
 
 type CheckoutClientProps = {
   websiteId: string;
@@ -28,7 +28,7 @@ export function CheckoutClient({
   previewImage,
   initialError = null,
 }: CheckoutClientProps) {
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("pro");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("export");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
 
@@ -46,6 +46,7 @@ export function CheckoutClient({
 
       const res = await fetch("/api/checkout_sessions", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ websiteId, plan: selectedPlan }),
       });
 

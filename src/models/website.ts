@@ -23,6 +23,7 @@ const websiteSchema = new Schema(
     name: { type: String, required: true },
     templateId: { type: String, required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: String },
     theme: { type: themeSchema, default: undefined },
     content: {
       type: Map,
@@ -33,8 +34,13 @@ const websiteSchema = new Schema(
     previewImage: { type: String },
     status: {
       type: String,
-      enum: ["draft", "published"],
+      enum: ["draft", "active", "published"],
       default: "draft",
+    },
+    plan: {
+      type: String,
+      enum: ["free", "export", "agency"],
+      default: "free",
     },
     metadata: { type: Schema.Types.Mixed },
   },
