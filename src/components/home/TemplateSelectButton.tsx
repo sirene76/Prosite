@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 interface TemplateSelectButtonProps {
@@ -19,10 +20,18 @@ export function TemplateSelectButton({
   children,
 }: TemplateSelectButtonProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = async () => {
     if (isLoading) {
+      return;
+    }
+
+    if (!session) {
+      await signIn(undefined, {
+        callbackUrl: `/builder/templates?selected=${encodeURIComponent(templateId)}`,
+      });
       return;
     }
 
