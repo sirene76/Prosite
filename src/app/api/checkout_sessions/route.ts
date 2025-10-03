@@ -24,28 +24,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
 
-    const priceId =
-      plan === "pro"
-        ? process.env.STRIPE_PRICE_PRO
-        : plan === "agency"
-          ? process.env.STRIPE_PRICE_AGENCY
-          : null;
+    if (website.user && website.user !== session.user.email) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-    if (!priceId) {
+    let lineItemPrice = "";
+    let mode: "payment" | "subscription" = "payment";
+
+    if (plan === "export") {
+      lineItemPrice = process.env.STRIPE_PRICE_EXPORT ?? "";
+      mode = "payment";
+    } else if (plan === "agency") {
+      lineItemPrice = process.env.STRIPE_PRICE_AGENCY ?? "";
+      mode = "subscription";
+    }
+
+    if (!lineItemPrice) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
     const stripeSession = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode,
       payment_method_types: ["card"],
       line_items: [
         {
-          price: priceId,
+          price: lineItemPrice,
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=1`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${websiteId}?canceled=1`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?websiteId=${websiteId}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/cancel?websiteId=${websiteId}`,
       metadata: { websiteId, plan },
       customer_email: session.user.email!,
     });

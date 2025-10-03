@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 });
 
-type PlanId = "free" | "pro" | "agency";
+type PlanId = "free" | "export" | "agency";
 
 type CheckoutRequest = {
   plan?: PlanId;
@@ -16,7 +16,7 @@ type CheckoutRequest = {
 
 const PRICE_MAP: Record<PlanId, string> = {
   free: "price_xxx_free",
-  pro: "price_xxx_pro",
+  export: "price_xxx_export",
   agency: "price_xxx_agency",
 };
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     }
 
     const { plan } = (await req.json()) as CheckoutRequest;
-    const selectedPlan: PlanId = plan ?? "pro";
+    const selectedPlan: PlanId = plan ?? "export";
 
     const priceId = PRICE_MAP[selectedPlan];
 
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     }
 
     const checkoutSession = await stripe.checkout.sessions.create({
-      mode: selectedPlan === "free" ? "payment" : "subscription",
+      mode: selectedPlan === "agency" ? "subscription" : "payment",
       payment_method_types: ["card"],
       customer_email: session.user.email,
       line_items: [{ price: priceId, quantity: 1 }],

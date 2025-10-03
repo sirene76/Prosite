@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { connectDB } from "@/lib/mongodb";
-import { User } from "@/models/user";
+import { Website } from "@/models/website";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
@@ -18,32 +18,27 @@ export async function POST(req: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
 
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
+    let eventHandled = false;
 
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const websiteId = session.metadata?.websiteId;
+      const plan = session.metadata?.plan;
+
+      if (websiteId) {
         await connectDB();
-        await User.findOneAndUpdate(
-          { email: session.customer_email },
-          {
-            stripeCustomerId: session.customer,
-            subscriptionStatus: "active",
-          }
-        );
+        const update: Record<string, unknown> = { status: "active" };
+        if (plan) {
+          update.plan = plan;
+        }
 
-        break;
+        await Website.findByIdAndUpdate(websiteId, update);
+        eventHandled = true;
       }
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
+    }
 
-        await connectDB();
-        await User.findOneAndUpdate(
-          { stripeCustomerId: customerId },
-          { subscriptionStatus: "canceled" }
-        );
-        break;
-      }
+    if (!eventHandled) {
+      console.warn(`Unhandled Stripe webhook event: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
