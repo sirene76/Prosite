@@ -12,10 +12,21 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
+      console.log("Unauthorized update attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const updates = await req.json();
+    const updates = (await req.json()) as {
+      theme?: {
+        colors?: Record<string, string> | Map<string, string>;
+        fonts?: Record<string, string> | Map<string, string>;
+        [key: string]: unknown;
+      };
+      content?: Record<string, string> | Map<string, string>;
+      name?: string;
+      [key: string]: unknown;
+    };
+    console.log("PATCH incoming:", updates);
     await connectDB();
 
     const website = await Website.findById(params.id);
@@ -29,10 +40,57 @@ export async function PATCH(
     }
 
     if (updates.theme && typeof updates.theme === "object") {
-      website.theme = updates.theme;
+      const existingThemeRaw = website.theme
+        ? typeof (website.theme as unknown as { toObject?: () => unknown }).toObject === "function"
+          ? (website.theme as unknown as { toObject: () => unknown }).toObject()
+          : website.theme
+        : {};
+      const existingTheme = existingThemeRaw as Record<string, any>;
+
+      const mergedTheme: Record<string, unknown> = {
+        ...existingTheme,
+        ...updates.theme,
+      };
+
+      if (updates.theme.colors && typeof updates.theme.colors === "object") {
+        const currentColors = existingTheme.colors instanceof Map
+          ? Object.fromEntries(existingTheme.colors as Map<string, string>)
+          : (existingTheme.colors as Record<string, string> | undefined) ?? {};
+        const incomingColors = updates.theme.colors instanceof Map
+          ? Object.fromEntries(updates.theme.colors as Map<string, string>)
+          : (updates.theme.colors as Record<string, string>);
+        mergedTheme.colors = {
+          ...currentColors,
+          ...incomingColors,
+        };
+      }
+
+      if (updates.theme.fonts && typeof updates.theme.fonts === "object") {
+        const currentFonts = existingTheme.fonts instanceof Map
+          ? Object.fromEntries(existingTheme.fonts as Map<string, string>)
+          : (existingTheme.fonts as Record<string, string> | undefined) ?? {};
+        const incomingFonts = updates.theme.fonts instanceof Map
+          ? Object.fromEntries(updates.theme.fonts as Map<string, string>)
+          : (updates.theme.fonts as Record<string, string>);
+        mergedTheme.fonts = {
+          ...currentFonts,
+          ...incomingFonts,
+        };
+      }
+
+      website.theme = mergedTheme;
     }
     if (updates.content && typeof updates.content === "object") {
-      website.content = updates.content;
+      const currentContent = website.content instanceof Map
+        ? Object.fromEntries(website.content)
+        : (website.content as Record<string, string> | undefined) ?? {};
+      const incomingContent = updates.content instanceof Map
+        ? Object.fromEntries(updates.content as Map<string, string>)
+        : (updates.content as Record<string, string>);
+      website.content = {
+        ...currentContent,
+        ...incomingContent,
+      };
     }
     if (Object.prototype.hasOwnProperty.call(updates, "name")) {
       website.name = updates.name;
@@ -43,7 +101,7 @@ export async function PATCH(
 
     return NextResponse.json(website);
   } catch (err) {
-    console.error("Error updating website:", err);
+    console.error("PATCH error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
