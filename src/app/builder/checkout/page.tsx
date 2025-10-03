@@ -1,21 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useBuilder } from "@/context/BuilderContext";
 
+type Plan = "export" | "agency";
+
 export default function CheckoutPage() {
-  const { selectedTemplate, content } = useBuilder();
+  const { selectedTemplate } = useBuilder();
+  const searchParams = useSearchParams();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const websiteId = searchParams.get("websiteId");
+  const plan: Plan = searchParams.get("plan") === "export" ? "export" : "agency";
+
   const handleCheckout = async () => {
+    if (!websiteId) {
+      setError("Missing website reference. Please return to the dashboard and try again.");
+      return;
+    }
+
     setIsProcessing(true);
     setError(null);
+
     try {
-      const response = await fetch("/api/checkout", {
+      const response = await fetch("/api/checkout_sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ templateId: selectedTemplate.id, content })
+        body: JSON.stringify({ websiteId, plan }),
       });
 
       if (!response.ok) {
@@ -24,8 +37,8 @@ export default function CheckoutPage() {
 
       const data = await response.json();
 
-      if (data?.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+      if (data?.url) {
+        window.location.href = data.url;
       }
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "Unexpected error");
