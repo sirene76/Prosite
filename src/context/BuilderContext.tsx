@@ -16,6 +16,8 @@ import type { TemplateDefinition } from "@/lib/templates";
 type Device = "desktop" | "tablet" | "mobile";
 
 type ThemeState = {
+  name?: string;
+  label?: string;
   colors: Record<string, string>;
   fonts: Record<string, string>;
 };
@@ -83,6 +85,8 @@ function createInitialTheme(template: TemplateDefinition | undefined): ThemeStat
   const colorEntries = (template?.colors ?? []).map((color) => [color.id, color.default ?? ""] as const);
   const fontEntries = (template?.fonts ?? []).map((font) => [font, ""] as const);
   return {
+    name: "Default",
+    label: "Default",
     colors: Object.fromEntries(colorEntries),
     fonts: Object.fromEntries(fontEntries),
   };
@@ -318,10 +322,34 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   const updateTheme = useCallback(
     (changes: Partial<ThemeState>) => {
       setTheme((prev) => {
-        const next = {
-          colors: { ...prev.colors, ...(changes.colors ?? {}) },
-          fonts: { ...prev.fonts, ...(changes.fonts ?? {}) },
-        } satisfies ThemeState;
+        const nextColors = changes.colors ? { ...prev.colors, ...changes.colors } : prev.colors;
+        const nextFonts = changes.fonts ? { ...prev.fonts, ...changes.fonts } : prev.fonts;
+
+        const hasColorChanges = Boolean(changes.colors && Object.keys(changes.colors).length > 0);
+        const hasFontChanges = Boolean(changes.fonts && Object.keys(changes.fonts).length > 0);
+        const hasTokenChanges = hasColorChanges || hasFontChanges;
+
+        const nameProvided = Object.prototype.hasOwnProperty.call(changes, "name");
+        const labelProvided = Object.prototype.hasOwnProperty.call(changes, "label");
+
+        let nextName = nameProvided ? changes.name : prev.name;
+        let nextLabel = labelProvided ? changes.label : prev.label;
+
+        if (!labelProvided && nameProvided) {
+          nextLabel = changes.name;
+        }
+
+        if (hasTokenChanges && !nameProvided && !labelProvided) {
+          nextName = "Custom";
+          nextLabel = "Custom";
+        }
+
+        const next: ThemeState = {
+          colors: nextColors,
+          fonts: nextFonts,
+          name: nextName,
+          label: nextLabel,
+        };
 
         if (websiteId) {
           void saveWebsiteChanges(websiteId, { theme: next });
@@ -335,6 +363,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const registerThemeDefaults = useCallback((defaults: Partial<ThemeState>) => {
     setThemeDefaults((prev) => ({
+      ...prev,
       colors: { ...prev.colors, ...(defaults.colors ?? {}) },
       fonts: { ...prev.fonts, ...(defaults.fonts ?? {}) },
     }));
@@ -355,6 +384,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       });
 
       return {
+        ...prev,
         colors: nextColors,
         fonts: nextFonts,
       };
