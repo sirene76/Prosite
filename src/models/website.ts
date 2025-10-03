@@ -26,9 +26,8 @@ const websiteSchema = new Schema(
     user: { type: String },
     theme: { type: themeSchema, default: undefined },
     content: {
-      type: Map,
-      of: String,
-      default: () => new Map<string, string>(),
+      type: Object,
+      default: {},
     },
     thumbnailUrl: { type: String },
     previewImage: { type: String },

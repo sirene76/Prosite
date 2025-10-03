@@ -5,9 +5,28 @@ import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import { Website } from "@/models/website";
 
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    await connectDB();
+    const website = await Website.findById(id);
+    if (!website) {
+      return NextResponse.json({ error: "Website not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(website);
+  } catch (err) {
+    console.error("GET error:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,6 +35,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const updates = (await req.json()) as {
       theme?: {
         colors?: Record<string, string> | Map<string, string>;
@@ -29,7 +49,7 @@ export async function PATCH(
     console.log("PATCH incoming:", updates);
     await connectDB();
 
-    const website = await Website.findById(params.id);
+    const website = await Website.findById(id);
     if (!website) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
