@@ -23,16 +23,19 @@ export async function POST(req: Request) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const websiteId = session.metadata?.websiteId;
-      const plan = session.metadata?.plan;
 
       if (websiteId) {
         await connectDB();
-        const update: Record<string, unknown> = { status: "active" };
-        if (plan) {
-          update.plan = plan;
-        }
-
-        await Website.findByIdAndUpdate(websiteId, update);
+        await Website.findByIdAndUpdate(websiteId, {
+          status: "active",
+          plan: session.metadata?.plan || "pro",
+          stripeCustomerId:
+            typeof session.customer === "string" ? session.customer : session.customer?.id,
+          stripeSubscriptionId:
+            typeof session.subscription === "string"
+              ? session.subscription
+              : session.subscription?.id,
+        });
         eventHandled = true;
       }
     }
