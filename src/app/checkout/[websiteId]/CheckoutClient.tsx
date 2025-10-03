@@ -35,11 +35,6 @@ export function CheckoutClient({
   const handleProceed = async () => {
     if (isSubmitting) return;
 
-    if (selectedPlan === "free") {
-      window.location.href = `/dashboard?plan=free&website=${encodeURIComponent(websiteId)}`;
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       setError(null);
@@ -51,7 +46,7 @@ export function CheckoutClient({
       });
 
       const data = (await res.json()) as { url?: string; error?: string };
-      if (data?.url) {
+      if (res.ok && data?.url) {
         window.location.href = data.url;
         return;
       }

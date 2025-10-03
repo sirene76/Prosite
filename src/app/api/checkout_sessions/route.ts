@@ -28,6 +28,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    if (plan === "free") {
+      await Website.findByIdAndUpdate(websiteId, {
+        status: "active",
+        plan: "free",
+      });
+
+      return NextResponse.json({ url: `/checkout/success?websiteId=${websiteId}` });
+    }
+
     let lineItemPrice = "";
     let mode: "payment" | "subscription" = "payment";
 
