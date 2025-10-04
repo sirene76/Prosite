@@ -7,8 +7,17 @@ export type RenderTemplateOptions = {
 };
 
 export function renderTemplate({ html, values, modules = [] }: RenderTemplateOptions) {
-  if (!html) {
-    return "";
+  if (!html) return "";
+
+  // --- Inject absolute asset paths dynamically ---
+  const templateMatch = html.match(/data-template-id="([\w-]+)"/);
+  const templateId = templateMatch ? templateMatch[1] : detectTemplateFromHTML(html);
+
+  if (templateId) {
+    html = html
+      .replace(/src=["']\.\/assets\//g, `src="/templates/${templateId}/assets/`)
+      .replace(/href=["']\.\/assets\//g, `href="/templates/${templateId}/assets/`)
+      .replace(/href=["']styles\.css["']/g, `href="/templates/${templateId}/styles.css"`);
   }
 
   const moduleMap = new Map<string, string>();
@@ -19,16 +28,19 @@ export function renderTemplate({ html, values, modules = [] }: RenderTemplateOpt
 
   return html.replace(/{{(.*?)}}/g, (_, rawKey: string) => {
     const key = rawKey.trim();
-    if (!key) {
-      return "";
-    }
-
-    if (moduleMap.has(key)) {
-      return moduleMap.get(key) ?? "";
-    }
-
+    if (!key) return "";
+    if (moduleMap.has(key)) return moduleMap.get(key) ?? "";
     return values[key] ?? "";
   });
+}
+
+// Template ID detection fallback
+function detectTemplateFromHTML(html: string): string | null {
+  if (html.includes("Agency") || html.includes("agency")) return "agency-starter";
+  if (html.includes("Restaurant") || html.includes("burger")) return "restaurant-classic";
+  if (html.includes("Portfolio") || html.includes("portfolio")) return "portfolio-creative";
+  if (html.includes("SaaS") || html.includes("saas")) return "saas-starter";
+  return null;
 }
 
 function renderModule(module: TemplateModuleDefinition) {
