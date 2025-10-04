@@ -311,6 +311,11 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     [templates]
   );
 
+  const lastSyncedTemplateRef = useRef<{ websiteId?: string; templateId?: string }>({
+    websiteId: websiteIdState,
+    templateId: templates[0]?.id,
+  });
+
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId) ?? fallbackTemplate,
     [fallbackTemplate, selectedTemplateId, templates]
@@ -476,10 +481,70 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   }, []);
 
   useEffect(() => {
+    lastSyncedTemplateRef.current = {
+      websiteId,
+      templateId: selectedTemplateId,
+    };
+  }, [selectedTemplateId, websiteId]);
+
+  useEffect(() => {
     if (resolvedWebsiteId && resolvedWebsiteId !== websiteId) {
       setWebsiteId(resolvedWebsiteId);
     }
   }, [resolvedWebsiteId, setWebsiteId, websiteId]);
+
+  useEffect(() => {
+    if (!websiteId) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const synchronizeTemplate = async () => {
+      try {
+        const response = await fetch(`/api/websites/${websiteId}`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          console.error(
+            `Failed to load website data for template sync: ${response.status}`
+          );
+          return;
+        }
+
+        const data = await response.json();
+        const templateId: string | undefined = data?.templateId ?? data?.template?.id;
+
+        if (!templateId) {
+          return;
+        }
+
+        const lastSynced = lastSyncedTemplateRef.current;
+        if (
+          templateId === selectedTemplateId ||
+          (lastSynced.websiteId === websiteId && lastSynced.templateId === templateId)
+        ) {
+          lastSyncedTemplateRef.current = { websiteId, templateId };
+          return;
+        }
+
+        lastSyncedTemplateRef.current = { websiteId, templateId };
+        selectTemplate(templateId);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        console.error("Failed to synchronize template with website:", error);
+      }
+    };
+
+    void synchronizeTemplate();
+
+    return () => {
+      controller.abort();
+    };
+  }, [selectTemplate, selectedTemplateId, websiteId]);
 
   const builderBasePath = useMemo(() => {
     if (websiteId) {
