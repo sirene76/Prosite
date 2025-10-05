@@ -130,7 +130,8 @@ export function WebsitePreview() {
       .filter(Boolean)
       .join(" ");
 
-    const themedCss = `:root { ${colorVariables} ${fontVariables} }\n${assets.css}`;
+    const themeTokens = [colorVariables, fontVariables].filter(Boolean).join(" ");
+    const themedCss = themeTokens ? `:root { ${themeTokens} }` : "";
 
     const rendered = renderTemplate({
       html: assets.html,
@@ -142,11 +143,14 @@ export function WebsitePreview() {
         background: colorPalette.background,
         text: colorPalette.text,
       },
+      css: assets.css,
     });
 
     const renderedWithScroll = injectScrollScript(rendered);
 
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><style>${themedCss}</style></head><body>${renderedWithScroll}</body></html>`;
+    const themeStyleTag = themedCss ? `<style>${themedCss}</style>` : "";
+
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />${themeStyleTag}</head><body>${renderedWithScroll}</body></html>`;
   }, [
     assets,
     mergedData,

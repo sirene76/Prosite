@@ -10,9 +10,10 @@ export type RenderTemplateOptions = {
     background?: string;
     text?: string;
   };
+  css?: string;
 };
 
-export function renderTemplate({ html, values, modules = [], theme }: RenderTemplateOptions) {
+export function renderTemplate({ html, values, modules = [], theme, css }: RenderTemplateOptions) {
   if (!html) return "";
 
   // --- Inject absolute asset paths dynamically ---
@@ -20,12 +21,21 @@ export function renderTemplate({ html, values, modules = [], theme }: RenderTemp
   const templateId = templateMatch ? templateMatch[1] : detectTemplateFromHTML(html);
 
   let processedHtml = html;
+  let inlineCss = css ?? "";
 
   if (templateId) {
+    if (!inlineCss) {
+      inlineCss = resolveTemplateCss(templateId);
+    }
+
     processedHtml = processedHtml
-      .replace(/src=["']\.\/assets\//g, `src="/templates/${templateId}/assets/`)
-      .replace(/href=["']\.\/assets\//g, `href="/templates/${templateId}/assets/`)
-      .replace(/href=["']styles\.css["']/g, `href="/templates/${templateId}/styles.css"`);
+      .replace(/<link[^>]*href=["'](?:\.\/)?style\.css["'][^>]*>/gi, "")
+      .replace(/(src|href)=["'](?:\.\/)?assets\//gi, `$1="/templates/${templateId}/assets/`)
+      .replace(/url\((['"]?)\.\/assets\//gi, `url($1/templates/${templateId}/assets/`);
+  }
+
+  if (inlineCss.trim()) {
+    processedHtml = injectInlineCss(processedHtml, inlineCss, templateId);
   }
 
   const moduleMap = new Map<string, string>();
@@ -51,6 +61,78 @@ export function renderTemplate({ html, values, modules = [], theme }: RenderTemp
   }
 
   return `${colorVars}${rendered}`;
+}
+
+const cssCache = new Map<string, string>();
+
+function resolveTemplateCss(templateId: string) {
+  if (cssCache.has(templateId)) {
+    return cssCache.get(templateId) ?? "";
+  }
+
+  const css = readCssFromDisk(templateId);
+  cssCache.set(templateId, css);
+  return css;
+}
+
+function injectInlineCss(html: string, css: string, templateId: string | null) {
+  if (!css.trim()) {
+    return html;
+  }
+
+  const normalizedCss = templateId
+    ? css.replace(/url\((['"]?)\.\/assets\//gi, `url($1/templates/${templateId}/assets/`)
+    : css;
+  const styleTag = `<style>${normalizedCss}</style>`;
+
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>${styleTag}`);
+  }
+
+  return `${styleTag}${html}`;
+}
+
+type DynamicRequire = ((path: string) => unknown) | null | undefined;
+let cachedRequire: DynamicRequire;
+
+function getDynamicRequire(): Exclude<DynamicRequire, undefined> {
+  if (typeof cachedRequire !== "undefined") {
+    return cachedRequire;
+  }
+
+  if (typeof window !== "undefined") {
+    cachedRequire = null;
+    return cachedRequire;
+  }
+
+  try {
+    const fn = Function("return typeof require !== 'undefined' ? require : null");
+    cachedRequire = fn();
+  } catch {
+    cachedRequire = null;
+  }
+
+  return cachedRequire;
+}
+
+function readCssFromDisk(templateId: string) {
+  const dynamicRequire = getDynamicRequire();
+  if (!dynamicRequire) {
+    return "";
+  }
+
+  try {
+    const fs = dynamicRequire("node:fs") as typeof import("node:fs");
+    const path = dynamicRequire("node:path") as typeof import("node:path");
+    const cssPath = path.join(process.cwd(), "templates", templateId, "style.css");
+    if (fs.existsSync(cssPath)) {
+      return fs.readFileSync(cssPath, "utf8");
+    }
+  } catch (error) {
+    console.error(`Unable to inline CSS for template '${templateId}'`, error);
+  }
+
+  return "";
 }
 
 // Template ID detection fallback
