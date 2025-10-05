@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       html,
       values: body.content ?? {},
       modules: template.modules,
+      theme: resolveThemeColors(template, body.theme, body.themeDefaults),
     });
 
     const finalHtml = wrapWithDocument(rendered);
@@ -109,6 +110,31 @@ function applyTheme(
   }
 
   return `:root { ${tokens.join(" ")} }\n${css}`;
+}
+
+function resolveThemeColors(
+  template: TemplateRegistryEntry,
+  theme?: ThemePayload,
+  themeDefaults?: ThemePayload
+) {
+  const defaults = new Map(template.colors.map((color) => [color.id, color.default ?? ""] as const));
+
+  const read = (key: string) => {
+    const value =
+      theme?.colors?.[key] ??
+      themeDefaults?.colors?.[key] ??
+      defaults.get(key) ??
+      "";
+    const trimmed = typeof value === "string" ? value.trim() : "";
+    return trimmed || undefined;
+  };
+
+  return {
+    primary: read("primary"),
+    secondary: read("secondary"),
+    background: read("background"),
+    text: read("text"),
+  };
 }
 
 function wrapWithDocument(html: string) {

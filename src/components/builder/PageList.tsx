@@ -17,7 +17,9 @@ export function PageList({ pages = defaultPages }: PageListProps) {
   const handleNavigate = useCallback(
     (page: TemplateSectionDefinition) => {
       const id = toSectionId(page.id);
-      previewFrame?.contentWindow?.postMessage({ type: "scroll-to", id }, "*");
+      const iframe =
+        document.querySelector<HTMLIFrameElement>("#preview-frame") ?? previewFrame;
+      iframe?.contentWindow?.postMessage({ type: "scrollTo", target: id }, "*");
     },
     [previewFrame]
   );
