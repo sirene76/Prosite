@@ -9,6 +9,7 @@ import { ProgressBar } from "@/components/builder/ProgressBar";
 import { Sidebar } from "@/components/builder/Sidebar";
 import { WebsitePreview } from "@/components/builder/WebsitePreview";
 import { StepNavigation } from "@/components/builder/StepNavigation";
+import BackButton from "@/components/builder/BackButton";
 import { useParams } from "next/navigation";
 
 type BuilderLayoutClientProps = {
@@ -41,11 +42,14 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
   return (
     <div className="flex min-h-screen flex-col bg-gray-950 text-slate-100">
       <header className="border-b border-gray-900/70 bg-gray-950/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-start justify-between gap-6 px-6 py-3">
-          <div className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            <div className="flex items-center gap-3">
-              <span className="text-slate-200">Prosite Builder</span>
-              <span className="hidden text-slate-600 sm:inline">{stepSummary}</span>
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-3">
+          <div className="flex items-center gap-4">
+            <BackButton />
+            <div className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <div className="flex items-center gap-3">
+                <span className="text-slate-200">Prosite Builder</span>
+                <span className="hidden text-slate-600 sm:inline">{stepSummary}</span>
+              </div>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
