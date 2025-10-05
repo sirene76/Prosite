@@ -4,6 +4,7 @@
   "category": "Business",
   "description": "Professional agency design with services, projects, testimonials, and FAQ.",
   "preview": "/templates/agency-starter/preview.png",
+  "video": "/templates/agency-starter/preview.mp4",
   "fields": {
     "seo.title": {
       "type": "text",

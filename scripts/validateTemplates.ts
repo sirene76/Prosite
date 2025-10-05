@@ -9,6 +9,7 @@ type TemplateMeta = {
   colors?: Record<string, string> | undefined;
   preview?: string;
   previewImage?: string;
+  video?: string;
 };
 
 const root = path.resolve("templates");
@@ -99,6 +100,17 @@ for (const folder of folders) {
     }
   } else {
     console.log(chalk.yellow(`⚠️  ${folder}: No preview image path defined in meta.json`));
+  }
+
+  const videoPath = typeof meta.video === "string" && meta.video.trim().length ? meta.video.trim() : undefined;
+  if (videoPath) {
+    const normalisedVideoPath = videoPath.replace(/^\/+/, "");
+    const absoluteVideoPath = path.join("public", normalisedVideoPath);
+    if (!fs.existsSync(absoluteVideoPath)) {
+      console.log(
+        chalk.yellow(`⚠️  ${folder}: Preview video not found at public/${normalisedVideoPath} (defined as ${videoPath})`)
+      );
+    }
   }
 
   const missingFields = uniquePlaceholders.filter((placeholder) => !fieldKeys.includes(placeholder));

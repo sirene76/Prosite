@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 
 import { useBuilder } from "@/context/BuilderContext";
+import { TemplateCard } from "./TemplateCard";
 
 function classNames(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -107,7 +107,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {templates.map((template, index) => {
+        {templates.map((template) => {
           const isActive = template.id === selectedTemplate.id;
           const isPending = pendingTemplateId === template.id;
 
@@ -119,23 +119,15 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                 isActive ? "border-builder-accent/60 shadow-[0_16px_45px_-24px_rgba(14,165,233,0.6)]" : "border-gray-800/80 hover:border-builder-accent/40"
               )}
             >
-              <div className="relative h-64 w-full bg-gray-900">
-                {template.previewImage ? (
-                  <Image
-                    src={template.previewImage}
-                    alt={template.name}
-                    fill
-                    priority={index < 3}
-                    className="object-cover"
-                    sizes="(min-width: 1280px) 320px, (min-width: 768px) 260px, 100vw"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-xs uppercase tracking-[0.3em] text-slate-500">
-                    No Preview
-                  </div>
-                )}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-gray-950/70 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
-              </div>
+              <TemplateCard
+                template={{
+                  ...template,
+                  preview: template.previewImage,
+                  video: template.previewVideo,
+                }}
+                onSelect={handleSelectTemplate}
+                className="rounded-none"
+              />
 
               <div className="flex flex-1 flex-col gap-4 p-5">
                 <div className="space-y-2">

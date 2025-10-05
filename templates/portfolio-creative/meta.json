@@ -3,6 +3,7 @@
   "name": "Portfolio Creative",
   "description": "A bold single-page portfolio ideal for designers, agencies, and creative professionals.",
   "previewImage": "/templates/portfolio-creative/preview.png",
+  "video": "/templates/portfolio-creative/preview.mp4",
   "sections": [
     {
       "id": "profile",
