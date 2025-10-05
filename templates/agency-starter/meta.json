@@ -3,8 +3,21 @@
   "name": "Agency Starter",
   "category": "Business",
   "description": "Professional agency design with services, projects, testimonials, and FAQ.",
-  "preview": "/templates/agency-starter/preview.png",
   "video": "/templates/agency-starter/preview.mp4",
+  "previewImage": "/templates/agency-starter/preview.png",
+  "preview": "/templates/agency-starter/preview.png",
+  "previewImages": [
+    "/templates/agency-starter/preview.png",
+    "/templates/agency-starter/assets/agency-hero.jpg",
+    "/templates/agency-starter/assets/agency-project-1.jpg",
+    "/templates/agency-starter/assets/agency-project-2.jpg"
+  ],
+  "features": [
+    "Responsive case study layouts",
+    "Testimonials with avatar support",
+    "Service highlights with icon grid",
+    "FAQ accordion and contact CTA"
+  ],
   "fields": {
     "seo.title": {
       "type": "text",

@@ -70,9 +70,12 @@ export type TemplateModuleDefinition = {
 export type TemplateDefinition = {
   id: string;
   name: string;
+  category?: string;
   description: string;
   previewImage: string;
   previewVideo?: string;
+  previewImages?: string[];
+  features?: string[];
   path: string;
   sections: TemplateSectionDefinition[];
   colors: TemplateColorDefinition[];
@@ -88,10 +91,13 @@ export type TemplateRegistryEntry = TemplateDefinition & {
 type RawTemplateMeta = {
   id?: unknown;
   name?: unknown;
+  category?: unknown;
   description?: unknown;
   previewImage?: unknown;
   preview?: unknown;
   video?: unknown;
+  previewImages?: unknown;
+  features?: unknown;
   sections?: unknown;
   fields?: unknown;
   colors?: unknown;
@@ -192,6 +198,20 @@ async function buildTemplateDefinition(
         ? meta.preview
         : "";
   const previewVideo = typeof meta.video === "string" ? meta.video : undefined;
+  const category =
+    typeof meta.category === "string" && meta.category.trim() ? meta.category.trim() : undefined;
+  const previewImagesRaw = Array.isArray(meta.previewImages)
+    ? (meta.previewImages as unknown[])
+        .map((value) => (typeof value === "string" && value.trim() ? value.trim() : null))
+        .filter((value): value is string => Boolean(value))
+    : [];
+  const previewImages = previewImagesRaw.length ? previewImagesRaw : undefined;
+  const featuresRaw = Array.isArray(meta.features)
+    ? (meta.features as unknown[])
+        .map((value) => (typeof value === "string" && value.trim() ? value.trim() : null))
+        .filter((value): value is string => Boolean(value))
+    : [];
+  const features = featuresRaw.length ? featuresRaw : undefined;
 
   const sectionsFromFields = normaliseFieldMap(meta.fields);
   const sections = sectionsFromFields.length ? sectionsFromFields : normaliseSections(meta.sections);
@@ -204,9 +224,12 @@ async function buildTemplateDefinition(
   return {
     id,
     name,
+    category,
     description,
     previewImage,
     previewVideo,
+    previewImages,
+    features,
     path: `/templates/${folderName}`,
     sections,
     colors,

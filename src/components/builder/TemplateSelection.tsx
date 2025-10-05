@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
-
 import { useBuilder } from "@/context/BuilderContext";
 import { TemplateGalleryModal } from "@/components/ui/TemplateGalleryModal";
 
@@ -18,20 +16,11 @@ type TemplateSelectionProps = {
   initialTemplateId?: string;
 };
 
-type CreateWebsiteResponse = {
-  _id: string;
-  templateId: string;
-  status: "draft" | "active" | "published";
-};
-
 export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps) {
-  const { templates, selectedTemplate, selectTemplate, websiteId, setWebsiteId } = useBuilder();
+  const { templates, selectedTemplate, selectTemplate, websiteId } = useBuilder();
   const router = useRouter();
-  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
-  const [isCreatingWebsite, setIsCreatingWebsite] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  const { data: session } = useSession();
 
   const galleryTemplates = useMemo(
     () =>
@@ -110,47 +99,9 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
     openGallery(templateId);
   };
 
-  const handleSelectTemplate = async (templateId: string) => {
-    if (isCreatingWebsite) {
-      return;
-    }
-
-    if (!session) {
-      await signIn(undefined, {
-        callbackUrl: `/builder/templates?selected=${encodeURIComponent(templateId)}`,
-      });
-      return;
-    }
-
+  const handleSelectTemplate = (templateId: string) => {
     selectTemplate(templateId);
-    setPendingTemplateId(templateId);
-    setIsCreatingWebsite(true);
-
-    try {
-      const response = await fetch("/api/websites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ templateId }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create website (status ${response.status})`);
-      }
-
-      const website: CreateWebsiteResponse = await response.json();
-
-      if (!website?._id) {
-        throw new Error("Website response did not include an _id");
-      }
-
-      setWebsiteId(website._id);
-      router.replace(`/builder/${website._id}/theme`);
-    } catch (error) {
-      console.error("Failed to create website from template", error);
-    } finally {
-      setPendingTemplateId(null);
-      setIsCreatingWebsite(false);
-    }
+    router.push(`/builder/templates/${templateId}`);
   };
 
   return (
@@ -165,7 +116,6 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {templates.map((template) => {
           const isActive = template.id === selectedTemplate.id;
-          const isPending = pendingTemplateId === template.id;
 
           return (
             <div
@@ -208,10 +158,8 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                         ? "border-builder-accent bg-builder-accent text-slate-950 hover:brightness-110"
                         : "border-gray-800 bg-gray-950/70 text-slate-200 hover:border-builder-accent/60 hover:text-white"
                     )}
-                    disabled={isCreatingWebsite}
-                    aria-busy={isPending}
                   >
-                    {isPending ? "Creating website..." : isActive ? "Using template" : "Select template"}
+                    {isActive ? "Using template" : "Use this template"}
                   </button>
                   <button
                     type="button"
@@ -220,19 +168,13 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                   >
                     Preview
                   </button>
-                  {isActive ? (
+                  {isActive && websiteId ? (
                     <button
                       type="button"
                       onClick={() => {
-                        if (websiteId) {
-                          router.replace(`/builder/${websiteId}/theme`);
-                          return;
-                        }
-
-                        void handleSelectTemplate(template.id);
+                        router.replace(`/builder/${websiteId}/theme`);
                       }}
                       className="flex-1 rounded-full border border-builder-accent/70 bg-builder-accent/10 px-4 py-2 text-sm font-semibold text-builder-accent transition hover:bg-builder-accent/20"
-                      disabled={isCreatingWebsite}
                     >
                       Continue to theme
                     </button>
