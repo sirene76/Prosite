@@ -14,11 +14,12 @@ export async function generateStaticParams() {
 }
 
 type TemplateDetailsPageProps = {
-  params: { templateId: string };
+  params: Promise<{ templateId: string }>;
 };
 
 export default async function TemplateDetailsPage({ params }: TemplateDetailsPageProps) {
-  const template = await getTemplateById(params.templateId);
+  const { templateId } = await params;
+  const template = await getTemplateById(templateId);
 
   if (!template) {
     return notFound();
