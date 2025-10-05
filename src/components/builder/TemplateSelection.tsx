@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useBuilder } from "@/context/BuilderContext";
-import { TemplateGalleryModal } from "@/components/ui/TemplateGalleryModal";
 
+import { useBuilder } from "@/context/BuilderContext";
 import { TemplateCard } from "./TemplateCard";
+import { TemplateGalleryModal } from "@/components/ui/TemplateGalleryModal";
 
 function classNames(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -17,8 +16,9 @@ type TemplateSelectionProps = {
 };
 
 export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps) {
-  const { templates, selectedTemplate, selectTemplate, websiteId } = useBuilder();
+  const { templates, selectedTemplate, selectTemplate } = useBuilder();
   const router = useRouter();
+
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
@@ -34,74 +34,29 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
     [templates]
   );
 
-  useEffect(() => {
-    if (!galleryTemplates.length) {
-      setIsGalleryOpen(false);
-      setGalleryIndex(0);
-      return;
-    }
-
-    setGalleryIndex((current) => {
-      if (current >= galleryTemplates.length) {
-        return galleryTemplates.length - 1;
-      }
-      return current;
-    });
-  }, [galleryTemplates]);
-
-  useEffect(() => {
-    if (!initialTemplateId) {
-      return;
-    }
-
-    const hasTemplate = templates.some((template) => template.id === initialTemplateId);
-
-    if (hasTemplate) {
-      selectTemplate(initialTemplateId);
-    }
-  }, [initialTemplateId, selectTemplate, templates]);
-
-  if (!templates.length) {
-    return (
-      <div className="space-y-4 rounded-2xl border border-gray-800/60 bg-gray-950/50 p-6 text-center text-sm text-slate-400">
-        <p>No templates found. Add a folder under <code className="rounded bg-gray-900/80 px-1 py-0.5">/templates</code> to get started.</p>
-      </div>
-    );
-  }
-
   const openGallery = (templateId: string) => {
-    const index = galleryTemplates.findIndex((template) => template.id === templateId);
-    if (index === -1) {
-      const previewUrl = `/templates/${encodeURIComponent(templateId)}`;
-      window.open(previewUrl, "_blank", "noopener,noreferrer");
-      return;
+    const index = galleryTemplates.findIndex((t) => t.id === templateId);
+    if (index >= 0) {
+      setGalleryIndex(index);
+      setIsGalleryOpen(true);
     }
-
-    setGalleryIndex(index);
-    setIsGalleryOpen(true);
-  };
-
-  const handleGalleryPrev = () => {
-    if (!galleryTemplates.length) {
-      return;
-    }
-    setGalleryIndex((current) => (current - 1 + galleryTemplates.length) % galleryTemplates.length);
-  };
-
-  const handleGalleryNext = () => {
-    if (!galleryTemplates.length) {
-      return;
-    }
-    setGalleryIndex((current) => (current + 1) % galleryTemplates.length);
-  };
-
-  const handlePreview = (templateId: string) => {
-    openGallery(templateId);
   };
 
   const handleSelectTemplate = (templateId: string) => {
     selectTemplate(templateId);
-    router.push(`/builder/templates/${templateId}`);
+    router.push(`/builder/templates/${templateId}`); // ✅ redirect to overview page
+  };
+
+  const handlePreview = (templateId: string) => openGallery(templateId);
+
+  const handleGalleryPrev = () => {
+    if (!galleryTemplates.length) return;
+    setGalleryIndex((current) => (current - 1 + galleryTemplates.length) % galleryTemplates.length);
+  };
+
+  const handleGalleryNext = () => {
+    if (!galleryTemplates.length) return;
+    setGalleryIndex((current) => (current + 1) % galleryTemplates.length);
   };
 
   return (
@@ -122,7 +77,9 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
               key={template.id}
               className={classNames(
                 "group flex flex-col overflow-hidden rounded-3xl border bg-gray-900/40 transition",
-                isActive ? "border-builder-accent/60 shadow-[0_16px_45px_-24px_rgba(14,165,233,0.6)]" : "border-gray-800/80 hover:border-builder-accent/40"
+                isActive
+                  ? "border-builder-accent/60 shadow-[0_16px_45px_-24px_rgba(14,165,233,0.6)]"
+                  : "border-gray-800/80 hover:border-builder-accent/40"
               )}
             >
               <TemplateCard
@@ -149,6 +106,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                 </div>
 
                 <div className="mt-auto flex flex-wrap gap-3">
+                  {/* ✅ This button now goes to overview page */}
                   <button
                     type="button"
                     onClick={() => handleSelectTemplate(template.id)}
@@ -159,8 +117,9 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                         : "border-gray-800 bg-gray-950/70 text-slate-200 hover:border-builder-accent/60 hover:text-white"
                     )}
                   >
-                    {isActive ? "Using template" : "Use this template"}
+                    Use this template
                   </button>
+
                   <button
                     type="button"
                     onClick={() => handlePreview(template.id)}
@@ -168,23 +127,13 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                   >
                     Preview
                   </button>
-                  {isActive && websiteId ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        router.replace(`/builder/${websiteId}/theme`);
-                      }}
-                      className="flex-1 rounded-full border border-builder-accent/70 bg-builder-accent/10 px-4 py-2 text-sm font-semibold text-builder-accent transition hover:bg-builder-accent/20"
-                    >
-                      Continue to theme
-                    </button>
-                  ) : null}
                 </div>
               </div>
             </div>
           );
         })}
-    </div>
+      </div>
+
       <TemplateGalleryModal
         open={isGalleryOpen && Boolean(galleryTemplates.length)}
         index={galleryIndex}
@@ -193,7 +142,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
         onPrev={handleGalleryPrev}
         onNext={handleGalleryNext}
         onSelect={(templateId) => {
-          void handleSelectTemplate(templateId);
+          handleSelectTemplate(templateId);
           setIsGalleryOpen(false);
         }}
       />
