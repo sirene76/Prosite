@@ -35,6 +35,7 @@ export async function GET(
         background: themeDefaults.background,
         text: themeDefaults.text,
       },
+      css: assets.css,
     });
     const document = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
 <title>${templateMeta?.name ?? "Template preview"}</title>

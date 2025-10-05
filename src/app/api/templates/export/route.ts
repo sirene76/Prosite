@@ -47,6 +47,7 @@ export async function POST(request: Request) {
       values: body.content ?? {},
       modules: template.modules,
       theme: resolveThemeColors(template, body.theme, body.themeDefaults),
+      css,
     });
 
     const finalHtml = wrapWithDocument(rendered);
