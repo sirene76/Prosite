@@ -3,8 +3,21 @@
   "name": "Restaurant Classic",
   "category": "Food & Drink",
   "description": "Bold restaurant theme with menu grid and food imagery.",
-  "preview": "/templates/restaurant-classic/preview.png",
   "video": "/templates/restaurant-classic/preview.mp4",
+  "previewImage": "/templates/restaurant-classic/preview.png",
+  "preview": "/templates/restaurant-classic/preview.png",
+  "previewImages": [
+    "/templates/restaurant-classic/preview.png",
+    "/templates/restaurant-classic/assets/restaurant-hero.jpg",
+    "/templates/restaurant-classic/assets/dessert.jpg",
+    "/templates/restaurant-classic/assets/interior.jpg"
+  ],
+  "features": [
+    "Menu highlights with pricing",
+    "Chef's specials spotlight",
+    "Reservation and location details",
+    "Customer review testimonials"
+  ],
   "fields": {
     "seo.title": {
       "type": "text",
