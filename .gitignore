@@ -5,5 +5,8 @@
 .DS_Store
 *.log
 
+# uploaded assets
+/public/uploads
+
 # generated
 .next-env.d.ts
