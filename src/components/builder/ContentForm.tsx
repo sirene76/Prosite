@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { Fragment } from "react";
+import { Fragment, type ChangeEvent } from "react";
 
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
 
@@ -49,36 +49,13 @@ function renderField(
 
   if (type === "image") {
     return (
-      <label className="flex flex-col gap-3">
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
-        {value ? (
-          <div className="flex flex-col gap-2 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
-            <img
-              src={value}
-              alt={label}
-              className="h-40 w-full rounded-lg object-cover"
-            />
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <button
-                type="button"
-                onClick={() => onChange(key, "")}
-                className="rounded-lg border border-gray-800 px-3 py-1 font-medium text-slate-300 transition hover:border-builder-accent/60 hover:text-white"
-              >
-                Clear image
-              </button>
-              <span className="truncate">{truncateValue(value)}</span>
-            </div>
-          </div>
-        ) : null}
-        <input
-          type="url"
-          value={value}
-          placeholder={placeholder ?? field.defaultValue ?? "https://"}
-          onChange={(event) => onChange(key, event.target.value)}
-          className={`${inputBaseClass} text-xs`}
-        />
-        {description ? <span className="text-[11px] text-slate-500">{description}</span> : null}
-      </label>
+      <ImageField
+        label={label}
+        value={value}
+        fieldKey={key}
+        description={description}
+        onChange={onChange}
+      />
     );
   }
 
@@ -136,9 +113,69 @@ function ensureColorValue(value: string | undefined) {
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : "#000000";
 }
 
-function truncateValue(value: string, maxLength = 32) {
-  if (value.length <= maxLength) {
-    return value;
+type ImageFieldProps = {
+  label: string;
+  value: string;
+  fieldKey: string;
+  onChange: (key: string, value: string) => void;
+  description?: string;
+};
+
+function ImageField({ label, value, onChange, fieldKey, description }: ImageFieldProps) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = await response.json();
+
+    if (data.url) {
+      onChange(fieldKey, data.url as string);
+    }
   }
-  return `${value.slice(0, maxLength)}…`;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</label>
+
+      {value ? (
+        <div className="relative">
+          <img
+            src={value}
+            alt={label}
+            className="h-40 w-full rounded-lg object-cover border border-gray-800"
+          />
+          <button
+            type="button"
+            onClick={() => onChange(fieldKey, "")}
+            className="absolute right-2 top-2 rounded bg-black/60 px-2 py-1 text-xs text-white"
+          >
+            Remove
+          </button>
+        </div>
+      ) : null}
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="block w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-blue-500"
+      />
+
+      {description ? <span className="text-[11px] text-slate-500">{description}</span> : null}
+    </div>
+  );
 }
