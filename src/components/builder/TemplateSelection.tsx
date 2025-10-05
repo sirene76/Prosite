@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 
 import { useBuilder } from "@/context/BuilderContext";
+import { TemplateGalleryModal } from "@/components/ui/TemplateGalleryModal";
+
 import { TemplateCard } from "./TemplateCard";
 
 function classNames(...classes: (string | false | null | undefined)[]) {
@@ -27,7 +29,36 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
   const router = useRouter();
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const [isCreatingWebsite, setIsCreatingWebsite] = useState(false);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const { data: session } = useSession();
+
+  const galleryTemplates = useMemo(
+    () =>
+      templates.map((template) => ({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        previewImage: template.previewImage,
+        previewVideo: template.previewVideo,
+      })),
+    [templates]
+  );
+
+  useEffect(() => {
+    if (!galleryTemplates.length) {
+      setIsGalleryOpen(false);
+      setGalleryIndex(0);
+      return;
+    }
+
+    setGalleryIndex((current) => {
+      if (current >= galleryTemplates.length) {
+        return galleryTemplates.length - 1;
+      }
+      return current;
+    });
+  }, [galleryTemplates]);
 
   useEffect(() => {
     if (!initialTemplateId) {
@@ -49,9 +80,34 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
     );
   }
 
+  const openGallery = (templateId: string) => {
+    const index = galleryTemplates.findIndex((template) => template.id === templateId);
+    if (index === -1) {
+      const previewUrl = `/templates/${encodeURIComponent(templateId)}`;
+      window.open(previewUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    setGalleryIndex(index);
+    setIsGalleryOpen(true);
+  };
+
+  const handleGalleryPrev = () => {
+    if (!galleryTemplates.length) {
+      return;
+    }
+    setGalleryIndex((current) => (current - 1 + galleryTemplates.length) % galleryTemplates.length);
+  };
+
+  const handleGalleryNext = () => {
+    if (!galleryTemplates.length) {
+      return;
+    }
+    setGalleryIndex((current) => (current + 1) % galleryTemplates.length);
+  };
+
   const handlePreview = (templateId: string) => {
-    const previewUrl = `/templates/${encodeURIComponent(templateId)}`;
-    window.open(previewUrl, "_blank", "noopener,noreferrer");
+    openGallery(templateId);
   };
 
   const handleSelectTemplate = async (templateId: string) => {
@@ -125,8 +181,8 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
                   preview: template.previewImage,
                   video: template.previewVideo,
                 }}
-                onSelect={handleSelectTemplate}
                 className="rounded-none"
+                onPreview={openGallery}
               />
 
               <div className="flex flex-1 flex-col gap-4 p-5">
@@ -186,7 +242,19 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
             </div>
           );
         })}
-      </div>
+    </div>
+      <TemplateGalleryModal
+        open={isGalleryOpen && Boolean(galleryTemplates.length)}
+        index={galleryIndex}
+        templates={galleryTemplates}
+        onClose={() => setIsGalleryOpen(false)}
+        onPrev={handleGalleryPrev}
+        onNext={handleGalleryNext}
+        onSelect={(templateId) => {
+          void handleSelectTemplate(templateId);
+          setIsGalleryOpen(false);
+        }}
+      />
     </div>
   );
 }

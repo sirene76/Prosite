@@ -5,8 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import clsx from "clsx";
 
-import { TemplatePreviewModal } from "@/components/ui/TemplatePreviewModal";
-
 export type TemplateCardTemplate = {
   id: string;
   name: string;
@@ -19,13 +17,12 @@ export type TemplateCardTemplate = {
 
 type TemplateCardProps = {
   template: TemplateCardTemplate;
-  onSelect: (templateId: string) => void | Promise<void>;
   className?: string;
+  onPreview?: (templateId: string) => void;
 };
 
-export function TemplateCard({ template, onSelect, className }: TemplateCardProps) {
+export function TemplateCard({ template, className, onPreview }: TemplateCardProps) {
   const [isHovering, setIsHovering] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const previewSrc = template.preview ?? template.previewImage;
@@ -64,6 +61,11 @@ export function TemplateCard({ template, onSelect, className }: TemplateCardProp
       <div
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
+        onClick={() => {
+          if (onPreview) {
+            onPreview(template.id);
+          }
+        }}
         className={clsx(
           "group relative flex h-64 w-full cursor-pointer overflow-hidden rounded-3xl bg-gray-950/40 transition",
           className
@@ -102,7 +104,7 @@ export function TemplateCard({ template, onSelect, className }: TemplateCardProp
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              setPreviewOpen(true);
+              onPreview?.(template.id);
             }}
             className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             aria-label={`Preview ${template.name}`}
@@ -122,21 +124,6 @@ export function TemplateCard({ template, onSelect, className }: TemplateCardProp
           <h3 className="text-sm font-semibold text-white">{template.name}</h3>
         </div>
       </div>
-
-      <TemplatePreviewModal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        template={{
-          name: template.name,
-          description: template.description,
-          video: videoSrc,
-          preview: previewSrc,
-        }}
-        onUseTemplate={() => {
-          void onSelect(template.id);
-          setPreviewOpen(false);
-        }}
-      />
     </>
   );
 }
