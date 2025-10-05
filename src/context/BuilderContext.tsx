@@ -302,6 +302,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         name: "No templates available",
         description: "Add template folders under /templates to get started.",
         previewImage: "",
+        previewVideo: undefined,
         path: "",
         sections: [],
         colors: [],

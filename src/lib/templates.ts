@@ -72,6 +72,7 @@ export type TemplateDefinition = {
   name: string;
   description: string;
   previewImage: string;
+  previewVideo?: string;
   path: string;
   sections: TemplateSectionDefinition[];
   colors: TemplateColorDefinition[];
@@ -90,6 +91,7 @@ type RawTemplateMeta = {
   description?: unknown;
   previewImage?: unknown;
   preview?: unknown;
+  video?: unknown;
   sections?: unknown;
   fields?: unknown;
   colors?: unknown;
@@ -189,6 +191,7 @@ async function buildTemplateDefinition(
       : typeof meta.preview === "string"
         ? meta.preview
         : "";
+  const previewVideo = typeof meta.video === "string" ? meta.video : undefined;
 
   const sectionsFromFields = normaliseFieldMap(meta.fields);
   const sections = sectionsFromFields.length ? sectionsFromFields : normaliseSections(meta.sections);
@@ -203,6 +206,7 @@ async function buildTemplateDefinition(
     name,
     description,
     previewImage,
+    previewVideo,
     path: `/templates/${folderName}`,
     sections,
     colors,
