@@ -21,10 +21,20 @@ export async function GET(
       })
     );
 
+    const themeDefaults = Object.fromEntries(
+      (templateMeta?.colors ?? []).map((color) => [color.id, color.default ?? ""])
+    );
+
     const html = renderTemplate({
       html: assets.html,
       values: sampleData,
       modules: templateMeta?.modules ?? [],
+      theme: {
+        primary: themeDefaults.primary,
+        secondary: themeDefaults.secondary,
+        background: themeDefaults.background,
+        text: themeDefaults.text,
+      },
     });
     const document = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
 <title>${templateMeta?.name ?? "Template preview"}</title>

@@ -105,6 +105,7 @@ export function WebsitePreview() {
       return "";
     }
 
+    const colorPalette: Record<string, string> = {};
     const colorVariables = selectedTemplate.colors
       .map((color) => {
         const key = color.id;
@@ -112,6 +113,7 @@ export function WebsitePreview() {
         if (!value) {
           return null;
         }
+        colorPalette[key] = value;
         return `--color-${key}: ${value}; --${key}-color: ${value};`;
       })
       .filter(Boolean)
@@ -134,11 +136,17 @@ export function WebsitePreview() {
       html: assets.html,
       values: mergedData,
       modules: selectedTemplate.modules,
+      theme: {
+        primary: colorPalette.primary,
+        secondary: colorPalette.secondary,
+        background: colorPalette.background,
+        text: colorPalette.text,
+      },
     });
 
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><style>${themedCss}</style></head><body>${rendered}</body></html>`;
+    const renderedWithScroll = injectScrollScript(rendered);
 
-    return html;
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><style>${themedCss}</style></head><body>${renderedWithScroll}</body></html>`;
   }, [
     assets,
     mergedData,
@@ -347,6 +355,7 @@ export function WebsitePreview() {
                   <iframe
                     key={`${selectedTemplate.id}-${device}`}
                     ref={setIframeRef}
+                    id="preview-frame"
                     title="Website preview"
                     srcDoc={srcDoc}
                     data-preview-frame="true"
@@ -417,6 +426,20 @@ export function WebsitePreview() {
       </div>
     </div>
   );
+}
+
+function injectScrollScript(html: string) {
+  if (!html) {
+    return html;
+  }
+
+  const script = `\n<script>\n  window.addEventListener("message", (e) => {\n    if (e.data?.type === "scrollTo") {\n      const el = document.getElementById(e.data.target);\n      if (el) {\n        el.scrollIntoView({ behavior: "smooth" });\n      }\n    }\n  });\n</script>\n`;
+
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${script}</body>`);
+  }
+
+  return `${html}${script}`;
 }
 
 function extractPlaceholders(html: string) {

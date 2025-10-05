@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { Fragment, type ChangeEvent } from "react";
+import { Fragment } from "react";
 
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
 
@@ -62,24 +62,20 @@ function renderField(
               <button
                 type="button"
                 onClick={() => onChange(key, "")}
-                className="rounded-lg border border-gray-800 px-3 py-1 font-medium text-slate-300 transition hover:border-rose-400/50 hover:text-white"
+                className="rounded-lg border border-gray-800 px-3 py-1 font-medium text-slate-300 transition hover:border-builder-accent/60 hover:text-white"
               >
-                Remove image
+                Clear image
               </button>
               <span className="truncate">{truncateValue(value)}</span>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col gap-3 rounded-xl border border-dashed border-gray-800 bg-gray-950/40 p-6 text-center">
-            <span className="text-sm text-slate-400">Upload an image</span>
-            <span className="text-[11px] uppercase tracking-[0.3em] text-slate-500">PNG, JPG, GIF</span>
-          </div>
-        )}
+        ) : null}
         <input
-          type="file"
-          accept="image/*"
-          onChange={(event) => handleFileUpload(event, key, onChange)}
-          className="block text-xs text-slate-400"
+          type="url"
+          value={value}
+          placeholder={placeholder ?? field.defaultValue ?? "https://"}
+          onChange={(event) => onChange(key, event.target.value)}
+          className={`${inputBaseClass} text-xs`}
         />
         {description ? <span className="text-[11px] text-slate-500">{description}</span> : null}
       </label>
@@ -131,24 +127,6 @@ function renderField(
       {description ? <span className="text-[11px] text-slate-500">{description}</span> : null}
     </label>
   );
-}
-
-function handleFileUpload(
-  event: ChangeEvent<HTMLInputElement>,
-  key: string,
-  onChange: (key: string, value: string) => void
-) {
-  const file = event.target.files?.[0];
-  if (!file) {
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    const result = typeof reader.result === "string" ? reader.result : "";
-    onChange(key, result);
-  };
-  reader.readAsDataURL(file);
 }
 
 function ensureColorValue(value: string | undefined) {

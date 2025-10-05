@@ -89,7 +89,9 @@ type RawTemplateMeta = {
   name?: unknown;
   description?: unknown;
   previewImage?: unknown;
+  preview?: unknown;
   sections?: unknown;
+  fields?: unknown;
   colors?: unknown;
   fonts?: unknown;
   modules?: unknown;
@@ -181,11 +183,17 @@ async function buildTemplateDefinition(
   const id = toId(typeof meta.id === "string" ? meta.id : folderName);
   const name = typeof meta.name === "string" && meta.name.trim() ? meta.name.trim() : toTitleCase(id);
   const description = typeof meta.description === "string" ? meta.description : "";
-  const previewImage = typeof meta.previewImage === "string" ? meta.previewImage : "";
+  const previewImage =
+    typeof meta.previewImage === "string"
+      ? meta.previewImage
+      : typeof meta.preview === "string"
+        ? meta.preview
+        : "";
 
-  const sections = normaliseSections(meta.sections);
+  const sectionsFromFields = normaliseFieldMap(meta.fields);
+  const sections = sectionsFromFields.length ? sectionsFromFields : normaliseSections(meta.sections);
   const colors = normaliseColors(meta.colors);
-  const fonts = Array.isArray(meta.fonts) ? meta.fonts.map((font) => String(font)) : [];
+  const fonts = normaliseFonts(meta.fonts);
   const modules = normaliseModules(meta.modules);
 
   const assetsDirectory = await normaliseAssetsDirectory(folderPath);
@@ -230,6 +238,76 @@ function toTitleCase(value: string) {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function normaliseFieldMap(raw: unknown): TemplateSectionDefinition[] {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return [];
+  }
+
+  const entries = Object.entries(raw as Record<string, unknown>);
+  const sections = new Map<string, { definition: TemplateSectionDefinition; order: number }>();
+  let sectionOrder = 0;
+
+  for (const [key, value] of entries) {
+    if (typeof key !== "string") {
+      continue;
+    }
+
+    const trimmedKey = key.trim();
+    if (!trimmedKey) {
+      continue;
+    }
+
+    if (!value || typeof value !== "object") {
+      continue;
+    }
+
+    const parts = trimmedKey.split(".");
+    const hasSection = parts.length > 1;
+    const rawSection = hasSection ? parts[0] : "general";
+    const sectionId = toSlug(rawSection, rawSection || "section");
+
+    if (!sections.has(sectionId)) {
+      const label = hasSection ? toTitleCase(rawSection) : "General";
+      sections.set(sectionId, {
+        definition: { id: sectionId, label, fields: [] },
+        order: sectionOrder++,
+      });
+    }
+
+    const section = sections.get(sectionId);
+    if (!section) {
+      continue;
+    }
+
+    const config = value as Record<string, unknown>;
+    const fieldLabelPart = hasSection ? parts.slice(1).join(".") : parts[0];
+    const label =
+      typeof config.label === "string" && config.label.trim()
+        ? config.label.trim()
+        : toTitleCase(fieldLabelPart);
+    const placeholder = typeof config.placeholder === "string" ? config.placeholder : undefined;
+    const description = typeof config.description === "string" ? config.description : undefined;
+    const defaultValue = typeof config.default === "string" ? config.default : undefined;
+
+    section.definition.fields.push({
+      id: trimmedKey,
+      label,
+      type: normaliseFieldType(config.type),
+      placeholder,
+      description,
+      default: defaultValue,
+    });
+  }
+
+  return Array.from(sections.values())
+    .sort((a, b) => a.order - b.order)
+    .map(({ definition }) => ({
+      ...definition,
+      fields: definition.fields.filter(Boolean),
+    }))
+    .filter((section) => section.fields.length > 0);
 }
 
 function normaliseSections(raw: unknown): TemplateSectionDefinition[] {
@@ -307,32 +385,68 @@ function normaliseFieldType(value: unknown): TemplateFieldType {
 }
 
 function normaliseColors(raw: unknown): TemplateColorDefinition[] {
-  if (!Array.isArray(raw)) {
+  if (!raw) {
     return [];
   }
 
-  return (raw as Array<string | Record<string, unknown>>)
-    .map((entry, index) => {
-      if (typeof entry === "string") {
-        const id = entry.trim();
-        if (!id) {
+  if (Array.isArray(raw)) {
+    return (raw as Array<string | Record<string, unknown>>)
+      .map((entry, index) => {
+        if (typeof entry === "string") {
+          const id = entry.trim();
+          if (!id) {
+            return null;
+          }
+          return { id, label: toTitleCase(id) } satisfies TemplateColorDefinition;
+        }
+
+        if (!entry || typeof entry !== "object") {
           return null;
         }
-        return { id, label: toTitleCase(id) } satisfies TemplateColorDefinition;
-      }
 
-      if (!entry || typeof entry !== "object") {
-        return null;
-      }
+        const idRaw = typeof entry.id === "string" && entry.id.trim() ? entry.id.trim() : `color-${index + 1}`;
+        const id = toSlug(idRaw, `color-${index + 1}`);
+        const label = typeof entry.label === "string" && entry.label.trim() ? entry.label.trim() : toTitleCase(id);
+        const defaultValue = typeof entry.default === "string" ? entry.default : undefined;
 
-      const idRaw = typeof entry.id === "string" && entry.id.trim() ? entry.id.trim() : `color-${index + 1}`;
-      const id = toSlug(idRaw, `color-${index + 1}`);
-      const label = typeof entry.label === "string" && entry.label.trim() ? entry.label.trim() : toTitleCase(id);
-      const defaultValue = typeof entry.default === "string" ? entry.default : undefined;
+        return { id, label, default: defaultValue } satisfies TemplateColorDefinition;
+      })
+      .filter((color): color is TemplateColorDefinition => Boolean(color));
+  }
 
-      return { id, label, default: defaultValue } satisfies TemplateColorDefinition;
-    })
-    .filter((color): color is TemplateColorDefinition => Boolean(color));
+  if (typeof raw === "object") {
+    return Object.entries(raw as Record<string, unknown>)
+      .map(([key, value]) => {
+        const idRaw = key.trim();
+        if (!idRaw) {
+          return null;
+        }
+
+        const id = toSlug(idRaw, idRaw);
+        const defaultValue = typeof value === "string" ? value : undefined;
+        return { id, label: toTitleCase(id), default: defaultValue } satisfies TemplateColorDefinition;
+      })
+      .filter((color): color is TemplateColorDefinition => Boolean(color));
+  }
+
+  return [];
+}
+
+function normaliseFonts(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return (raw as unknown[])
+      .map((entry) => (typeof entry === "string" ? entry.trim() : String(entry)))
+      .map((value) => value.trim())
+      .filter((value) => Boolean(value));
+  }
+
+  if (raw && typeof raw === "object") {
+    return Object.keys(raw as Record<string, unknown>)
+      .map((key) => key.trim())
+      .filter((key) => Boolean(key));
+  }
+
+  return [];
 }
 
 function normaliseModules(raw: unknown): TemplateModuleDefinition[] {
