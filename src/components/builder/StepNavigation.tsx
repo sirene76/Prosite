@@ -7,26 +7,27 @@ import { useBuilder } from "@/context/BuilderContext";
 import { getBuilderStepLabel } from "@/lib/builderSteps";
 
 export function StepNavigation() {
-  const { steps, currentStep, prevStep, goToStep, websiteId } = useBuilder();
+  const { steps, currentStep, goToStep, websiteId } = useBuilder();
   const router = useRouter();
 
   const checkoutIndex = useMemo(() => steps.indexOf("checkout"), [steps]);
 
-  const { hasPrevious, canGoToCheckout, nextButtonLabel } = useMemo(() => {
-    const previous = currentStep > 0;
+  const { canGoToCheckout, nextButtonLabel } = useMemo(() => {
     const checkoutLabel = getBuilderStepLabel("checkout");
     const hasCheckoutStep = checkoutIndex >= 0;
     const onCheckoutStep = checkoutIndex === currentStep;
 
     return {
-      hasPrevious: previous,
       // ✅ allow going to checkout step without requiring websiteId immediately
       canGoToCheckout:
         hasCheckoutStep && !onCheckoutStep && Boolean(websiteId),
       nextButtonLabel: hasCheckoutStep ? `Next: ${checkoutLabel}` : "Next",
     };
   }, [checkoutIndex, currentStep, websiteId]);
-
+ 
+  const handleBack = useCallback(() => {
+    router.push("/");
+  }, [router]);
 
   const handleNext = useCallback(() => {
     if (checkoutIndex >= 0) {
@@ -46,9 +47,8 @@ export function StepNavigation() {
     <div className="flex justify-end gap-2">
       <button
         type="button"
-        onClick={prevStep}
-        disabled={!hasPrevious}
-        className="rounded bg-gray-800 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleBack}
+        className="rounded bg-gray-800 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-gray-700"
       >
         Back
       </button>
