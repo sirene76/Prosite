@@ -2,6 +2,7 @@ import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { notFound, redirect } from "next/navigation";
 
+import StartCustomizationForm from "@/components/ui/StartCustomizationForm";
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import { getTemplateById, getTemplates } from "@/lib/templates";
@@ -137,14 +138,7 @@ export default async function TemplateDetailsPage({ params }: TemplateDetailsPag
       ) : null}
 
       <div className="flex justify-center pt-8">
-        <form action={startCustomizing}>
-          <button
-            type="submit"
-            className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500"
-          >
-            Start Customizing →
-          </button>
-        </form>
+        <StartCustomizationForm startCustomizing={startCustomizing} />
       </div>
     </div>
   );
