@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
@@ -128,4 +128,30 @@ export async function PATCH(
     console.error("PATCH error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await connectDB();
+
+  const website = await Website.findById(id);
+  if (!website) {
+    return NextResponse.json({ error: "Website not found" }, { status: 404 });
+  }
+
+  if (website.user !== session.user.email) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  await Website.findByIdAndDelete(id);
+  return NextResponse.json({ success: true });
 }
