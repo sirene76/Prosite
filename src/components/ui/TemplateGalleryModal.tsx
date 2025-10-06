@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 
 import { AnimatePresence, PanInfo, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X as CloseIcon } from "lucide-react/icons";
 
 export type TemplateGalleryModalTemplate = {
   id: string;
@@ -128,7 +128,7 @@ export function TemplateGalleryModal({
               className="absolute right-4 top-4 z-10 rounded-full bg-black/60 p-2 text-white transition hover:bg-black/80"
               aria-label="Close preview"
             >
-              <X className="h-5 w-5" />
+              <CloseIcon className="h-5 w-5" />
             </button>
 
             {templates.length > 1 ? (
