@@ -22,7 +22,7 @@ export default async function TemplateDetailsPage({ params }: TemplateDetailsPag
   const template = await getTemplateById(templateId);
 
   if (!template) {
-    return notFound();
+    notFound();
   }
 
   const startCustomizing = async () => {

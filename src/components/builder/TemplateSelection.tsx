@@ -16,7 +16,7 @@ type TemplateSelectionProps = {
 };
 
 export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps) {
-  const { templates, selectedTemplate, selectTemplate } = useBuilder();
+  const { templates, selectedTemplate } = useBuilder();
   const router = useRouter();
 
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -43,9 +43,10 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
   };
 
   const handleSelectTemplate = (templateId: string) => {
-    selectTemplate(templateId);
-    router.push(`/builder/templates/${templateId}`); // ✅ redirect to overview page
+    router.push(`/builder/templates/${templateId}`);
   };
+
+  const activeTemplateId = initialTemplateId ?? selectedTemplate?.id;
 
   const handlePreview = (templateId: string) => openGallery(templateId);
 
@@ -70,7 +71,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {templates.map((template) => {
-          const isActive = template.id === selectedTemplate.id;
+          const isActive = template.id === activeTemplateId;
 
           return (
             <div
