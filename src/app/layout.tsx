@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
+import { extractRouterConfig } from "uploadthing/server";
+
 import Navbar from "@/components/Navbar";
 import SessionWrapper from "@/components/SessionWrapper";
+import { ourFileRouter } from "@/app/api/uploadthing/core";
 
 export const metadata: Metadata = {
   title: "Prosite Builder",
@@ -13,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="h-full bg-builder-background">
       <body className="min-h-screen bg-builder-background text-slate-100 antialiased">
+        <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />
         <SessionWrapper>
           <Navbar />
           <main>{children}</main>
