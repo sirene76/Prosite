@@ -25,6 +25,11 @@ export default async function TemplateDetailsPage({ params }: TemplateDetailsPag
     notFound();
   }
 
+  const showPlaceholderMedia =
+    !template.previewVideo &&
+    (!template.previewImages || template.previewImages.length === 0) &&
+    !template.previewImage;
+
   const startCustomizing = async () => {
     "use server";
 
@@ -92,6 +97,15 @@ export default async function TemplateDetailsPage({ params }: TemplateDetailsPag
               <Image
                 src={template.previewImage}
                 alt={template.name || "Template preview"}
+                fill
+                sizes="(min-width: 1280px) 960px, (min-width: 768px) 720px, 100vw"
+                className="object-cover"
+                priority
+              />
+            ) : showPlaceholderMedia ? (
+              <Image
+                src="/placeholder-template.svg"
+                alt="Template preview placeholder"
                 fill
                 sizes="(min-width: 1280px) 960px, (min-width: 768px) 720px, 100vw"
                 className="object-cover"
