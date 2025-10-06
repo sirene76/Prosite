@@ -6,7 +6,10 @@ import { authOptions } from "@/lib/auth";
 const f = createUploadthing();
 
 export const ourFileRouter = {
-  templateAssets: f({ image: { maxFileSize: "8MB" } })
+  templateAssets: f({
+    image: { maxFileSize: "8MB" },
+    video: { maxFileSize: "64MB" },
+  })
     .middleware(async () => {
       const session = await getServerSession(authOptions);
       if (!session?.user) throw new Error("Unauthorized");
