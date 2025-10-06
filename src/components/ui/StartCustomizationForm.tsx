@@ -1,34 +1,25 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useFormStatus } from "react-dom";
 
-export default function StartCustomizationForm({
-  startCustomizing,
-}: {
+type StartCustomizationFormProps = {
   startCustomizing: () => Promise<void>;
-}) {
-  const [isPending, startTransition] = useTransition();
-  const [loading, setLoading] = useState(false);
+};
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
 
   return (
-    <form
-      action={async () => {
-        setLoading(true);
-        startTransition(async () => {
-          await startCustomizing();
-        });
-      }}
-      className="relative"
-    >
+    <>
       <button
         type="submit"
-        disabled={isPending || loading}
-        className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500 transition disabled:opacity-60"
+        disabled={pending}
+        className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60"
       >
-        {loading ? "Redirecting to builder…" : "Start Customizing →"}
+        {pending ? "Redirecting to builder…" : "Start Customizing →"}
       </button>
 
-      {loading && (
+      {pending ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
             <svg
@@ -51,10 +42,18 @@ export default function StartCustomizationForm({
                 d="M4 12a8 8 0 018-8v8H4z"
               ></path>
             </svg>
-            <p className="text-white text-sm font-medium">Redirecting to builder…</p>
+            <p className="text-sm font-medium text-white">Redirecting to builder…</p>
           </div>
         </div>
-      )}
+      ) : null}
+    </>
+  );
+}
+
+export default function StartCustomizationForm({ startCustomizing }: StartCustomizationFormProps) {
+  return (
+    <form action={startCustomizing} className="relative">
+      <SubmitButton />
     </form>
   );
 }
