@@ -57,7 +57,7 @@ export default async function TemplateDetailsPage({ params }: TemplateDetailsPag
       },
     });
 
-    const websiteId = website.id ?? website._id?.toString?.();
+    const websiteId = website._id?.toString?.();
 
     if (!websiteId) {
       throw new Error("Unable to start customizing: missing website id");

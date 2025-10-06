@@ -20,11 +20,11 @@ async function loadWebsite(websiteId: string) {
     return null;
   }
 
-  const websiteQuery = isValidObjectId(websiteId)
-    ? Website.findById(websiteId)
-    : Website.findOne({ slug: websiteId });
+  if (!isValidObjectId(websiteId)) {
+    return null;
+  }
 
-  const website = await websiteQuery.lean<{
+  const website = await Website.findById(websiteId).lean<{
     name?: string;
     templateId?: string;
     theme?: { name?: string; label?: string };
@@ -36,7 +36,7 @@ async function loadWebsite(websiteId: string) {
     return null;
   }
 
-  const template = website.templateId ? await getTemplateById(website.templateId) : null;
+  const template = await getTemplateById(website.templateId);
 
   return {
     name: website.name ?? "Untitled Website",
