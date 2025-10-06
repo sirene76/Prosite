@@ -22,7 +22,7 @@ export default function TemplateNotFound() {
 
       <div className="flex gap-4">
         <Link
-          href="/builder/templates"
+          href="/templates"
           className="rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white hover:bg-blue-500 transition"
         >
           ← Back to templates
