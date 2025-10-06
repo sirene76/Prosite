@@ -1,36 +1,11 @@
 import { Schema, model, models, type HydratedDocument, type InferSchemaType } from "mongoose";
 
-const themeSchema = new Schema(
-  {
-    name: { type: String },
-    label: { type: String },
-    colors: {
-      type: Map,
-      of: String,
-      default: () => new Map<string, string>(),
-    },
-    fonts: {
-      type: Map,
-      of: String,
-      default: () => new Map<string, string>(),
-    },
-  },
-  { _id: false }
-);
-
-const websiteSchema = new Schema(
+const WebsiteSchema = new Schema(
   {
     name: { type: String, required: true },
-    templateId: { type: String, required: true },
+    templateId: { type: String, required: true }, // slug like "agency-starter"
     userId: { type: Schema.Types.ObjectId, ref: "User" },
     user: { type: String },
-    theme: { type: themeSchema, default: undefined },
-    content: {
-      type: Object,
-      default: {},
-    },
-    thumbnailUrl: { type: String },
-    previewImage: { type: String },
     status: {
       type: String,
       enum: ["draft", "active", "published"],
@@ -38,17 +13,18 @@ const websiteSchema = new Schema(
     },
     plan: {
       type: String,
-      enum: ["free", "export", "agency"],
+      enum: ["free", "pro", "agency"],
       default: "free",
     },
-    metadata: { type: Schema.Types.Mixed },
+    theme: {
+      colors: { type: Object, default: {} },
+      fonts: { type: Object, default: {} },
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-export type WebsiteModel = InferSchemaType<typeof websiteSchema>;
-export type WebsiteDocument = HydratedDocument<WebsiteModel>;
+export const Website = models.Website || model("Website", WebsiteSchema);
 
-export const Website = models.Website<WebsiteModel> || model<WebsiteModel>("Website", websiteSchema);
+export type WebsiteModel = InferSchemaType<typeof WebsiteSchema>;
+export type WebsiteDocument = HydratedDocument<WebsiteModel>;

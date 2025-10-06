@@ -40,8 +40,8 @@ export async function POST(req: Request) {
     let lineItemPrice = "";
     let mode: "payment" | "subscription" = "payment";
 
-    if (plan === "export") {
-      lineItemPrice = process.env.STRIPE_PRICE_EXPORT ?? "";
+    if (plan === "pro") {
+      lineItemPrice = process.env.STRIPE_PRICE_PRO ?? "";
       mode = "payment";
     } else if (plan === "agency") {
       lineItemPrice = process.env.STRIPE_PRICE_AGENCY ?? "";

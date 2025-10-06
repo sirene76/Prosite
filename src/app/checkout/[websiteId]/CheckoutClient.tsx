@@ -5,11 +5,11 @@ import Image from "next/image";
 
 const PLAN_PRICING: Record<PlanId, { price: string; description: string }> = {
   free: { price: "$0/mo", description: "Basic hosting with limited features" },
-  export: { price: "$49 one-time", description: "Export your site code for external hosting" },
+  pro: { price: "$49/mo", description: "Professional features with premium support" },
   agency: { price: "$99/mo", description: "Advanced collaboration and priority support" },
 };
 
-type PlanId = "free" | "export" | "agency";
+type PlanId = "free" | "pro" | "agency";
 
 type CheckoutClientProps = {
   websiteId: string;
@@ -28,7 +28,7 @@ export function CheckoutClient({
   previewImage,
   initialError = null,
 }: CheckoutClientProps) {
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("export");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("pro");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
 
