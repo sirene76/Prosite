@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Plan = "export" | "agency";
+type Plan = "pro" | "agency";
 
 type CheckoutResponse = {
   url?: string;
