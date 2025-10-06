@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 
 import { AnimatePresence, PanInfo, motion } from "framer-motion";
+
 import { ChevronLeft, ChevronRight, X as CloseIcon } from "lucide-react/icons";
 
 export type TemplateGalleryModalTemplate = {
