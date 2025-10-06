@@ -1,13 +1,14 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UploadButton } from "@uploadthing/react";
 
+import { TemplateImageUploader } from "@/components/admin/TemplateImageUploader";
 import { useUploadThing } from "@/lib/uploadthing";
 
 export default function NewTemplatePage() {
   const router = useRouter();
-  const { isUploading } = useUploadThing("templateMedia");
+  const { isUploading } = useUploadThing("templateAssets");
   const [form, setForm] = useState({
     name: "",
     category: "",
@@ -33,67 +34,65 @@ export default function NewTemplatePage() {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
-      <h2 className="text-2xl font-semibold mb-2">Add New Template</h2>
+      <h2 className="mb-2 text-2xl font-semibold">Add New Template</h2>
 
       <input
         placeholder="Name"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="w-full bg-gray-900 border border-gray-700 p-2 rounded-md"
+        className="w-full rounded-md border border-gray-700 bg-gray-900 p-2"
       />
 
       <input
         placeholder="Category"
         value={form.category}
         onChange={(e) => setForm({ ...form, category: e.target.value })}
-        className="w-full bg-gray-900 border border-gray-700 p-2 rounded-md"
+        className="w-full rounded-md border border-gray-700 bg-gray-900 p-2"
       />
 
       <textarea
         placeholder="Description"
         value={form.description}
         onChange={(e) => setForm({ ...form, description: e.target.value })}
-        className="w-full bg-gray-900 border border-gray-700 p-2 rounded-md"
+        className="w-full rounded-md border border-gray-700 bg-gray-900 p-2"
       />
 
-      {/* Upload Preview Image */}
       <div>
-        <p className="text-sm text-slate-400 mb-1">Preview Image</p>
-        <UploadButton
-          endpoint="templateMedia"
-          onClientUploadComplete={(res) => {
-            setForm({ ...form, previewImage: res?.[0]?.url || "" });
+        <p className="mb-1 text-sm text-slate-400">Preview Image</p>
+        <TemplateImageUploader
+          label="Upload Template Image"
+          onUploadComplete={(urls) => {
+            setForm((prev) => ({ ...prev, previewImage: urls[0] ?? "" }));
           }}
-          onUploadError={(err) => alert(err.message)}
         />
-        {form.previewImage && <img src={form.previewImage} alt="Preview" className="mt-2 w-64 rounded-md" />}
+        {form.previewImage ? (
+          <img src={form.previewImage} alt="Preview" className="mt-2 w-64 rounded-md" />
+        ) : null}
       </div>
 
-      {/* Upload Preview Video */}
       <div>
-        <p className="text-sm text-slate-400 mb-1">Preview Video (optional)</p>
-        <UploadButton
-          endpoint="templateMedia"
-          onClientUploadComplete={(res) => {
-            setForm({ ...form, previewVideo: res?.[0]?.url || "" });
+        <p className="mb-1 text-sm text-slate-400">Preview Video (optional)</p>
+        <TemplateImageUploader
+          label="Upload Template Video"
+          onUploadComplete={(urls) => {
+            setForm((prev) => ({ ...prev, previewVideo: urls[0] ?? "" }));
           }}
-          onUploadError={(err) => alert(err.message)}
         />
-        {form.previewVideo && (
+        {form.previewVideo ? (
           <video src={form.previewVideo} controls className="mt-2 w-64 rounded-md" />
-        )}
+        ) : null}
       </div>
 
-      {/* Upload Gallery Images */}
       <div>
-        <p className="text-sm text-slate-400 mb-1">Gallery Images</p>
-        <UploadButton
-          endpoint="templateMedia"
-          onClientUploadComplete={(res) => {
-            const urls = res?.map((f) => f.url) || [];
-            setForm({ ...form, previewImages: [...form.previewImages, ...urls] });
+        <p className="mb-1 text-sm text-slate-400">Gallery Images</p>
+        <TemplateImageUploader
+          label="Upload Gallery Images"
+          onUploadComplete={(urls) => {
+            setForm((prev) => ({
+              ...prev,
+              previewImages: [...prev.previewImages, ...urls],
+            }));
           }}
-          onUploadError={(err) => alert(err.message)}
         />
         <div className="mt-2 grid grid-cols-3 gap-2">
           {form.previewImages.map((img, i) => (
@@ -106,14 +105,14 @@ export default function NewTemplatePage() {
         placeholder="Features (comma-separated)"
         value={form.features}
         onChange={(e) => setForm({ ...form, features: e.target.value })}
-        className="w-full bg-gray-900 border border-gray-700 p-2 rounded-md"
+        className="w-full rounded-md border border-gray-700 bg-gray-900 p-2"
       />
 
-      {isUploading && <p className="text-sm text-blue-400">Uploading media...</p>}
+      {isUploading ? <p className="text-sm text-blue-400">Uploading media...</p> : null}
 
       <button
         type="submit"
-        className="mt-4 bg-blue-600 px-4 py-2 rounded-md text-white hover:bg-blue-500"
+        className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-500"
       >
         Save Template
       </button>
