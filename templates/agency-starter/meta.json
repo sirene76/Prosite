@@ -3,9 +3,8 @@
   "name": "Agency Starter",
   "category": "Business",
   "description": "Professional agency design with services, projects, testimonials, and FAQ.",
-  "video": "/templates/agency-starter/preview.mp4",
   "previewImage": "/templates/agency-starter/preview.png",
-  "preview": "/templates/agency-starter/preview.png",
+  "previewVideo": "/templates/agency-starter/preview.mp4",
   "previewImages": [
     "/templates/agency-starter/preview.png",
     "/templates/agency-starter/assets/agency-hero.jpg",

@@ -3,9 +3,8 @@
   "name": "Restaurant Classic",
   "category": "Food & Drink",
   "description": "Bold restaurant theme with menu grid and food imagery.",
-  "video": "/templates/restaurant-classic/preview.mp4",
   "previewImage": "/templates/restaurant-classic/preview.png",
-  "preview": "/templates/restaurant-classic/preview.png",
+  "previewVideo": "/templates/restaurant-classic/preview.mp4",
   "previewImages": [
     "/templates/restaurant-classic/preview.png",
     "/templates/restaurant-classic/assets/restaurant-hero.jpg",

@@ -82,21 +82,28 @@ export default async function TemplateDetailsPage({ params }: TemplateDetailsPag
             src={template.previewVideo}
             controls
             playsInline
-            poster={template.previewImage}
+            poster={template.previewImage || ""}
             className="h-[480px] w-full object-cover"
           />
-        ) : (
+        ) : null}
+        {!template.previewVideo ? (
           <div className="relative h-[480px] w-full">
-            <Image
-              src={template.previewImage}
-              alt={template.name}
-              fill
-              sizes="(min-width: 1280px) 960px, (min-width: 768px) 720px, 100vw"
-              className="object-cover"
-              priority
-            />
+            {template.previewImage ? (
+              <Image
+                src={template.previewImage}
+                alt={template.name || "Template preview"}
+                fill
+                sizes="(min-width: 1280px) 960px, (min-width: 768px) 720px, 100vw"
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gray-800 text-slate-400">
+                <p>No preview available</p>
+              </div>
+            )}
           </div>
-        )}
+        ) : null}
       </div>
 
       {template.previewImages?.length ? (
