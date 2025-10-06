@@ -6,15 +6,16 @@ import { authOptions } from "@/lib/auth";
 const f = createUploadthing();
 
 export const ourFileRouter = {
-  templateMedia: f({ image: { maxFileSize: "8MB" }, video: { maxFileSize: "50MB" } })
+  templateAssets: f({ image: { maxFileSize: "8MB" } })
     .middleware(async () => {
       const session = await getServerSession(authOptions);
-      if (!session) throw new Error("Unauthorized");
-      return { userId: session.user?.email || "unknown" };
+      if (!session?.user) throw new Error("Unauthorized");
+      return { userId: session.user.email };
     })
-    .onUploadComplete(({ file, metadata }) => {
-      console.log("Uploaded file", file.url);
-      return { uploadedBy: metadata.userId, url: file.url };
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("✅ File uploaded by:", metadata.userId);
+      console.log("✅ File URL:", file.url);
+      return { fileUrl: file.url };
     }),
 } satisfies FileRouter;
 
