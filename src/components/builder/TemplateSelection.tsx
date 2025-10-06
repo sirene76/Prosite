@@ -43,7 +43,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
   };
 
   const handleSelectTemplate = (templateId: string) => {
-    router.push(`/builder/templates/${templateId}`);
+    router.push(`/templates/${templateId}`);
   };
 
   const activeTemplateId = initialTemplateId ?? selectedTemplate?.id;

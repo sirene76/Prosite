@@ -26,13 +26,13 @@ export function TemplateSelectButton({
 
     if (!session) {
       await signIn(undefined, {
-        callbackUrl: `/builder/templates?selected=${encodeURIComponent(templateId)}`,
+        callbackUrl: `/templates?selected=${encodeURIComponent(templateId)}`,
       });
       return;
     }
 
     setIsLoading(true);
-    router.push(`/builder/templates/${templateId}`);
+    router.push(`/templates/${templateId}`);
   };
 
   return (

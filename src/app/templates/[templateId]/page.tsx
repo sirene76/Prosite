@@ -31,7 +31,7 @@ export default async function TemplateDetailsPage({ params }: TemplateDetailsPag
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      const callbackUrl = encodeURIComponent(`/builder/templates/${template.id}`);
+      const callbackUrl = encodeURIComponent(`/templates/${template.id}`);
       redirect(`/api/auth/signin?callbackUrl=${callbackUrl}`);
     }
 
