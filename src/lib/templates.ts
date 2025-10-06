@@ -2,6 +2,9 @@ import { promises as fs } from "fs";
 import type { Dirent } from "fs";
 import path from "path";
 
+import { connectDB } from "@/lib/mongodb";
+import { Template } from "@/models/template";
+
 const templatesRoot = path.join(process.cwd(), "templates");
 
 export type TemplateSummary = {
@@ -107,7 +110,60 @@ type RawTemplateMeta = {
 
 export async function getTemplates(): Promise<TemplateDefinition[]> {
   const entries = await readTemplateRegistry();
-  return entries.map(stripFilesystemFields);
+  const databaseTemplates = await readDatabaseTemplates();
+
+  return [...databaseTemplates, ...entries.map(stripFilesystemFields)];
+}
+
+async function readDatabaseTemplates(): Promise<TemplateDefinition[]> {
+  if (!process.env.DATABASE_URL) {
+    return [];
+  }
+
+  try {
+    await connectDB();
+  } catch (error) {
+    console.warn("Skipping database templates: failed to connect to MongoDB", error);
+    return [];
+  }
+
+  try {
+    const dbTemplates = await Template.find({ isActive: true }).lean();
+
+    return dbTemplates.map((template) => {
+      const previewImages = Array.isArray(template.previewImages)
+        ? template.previewImages.filter((item): item is string => typeof item === "string" && item.trim() !== "")
+        : [];
+      const features = Array.isArray(template.features)
+        ? template.features.filter((item): item is string => typeof item === "string" && item.trim() !== "")
+        : [];
+
+      const previewImage =
+        typeof template.previewImage === "string" && template.previewImage.trim()
+          ? template.previewImage
+          : previewImages[0] ?? "";
+
+      return {
+        id: template.slug,
+        name: template.name,
+        category: template.category ?? undefined,
+        description: template.description ?? "",
+        previewImage,
+        previewVideo:
+          typeof template.previewVideo === "string" && template.previewVideo.trim() ? template.previewVideo : undefined,
+        previewImages: previewImages.length > 0 ? previewImages : undefined,
+        features: features.length > 0 ? features : undefined,
+        path: template.path ?? `/templates/${template.slug}`,
+        sections: [],
+        colors: [],
+        fonts: [],
+        modules: [],
+      } satisfies TemplateDefinition;
+    });
+  } catch (error) {
+    console.error("Failed to load templates from MongoDB", error);
+    return [];
+  }
 }
 
 export async function getTemplateById(templateId: string): Promise<TemplateRegistryEntry | null> {
