@@ -6,17 +6,16 @@ import { useEffect } from "react";
 export default function BuilderNewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const templateSlug = searchParams.get("template");
+  const templateId = searchParams.get("template");
 
   useEffect(() => {
     async function createWebsite() {
-      if (!templateSlug) return;
+      if (!templateId) return;
 
-      // Create a new website entry in the DB
       const response = await fetch("/api/websites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template: templateSlug }),
+        body: JSON.stringify({ templateId }),
       });
 
       if (!response.ok) {
@@ -25,15 +24,17 @@ export default function BuilderNewPage() {
       }
 
       const website = await response.json();
-      router.replace(`/builder/${website._id}`); // redirect to the actual builder page
+      router.replace(`/builder/${website._id}`);
     }
 
     createWebsite();
-  }, [templateSlug, router]);
+  }, [templateId, router]);
 
   return (
     <div className="flex h-screen items-center justify-center text-slate-300">
-      <p>Creating your website from template <b>{templateSlug}</b>...</p>
+      <p>
+        Creating your website from template <b>{templateId}</b>...
+      </p>
     </div>
   );
 }
