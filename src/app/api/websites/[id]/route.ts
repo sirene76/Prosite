@@ -15,13 +15,15 @@ export async function GET(
     if (!isValidObjectId(id)) {
       return NextResponse.json({ error: "Invalid website ID" }, { status: 400 });
     }
+
     await connectDB();
-    const website = await Website.findById(id);
+    const website = await Website.findById(id).lean();
     if (!website) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
 
-    return NextResponse.json(website);
+    const payload = { ...website, _id: website._id?.toString() };
+    return NextResponse.json(payload);
   } catch (err) {
     console.error("GET error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

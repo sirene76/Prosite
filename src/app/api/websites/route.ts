@@ -9,6 +9,10 @@ import { getTemplateAssets, getTemplateById } from "@/lib/templates";
 import type { WebsiteModel } from "@/models/website";
 import type { DashboardWebsite } from "@/types/website";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const templateId = searchParams.get("templateId");
@@ -88,16 +92,19 @@ export async function POST(request: Request) {
 
   try {
     // Parse meta JSON if it's stored as a string
-    let parsedMeta: Record<string, any> = {};
+    let parsedMeta: Record<string, unknown> = {};
     if (typeof template.meta === "string") {
       try {
-        parsedMeta = JSON.parse(template.meta);
+        parsedMeta = JSON.parse(template.meta) as Record<string, unknown>;
       } catch {
         parsedMeta = {};
       }
-    } else {
-      parsedMeta = (template.meta as Record<string, any>) ?? {};
+    } else if (template.meta && typeof template.meta === "object") {
+      parsedMeta = (template.meta as Record<string, unknown>) ?? {};
     }
+
+    const metaTheme = isRecord(parsedMeta.theme) ? parsedMeta.theme : {};
+    const metaContent = isRecord(parsedMeta.content) ? parsedMeta.content : {};
 
     // Create the website with template data prefilled
     const website = await Website.create({
@@ -109,8 +116,8 @@ export async function POST(request: Request) {
       html: template.html ?? "",
       css: template.css ?? "",
       meta: parsedMeta,
-      theme: parsedMeta.theme ?? {},
-      content: parsedMeta.content ?? {},
+      theme: metaTheme,
+      content: metaContent,
     });
 
     return NextResponse.json(website, { status: 201 });

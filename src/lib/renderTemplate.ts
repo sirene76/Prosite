@@ -1,8 +1,9 @@
+import type { ThemeState } from "@/context/BuilderContext";
 import type { TemplateModuleDefinition } from "@/lib/templates";
 
 export type RenderTemplateOptions = {
   html: string;
-  values: Record<string, string>;
+  values: Record<string, unknown>;
   modules?: TemplateModuleDefinition[];
   theme?: {
     primary?: string;
@@ -63,7 +64,7 @@ export function renderTemplate({
       colorTokens.text = theme.text;
     }
 
-    processedHtml = applyThemeTokens({
+    processedHtml = injectThemeTokens({
       html: processedHtml,
       css: inlineCss,
       templateId,
@@ -78,12 +79,26 @@ export function renderTemplate({
     moduleMap.set(key, renderModule(module));
   });
 
-  const rendered = processedHtml.replace(/{{(.*?)}}/g, (_, rawKey: string) => {
-    const key = rawKey.trim();
-    if (!key) return "";
-    if (moduleMap.has(key)) return moduleMap.get(key) ?? "";
-    return values[key] ?? "";
-  });
+  const contentForRendering: Record<string, unknown> = { ...values };
+
+  if (moduleMap.size > 0) {
+    const modulesContent: Record<string, unknown> =
+      typeof contentForRendering.modules === "object" && contentForRendering.modules !== null
+        ? { ...(contentForRendering.modules as Record<string, unknown>) }
+        : {};
+
+    moduleMap.forEach((markup, key) => {
+      contentForRendering[key] = markup;
+      const [, moduleKey] = key.split(".");
+      if (moduleKey) {
+        modulesContent[moduleKey] = markup;
+      }
+    });
+
+    contentForRendering.modules = modulesContent;
+  }
+
+  const rendered = renderWithContent(processedHtml, contentForRendering);
 
   const colorVars = buildThemeVariables(theme, themeTokens?.fonts);
   if (!colorVars) {
@@ -126,9 +141,148 @@ function injectInlineCss(html: string, css: string, templateId: string | null) {
   return `${styleTag}${html}`;
 }
 
+export function applyThemeTokens(html: string, css: string, theme: ThemeState) {
+  let themedCss = css || "";
+
+  Object.entries(theme.colors ?? {}).forEach(([key, value]) => {
+    if (!value) {
+      return;
+    }
+    const pattern = new RegExp(`{{\\s*${escapeRegExp(key)}\\s*}}`, "g");
+    themedCss = themedCss.replace(pattern, value);
+  });
+
+  Object.entries(theme.fonts ?? {}).forEach(([key, value]) => {
+    if (!value) {
+      return;
+    }
+    const pattern = new RegExp(`{{\\s*font\\.${escapeRegExp(key)}\\s*}}`, "g");
+    themedCss = themedCss.replace(pattern, value);
+  });
+
+  return { html, css: themedCss };
+}
+
+export function renderWithContent(html: string, content: Record<string, unknown>) {
+  if (!html) {
+    return html;
+  }
+
+  const eachBlockRe = /{{#each\s+([\w.]+)\s*}}([\s\S]*?){{\/each}}/g;
+  let output = html.replace(eachBlockRe, (_, keyPath: string, block: string) => {
+    const list = resolvePath(content, keyPath);
+    if (!Array.isArray(list)) {
+      return "";
+    }
+
+    return list
+      .map((item) => {
+        const scope = createScope(item);
+        return renderWithContent(block, scope);
+      })
+      .join("");
+  });
+
+  output = replaceScalars(output, content);
+
+  return output;
+}
+
+function replaceScalars(template: string, scope: Record<string, unknown>) {
+  return template.replace(/{{\s*([\w.]+)\s*}}/g, (_, keyPath: string) => {
+    const value = resolvePath(scope, keyPath);
+    return formatScalar(value);
+  });
+}
+
+function formatScalar(value: unknown) {
+  if (value == null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
+}
+
+function createScope(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return { ...(value as Record<string, unknown>), this: value };
+  }
+  return { ".": value, this: value } as Record<string, unknown>;
+}
+
+function resolvePath(obj: unknown, path: string): unknown {
+  if (!path) {
+    return undefined;
+  }
+
+  if (path === "." || path === "this") {
+    return obj;
+  }
+
+  if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+    if (Object.prototype.hasOwnProperty.call(obj, path)) {
+      return (obj as Record<string, unknown>)[path];
+    }
+  }
+
+  const parts = path.split(".");
+  let current: unknown = obj;
+
+  for (const part of parts) {
+    if (!part) {
+      continue;
+    }
+
+    if (Array.isArray(current)) {
+      const index = Number(part);
+      if (!Number.isFinite(index) || index < 0 || index >= current.length) {
+        return undefined;
+      }
+      current = current[index];
+      continue;
+    }
+
+    if (current && typeof current === "object") {
+      if (Object.prototype.hasOwnProperty.call(current, part)) {
+        current = (current as Record<string, unknown>)[part];
+        continue;
+      }
+      return undefined;
+    }
+
+    return undefined;
+  }
+
+  return current;
+}
+
+export function composePreviewDocument(
+  html: string,
+  css: string,
+  theme: ThemeState,
+  content: Record<string, unknown>
+) {
+  const themed = applyThemeTokens(html, css, theme);
+  const htmlWithContent = renderWithContent(themed.html, content);
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>${themed.css || ""}</style>
+      </head>
+      <body>${htmlWithContent}</body>
+    </html>
+  `;
+}
+
 type ThemeTokenMap = Record<string, string | undefined> | undefined;
 
-export function applyThemeTokens({
+export function injectThemeTokens({
   html,
   css,
   templateId,

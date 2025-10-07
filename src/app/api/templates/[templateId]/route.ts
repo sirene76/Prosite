@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getTemplateAssets, getTemplates } from "@/lib/templates";
-import { applyThemeTokens, renderTemplate } from "@/lib/renderTemplate";
+import { injectThemeTokens, renderTemplate } from "@/lib/renderTemplate";
 
 export async function GET(
   request: Request,
@@ -57,7 +57,7 @@ export async function GET(
       },
     });
 
-    const document = applyThemeTokens({
+    const document = injectThemeTokens({
       html: rendered,
       css: assets.css,
       templateId,

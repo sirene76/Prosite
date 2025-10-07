@@ -15,7 +15,7 @@ import type { TemplateDefinition } from "@/lib/templates";
 
 type Device = "desktop" | "tablet" | "mobile";
 
-type ThemeState = {
+export type ThemeState = {
   name?: string;
   label?: string;
   colors: Record<string, string>;
@@ -60,8 +60,8 @@ type BuilderContextValue = {
   themeDefaults: ThemeState;
   updateTheme: (changes: Partial<ThemeState>) => void;
   registerThemeDefaults: (defaults: Partial<ThemeState>) => void;
-  content: Record<string, string>;
-  updateContent: (changes: Record<string, string>) => void;
+  content: Record<string, unknown>;
+  updateContent: (changes: Record<string, unknown>) => void;
   contentSections: TemplateContentSection[];
   registerContentPlaceholders: (placeholders: string[]) => void;
   isPreviewReady: boolean;
@@ -238,7 +238,7 @@ function mapFieldType(fieldType: TemplateContentField["type"] | string | undefin
 }
 
 function createDefaultContent(placeholders: string[], defaults: Record<string, string>) {
-  const result: Record<string, string> = {};
+  const result: Record<string, unknown> = {};
   placeholders.forEach((placeholder) => {
     const key = placeholder.trim();
     if (!key) {
@@ -266,7 +266,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templates[0]?.id ?? "");
   const [theme, setTheme] = useState<ThemeState>(() => createInitialTheme(templates[0]));
   const [themeDefaults, setThemeDefaults] = useState<ThemeState>(() => createInitialTheme(templates[0]));
-  const [content, setContent] = useState<Record<string, string>>({});
+  const [content, setContent] = useState<Record<string, unknown>>({});
   const [contentSections, setContentSections] = useState<TemplateContentSection[]>([]);
   const [previewDocument, setPreviewDocument] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
@@ -402,7 +402,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   }, []);
 
   const updateContent = useCallback(
-    (changes: Record<string, string>) => {
+    (changes: Record<string, unknown>) => {
       setContent((prev) => {
         const next = { ...prev, ...changes };
 
@@ -436,9 +436,17 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
       setContent((prev) => {
         const fallback = createDefaultContent(keys, defaults);
-        const next: Record<string, string> = {};
+        const next: Record<string, unknown> = { ...prev };
         keys.forEach((key) => {
-          next[key] = prev[key] ?? fallback[key] ?? "";
+          if (prev[key] !== undefined) {
+            next[key] = prev[key];
+            return;
+          }
+          if (Object.prototype.hasOwnProperty.call(fallback, key)) {
+            next[key] = fallback[key];
+            return;
+          }
+          next[key] = "";
         });
         return next;
       });
