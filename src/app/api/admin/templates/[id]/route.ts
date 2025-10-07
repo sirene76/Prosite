@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 
-import { createSlug, sanitizeTemplatePayload } from "../utils";
+import { createSlug, parseMeta } from "../utils";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   await connectDB();
@@ -30,20 +30,72 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
   try {
     const body = await request.json();
-    const payload = sanitizeTemplatePayload(body);
+    const updates: Record<string, unknown> = {};
 
-    if (typeof body?.name === "string") {
-      const slug = createSlug(body.name);
+    if (typeof body.name === "string") {
+      const trimmedName = body.name.trim();
+      if (!trimmedName) {
+        return NextResponse.json({ error: "Name is required" }, { status: 400 });
+      }
+
+      updates.name = trimmedName;
+
+      if (!body.slug) {
+        const generatedSlug = createSlug(trimmedName);
+        if (!generatedSlug) {
+          return NextResponse.json(
+            { error: "Name must include at least one alphanumeric character" },
+            { status: 400 }
+          );
+        }
+        updates.slug = generatedSlug;
+      }
+    }
+
+    if (typeof body.slug === "string" && body.slug.trim()) {
+      const slug = createSlug(body.slug);
       if (!slug) {
         return NextResponse.json(
-          { error: "Name must include at least one alphanumeric character" },
+          { error: "Slug must include at least one alphanumeric character" },
           { status: 400 }
         );
       }
-      payload.slug = slug;
+      updates.slug = slug;
     }
 
-    const updated = await Template.findByIdAndUpdate(params.id, payload, { new: true });
+    if (body.category !== undefined) {
+      updates.category = typeof body.category === "string" && body.category.trim() ? body.category.trim() : undefined;
+    }
+
+    if (body.description !== undefined) {
+      updates.description = typeof body.description === "string" ? body.description : "";
+    }
+
+    if (body.previewImage !== undefined) {
+      updates.previewImage =
+        typeof body.previewImage === "string" && body.previewImage.trim() ? body.previewImage.trim() : undefined;
+    }
+
+    if (body.html !== undefined) {
+      updates.html = typeof body.html === "string" ? body.html : "";
+    }
+
+    if (body.css !== undefined) {
+      updates.css = typeof body.css === "string" ? body.css : "";
+    }
+
+    if (body.meta !== undefined) {
+      try {
+        updates.meta = parseMeta(body.meta);
+      } catch (error) {
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Invalid meta" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const updated = await Template.findByIdAndUpdate(params.id, updates, { new: true });
     if (!updated) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }

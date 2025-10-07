@@ -1,5 +1,4 @@
-import { promises as fs } from "fs";
-import type { Dirent } from "fs";
+import { promises as fsPromises, type Dirent } from "fs";
 import path from "path";
 
 import { connectDB } from "@/lib/mongodb";
@@ -84,11 +83,22 @@ export type TemplateDefinition = {
   colors: TemplateColorDefinition[];
   fonts: string[];
   modules: TemplateModuleDefinition[];
+  html?: string;
+  css?: string;
+  meta?: Record<string, unknown>;
+  isDynamic?: boolean;
 };
 
 export type TemplateRegistryEntry = TemplateDefinition & {
   directory: string;
   assetsDirectory: string | null;
+};
+
+export type DynamicTemplateDefinition = TemplateDefinition & {
+  html: string;
+  css: string;
+  meta: Record<string, unknown>;
+  isDynamic: true;
 };
 
 type RawTemplateMeta = {
@@ -128,48 +138,155 @@ async function readDatabaseTemplates(): Promise<TemplateDefinition[]> {
   }
 
   try {
-    const dbTemplates = await Template.find({ isActive: true }).lean();
+    const dbTemplates = await Template.find().lean<DatabaseTemplateDocument[]>();
 
-    return dbTemplates.map((template) => {
-      const previewImages = Array.isArray(template.previewImages)
-        ? template.previewImages.filter((item): item is string => typeof item === "string" && item.trim() !== "")
-        : [];
-      const features = Array.isArray(template.features)
-        ? template.features.filter((item): item is string => typeof item === "string" && item.trim() !== "")
-        : [];
-
-      const previewImage =
-        typeof template.previewImage === "string" && template.previewImage.trim()
-          ? template.previewImage
-          : previewImages[0] ?? "";
-
-      return {
-        id: template.slug,
-        name: template.name,
-        category: template.category ?? undefined,
-        description: template.description ?? "",
-        previewImage,
-        previewVideo:
-          typeof template.previewVideo === "string" && template.previewVideo.trim() ? template.previewVideo : undefined,
-        previewImages: previewImages.length > 0 ? previewImages : undefined,
-        features: features.length > 0 ? features : undefined,
-        path: template.path ?? `/templates/${template.slug}`,
-        sections: [],
-        colors: [],
-        fonts: [],
-        modules: [],
-      } satisfies TemplateDefinition;
-    });
+    return dbTemplates
+      .map((template) => buildDatabaseTemplateDefinition(template))
+      .filter((template): template is DynamicTemplateDefinition => Boolean(template));
   } catch (error) {
     console.error("Failed to load templates from MongoDB", error);
     return [];
   }
 }
 
-export async function getTemplateById(templateId: string): Promise<TemplateRegistryEntry | null> {
+async function loadDatabaseTemplate(templateId: string): Promise<DynamicTemplateDefinition | null> {
+  if (!process.env.DATABASE_URL) {
+    return null;
+  }
+
+  try {
+    await connectDB();
+  } catch (error) {
+    console.warn(`Skipping database template lookup for ${templateId}: failed to connect to MongoDB`, error);
+    return null;
+  }
+
+  try {
+    const template = await Template.findOne({ slug: templateId }).lean<DatabaseTemplateDocument | null>();
+    if (!template) {
+      return null;
+    }
+
+    return buildDatabaseTemplateDefinition(template);
+  } catch (error) {
+    console.error(`Failed to load template ${templateId} from MongoDB`, error);
+    return null;
+  }
+}
+
+type DatabaseTemplateDocument = {
+  slug?: string;
+  name?: string;
+  category?: string;
+  description?: string;
+  previewImage?: string;
+  html?: string;
+  css?: string;
+  meta?: unknown;
+};
+
+function buildDatabaseTemplateDefinition(template: DatabaseTemplateDocument): DynamicTemplateDefinition | null {
+  const slug = readOptionalString(template.slug);
+  if (!slug) {
+    return null;
+  }
+
+  const meta = parseTemplateMeta(template.meta);
+
+  const metaPreviewImages = normaliseStringArray(meta["previewImages"]);
+  const metaFeatures = normaliseStringArray(meta["features"]);
+  const metaPreviewImage = readOptionalString(meta["previewImage"] ?? meta["preview"]);
+  const previewImage = readOptionalString(template.previewImage) ?? metaPreviewImage ?? metaPreviewImages[0] ?? "";
+  const previewVideo = readOptionalString(meta["previewVideo"] ?? meta["video"]);
+  const name = readOptionalString(template.name) ?? readOptionalString(meta["name"]) ?? toTitleCase(slug);
+  const category = readOptionalString(template.category) ?? readOptionalString(meta["category"]);
+  const description =
+    typeof template.description === "string"
+      ? template.description
+      : readOptionalString(meta["description"]) ?? "";
+
+  const sectionsFromFields = normaliseFieldMap(meta["fields"]);
+  const sections = sectionsFromFields.length ? sectionsFromFields : normaliseSections(meta["sections"]);
+  const colors = normaliseColors(meta["colors"]);
+  const fonts = normaliseFonts(meta["fonts"]);
+  const modules = normaliseModules(meta["modules"]);
+
+  return {
+    id: slug,
+    name,
+    category: category ?? undefined,
+    description,
+    previewImage,
+    previewVideo: previewVideo ?? undefined,
+    previewImages: metaPreviewImages.length ? metaPreviewImages : undefined,
+    features: metaFeatures.length ? metaFeatures : undefined,
+    path: `/templates/${slug}`,
+    sections,
+    colors,
+    fonts,
+    modules,
+    html: typeof template.html === "string" ? template.html : "",
+    css: typeof template.css === "string" ? template.css : "",
+    meta,
+    isDynamic: true,
+  } satisfies DynamicTemplateDefinition;
+}
+
+function parseTemplateMeta(meta: unknown): Record<string, unknown> {
+  if (!meta) {
+    return {};
+  }
+
+  if (typeof meta === "string") {
+    const trimmed = meta.trim();
+    if (!trimmed) {
+      return {};
+    }
+    try {
+      return JSON.parse(trimmed) as Record<string, unknown>;
+    } catch (error) {
+      console.warn("Failed to parse template meta JSON", error);
+      return {};
+    }
+  }
+
+  if (typeof meta === "object" && !Array.isArray(meta)) {
+    return meta as Record<string, unknown>;
+  }
+
+  return {};
+}
+
+function readOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function normaliseStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return (value as unknown[])
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item): item is string => Boolean(item));
+}
+
+export async function getTemplateById(
+  templateId: string
+): Promise<TemplateRegistryEntry | DynamicTemplateDefinition | null> {
   const safeId = templateId.trim();
   if (!safeId) {
     return null;
+  }
+
+  const dynamicTemplate = await loadDatabaseTemplate(safeId);
+  if (dynamicTemplate) {
+    return dynamicTemplate;
   }
 
   const entries = await readTemplateRegistry();
@@ -183,10 +300,20 @@ export async function getTemplateAssets(templateId: string): Promise<{ html: str
     throw new Error(`Template not found: ${templateId}`);
   }
 
+  if (isDynamicTemplate(template)) {
+    return {
+      html: template.html ?? "",
+      css: template.css ?? "",
+    };
+  }
+
   const htmlPath = path.join(template.directory, "index.html");
   const cssPath = path.join(template.directory, "style.css");
 
-  const [html, css] = await Promise.all([readTextFile(htmlPath), readTextFile(cssPath)]);
+  const [html, css] = await Promise.all([
+    readTextFile(htmlPath),
+    readTextFile(cssPath).catch(() => ""),
+  ]);
   return { html, css };
 }
 
@@ -194,7 +321,11 @@ export async function getTemplateAssetFiles(
   templateId: string
 ): Promise<Array<{ relativePath: string; content: Buffer }>> {
   const template = await getTemplateById(templateId);
-  if (!template || !template.assetsDirectory) {
+  if (!template) {
+    return [];
+  }
+
+  if (isDynamicTemplate(template) || !template.assetsDirectory) {
     return [];
   }
 
@@ -204,7 +335,7 @@ export async function getTemplateAssetFiles(
 async function readTemplateRegistry(): Promise<TemplateRegistryEntry[]> {
   let folders: Dirent[];
   try {
-    folders = await fs.readdir(templatesRoot, { withFileTypes: true });
+    folders = await fsPromises.readdir(templatesRoot, { withFileTypes: true });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return [];
@@ -224,7 +355,7 @@ async function readTemplateRegistry(): Promise<TemplateRegistryEntry[]> {
     const metaPath = path.join(folderPath, "meta.json");
 
     try {
-      const raw = await fs.readFile(metaPath, "utf-8");
+      const raw = await fsPromises.readFile(metaPath, "utf-8");
       const meta = JSON.parse(raw) as RawTemplateMeta;
       const template = await buildTemplateDefinition(meta, folderName, folderPath);
       templates.push(template);
@@ -578,7 +709,7 @@ function normaliseModuleType(value: unknown): TemplateModuleType {
 async function normaliseAssetsDirectory(folderPath: string): Promise<string | null> {
   const assetsPath = path.join(folderPath, "assets");
   try {
-    const stat = await fs.stat(assetsPath);
+    const stat = await fsPromises.stat(assetsPath);
     if (stat.isDirectory()) {
       return assetsPath;
     }
@@ -590,15 +721,21 @@ async function normaliseAssetsDirectory(folderPath: string): Promise<string | nu
   return null;
 }
 
+function isDynamicTemplate(
+  template: TemplateDefinition | TemplateRegistryEntry | DynamicTemplateDefinition
+): template is DynamicTemplateDefinition {
+  return Boolean(template.isDynamic);
+}
+
 function stripFilesystemFields(entry: TemplateRegistryEntry): TemplateDefinition {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { directory, assetsDirectory, ...definition } = entry;
-  return definition;
+  return { ...definition, isDynamic: false };
 }
 
 async function readTextFile(filePath: string): Promise<string> {
   try {
-    return await fs.readFile(filePath, "utf-8");
+    return await fsPromises.readFile(filePath, "utf-8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`Missing file: ${filePath}`);
@@ -611,7 +748,7 @@ async function readDirectoryRecursive(
   directory: string,
   base: string
 ): Promise<Array<{ relativePath: string; content: Buffer }>> {
-  const entries = await fs.readdir(directory, { withFileTypes: true });
+  const entries = await fsPromises.readdir(directory, { withFileTypes: true });
   const files: Array<{ relativePath: string; content: Buffer }> = [];
 
   for (const entry of entries) {
@@ -627,7 +764,7 @@ async function readDirectoryRecursive(
     }
 
     const relativePath = path.relative(base, entryPath).replace(/\\/g, "/");
-    const content = await fs.readFile(entryPath);
+    const content = await fsPromises.readFile(entryPath);
     files.push({ relativePath, content });
   }
 

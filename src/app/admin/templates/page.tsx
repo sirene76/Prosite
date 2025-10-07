@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 
@@ -22,8 +23,6 @@ type TemplateListItem = {
   category?: string;
   description?: string;
   previewImage?: string;
-  features?: string[];
-  isActive: boolean;
   createdAt: string;
 };
 
@@ -93,36 +92,25 @@ export default async function AdminTemplatesPage() {
             templates.map((template) => (
               <article key={template._id} className="flex flex-col justify-between rounded-xl border border-slate-900 bg-gray-900/60 p-5 shadow-lg shadow-black/10">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{template.name}</h3>
-                      {template.category ? (
-                        <p className="text-xs uppercase tracking-wide text-slate-400">{template.category}</p>
-                      ) : null}
-                    </div>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        template.isActive
-                          ? "bg-emerald-500/10 text-emerald-300"
-                          : "bg-slate-700/40 text-slate-300"
-                      }`}
-                    >
-                      {template.isActive ? "Published" : "Unpublished"}
-                    </span>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-semibold text-white">{template.name}</h3>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">/{template.slug}</p>
+                    {template.category ? (
+                      <p className="text-xs text-slate-400">{template.category}</p>
+                    ) : null}
                   </div>
                   {template.description ? (
                     <p className="text-sm text-slate-400">{template.description}</p>
                   ) : null}
-                  {template.features && template.features.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {template.features.map((feature) => (
-                        <span
-                          key={feature}
-                          className="rounded-full bg-slate-800/60 px-2 py-1 text-xs text-slate-300"
-                        >
-                          {feature}
-                        </span>
-                      ))}
+                  {template.previewImage ? (
+                    <div className="relative h-32 overflow-hidden rounded-lg border border-slate-800">
+                      <Image
+                        src={template.previewImage}
+                        alt={`${template.name} preview`}
+                        fill
+                        sizes="(min-width: 1280px) 320px, (min-width: 768px) 33vw, 100vw"
+                        className="object-cover"
+                      />
                     </div>
                   ) : null}
                 </div>
