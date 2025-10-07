@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+import clsx from "clsx";
+
 import { useBuilder } from "@/context/BuilderContext";
 
 export function ThemeSelector() {
@@ -11,6 +13,10 @@ export function ThemeSelector() {
   const fontKeys = selectedTemplate.fonts;
 
   const palettes = useMemo(() => buildPalettes(colorKeys), [colorKeys]);
+  const colorDefaultsMap = useMemo(
+    () => new Map(colorDefinitions.map((color) => [color.id, color.default ?? ""])),
+    [colorDefinitions]
+  );
 
   return (
     <div className="space-y-4">
@@ -18,32 +24,57 @@ export function ThemeSelector() {
         <div className="space-y-3">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Palettes</p>
           <div className="space-y-2">
-            {palettes.map((preset) => (
-              <button
-                type="button"
-                key={preset.name}
-                onClick={() =>
-                  updateTheme({
-                    colors: preset.colors,
-                    name: preset.name,
-                    label: preset.label ?? preset.name,
-                  })
+            {palettes.map((preset) => {
+              const isActive = colorKeys.every((token) => {
+                const presetValue = preset.colors[token];
+                if (!presetValue) {
+                  return false;
                 }
-                className="flex w-full items-center justify-between rounded-2xl border border-gray-800 bg-gray-900/40 px-4 py-3 text-left transition hover:border-builder-accent/40"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-100">{preset.name}</p>
-                  <p className="text-xs text-slate-500">Apply this palette</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {Object.values(preset.colors)
-                    .slice(0, 3)
-                    .map((value, index) => (
-                      <span key={`${preset.name}-${index}`} className="h-7 w-7 rounded-full border border-white/10" style={{ backgroundColor: value }} />
-                    ))}
-                </div>
-              </button>
-            ))}
+                const appliedValue =
+                  theme.colors[token] ?? themeDefaults.colors[token] ?? colorDefaultsMap.get(token) ?? "";
+                if (!appliedValue) {
+                  return false;
+                }
+                return appliedValue.trim().toLowerCase() === presetValue.trim().toLowerCase();
+              });
+
+              return (
+                <button
+                  type="button"
+                  key={preset.name}
+                  onClick={() =>
+                    updateTheme({
+                      colors: preset.colors,
+                      name: preset.name,
+                      label: preset.label ?? preset.name,
+                    })
+                  }
+                  className={clsx(
+                    "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition hover:border-builder-accent/40",
+                    "bg-gray-900/40",
+                    isActive
+                      ? "border-builder-accent/70 bg-gray-900/60 ring-1 ring-builder-accent/30"
+                      : "border-gray-800"
+                  )}
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">{preset.name}</p>
+                    <p className="text-xs text-slate-500">Apply this palette</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {Object.values(preset.colors)
+                      .slice(0, 3)
+                      .map((value, index) => (
+                        <span
+                          key={`${preset.name}-${index}`}
+                          className="h-7 w-7 rounded-full border border-white/10"
+                          style={{ backgroundColor: value }}
+                        />
+                      ))}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : null}
