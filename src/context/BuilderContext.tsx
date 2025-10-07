@@ -129,12 +129,11 @@ function buildContentSections(
   const templateSections = template?.sections ?? [];
 
   templateSections.forEach((section) => {
-    const fields = section.fields
-      .map((field) => {
+    // ✅ Make sure we always return a TemplateContentField or null
+    const fields: TemplateContentField[] = section.fields
+      .map((field): TemplateContentField | null => {
         const key = field.id.trim();
-        if (!key) {
-          return null;
-        }
+        if (!key) return null;
 
         seenKeys.add(key);
 
@@ -146,12 +145,13 @@ function buildContentSections(
           key,
           label: field.label ?? toSentence(key.split(".").pop() ?? key),
           type: mapFieldType(field.type, key),
-          placeholder: field.placeholder,
-          description: field.description,
-          defaultValue: field.default,
-        } satisfies TemplateContentField;
+          placeholder: field.placeholder ?? undefined,
+          description: field.description ?? undefined,
+          defaultValue: field.default ?? undefined,
+        };
       })
-      .filter((field): field is TemplateContentField => Boolean(field));
+      // ✅ Proper type predicate so TS narrows nulls
+      .filter((field): field is TemplateContentField => field !== null);
 
     sectionMap.set(section.id, {
       id: section.id,
@@ -161,6 +161,7 @@ function buildContentSections(
     });
   });
 
+  // ✅ Add missing placeholders that aren't explicitly declared
   placeholders.forEach((placeholder) => {
     const trimmed = placeholder.trim();
     if (!trimmed || seenKeys.has(trimmed) || trimmed.startsWith("modules.")) {
@@ -183,27 +184,29 @@ function buildContentSections(
     }
 
     const section = sectionMap.get(sectionId);
-    if (!section) {
-      return;
-    }
+    if (!section) return;
 
     section.fields.push({
       key: trimmed,
       label: toSentence(fieldKey),
       type: inferFieldType(fieldKey),
+      placeholder: undefined,
+      description: undefined,
+      defaultValue: undefined,
     });
   });
 
-  const sections = Array.from(sectionMap.values()).filter((section) => section.fields.length > 0);
+  // ✅ Sort sections and deduplicate field keys
+  const sections = Array.from(sectionMap.values()).filter(
+    (section) => section.fields.length > 0
+  );
 
   if (templateSections.length) {
     const order = new Map(templateSections.map((section, index) => [section.id, index] as const));
     sections.sort((a, b) => {
-      const aIndex = order.has(a.id) ? order.get(a.id)! : Number.MAX_SAFE_INTEGER;
-      const bIndex = order.has(b.id) ? order.get(b.id)! : Number.MAX_SAFE_INTEGER;
-      if (aIndex === bIndex) {
-        return a.label.localeCompare(b.label);
-      }
+      const aIndex = order.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const bIndex = order.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      if (aIndex === bIndex) return a.label.localeCompare(b.label);
       return aIndex - bIndex;
     });
   } else {
@@ -222,6 +225,7 @@ function buildContentSections(
     defaults,
   };
 }
+
 
 function mapFieldType(fieldType: TemplateContentField["type"] | string | undefined, key: string) {
   if (fieldType === "textarea" || fieldType === "image" || fieldType === "color") {

@@ -74,29 +74,48 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { templateId } = await request.json();
+  const { templateId } = (await request.json()) as { templateId?: string };
 
-  if (typeof templateId !== "string" || !templateId.trim()) {
+  if (!templateId || typeof templateId !== "string" || !templateId.trim()) {
     return NextResponse.json({ error: "templateId is required" }, { status: 400 });
   }
 
+  // Fetch the selected template (can be static or dynamic)
   const template = await getTemplateById(templateId.trim());
   if (!template) {
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
   try {
+    // Parse meta JSON if it's stored as a string
+    let parsedMeta: Record<string, any> = {};
+    if (typeof template.meta === "string") {
+      try {
+        parsedMeta = JSON.parse(template.meta);
+      } catch {
+        parsedMeta = {};
+      }
+    } else {
+      parsedMeta = (template.meta as Record<string, any>) ?? {};
+    }
+
+    // Create the website with template data prefilled
     const website = await Website.create({
       name: template.name,
       templateId: template.id,
       user: session.user.email,
       status: "draft",
       plan: "free",
+      html: template.html ?? "",
+      css: template.css ?? "",
+      meta: parsedMeta,
+      theme: parsedMeta.theme ?? {},
+      content: parsedMeta.content ?? {},
     });
 
     return NextResponse.json(website, { status: 201 });
   } catch (error) {
-    console.error("Failed to create website:", error);
+    console.error("❌ Failed to create website:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
