@@ -11,9 +11,20 @@ export type RenderTemplateOptions = {
     text?: string;
   };
   css?: string;
+  themeTokens?: {
+    colors?: Record<string, string | undefined>;
+    fonts?: Record<string, string | undefined>;
+  };
 };
 
-export function renderTemplate({ html, values, modules = [], theme, css }: RenderTemplateOptions) {
+export function renderTemplate({
+  html,
+  values,
+  modules = [],
+  theme,
+  css,
+  themeTokens,
+}: RenderTemplateOptions) {
   if (!html) return "";
 
   // --- Inject absolute asset paths dynamically ---
@@ -35,7 +46,30 @@ export function renderTemplate({ html, values, modules = [], theme, css }: Rende
   }
 
   if (inlineCss.trim()) {
-    processedHtml = injectInlineCss(processedHtml, inlineCss, templateId);
+    const colorTokens: Record<string, string | undefined> = {
+      ...(themeTokens?.colors ?? {}),
+    };
+
+    if (theme?.primary && !colorTokens.primary) {
+      colorTokens.primary = theme.primary;
+    }
+    if (theme?.secondary && !colorTokens.secondary) {
+      colorTokens.secondary = theme.secondary;
+    }
+    if (theme?.background && !colorTokens.background) {
+      colorTokens.background = theme.background;
+    }
+    if (theme?.text && !colorTokens.text) {
+      colorTokens.text = theme.text;
+    }
+
+    processedHtml = applyThemeTokens({
+      html: processedHtml,
+      css: inlineCss,
+      templateId,
+      colors: colorTokens,
+      fonts: themeTokens?.fonts,
+    });
   }
 
   const moduleMap = new Map<string, string>();
@@ -51,7 +85,7 @@ export function renderTemplate({ html, values, modules = [], theme, css }: Rende
     return values[key] ?? "";
   });
 
-  const colorVars = buildThemeVariables(theme);
+  const colorVars = buildThemeVariables(theme, themeTokens?.fonts);
   if (!colorVars) {
     return rendered;
   }
@@ -90,6 +124,51 @@ function injectInlineCss(html: string, css: string, templateId: string | null) {
   }
 
   return `${styleTag}${html}`;
+}
+
+type ThemeTokenMap = Record<string, string | undefined> | undefined;
+
+export function applyThemeTokens({
+  html,
+  css,
+  templateId,
+  colors,
+  fonts,
+}: {
+  html: string;
+  css?: string;
+  templateId?: string | null;
+  colors?: ThemeTokenMap;
+  fonts?: ThemeTokenMap;
+}) {
+  if (!css || !css.trim()) {
+    return html;
+  }
+
+  const replacements: Array<[RegExp, string]> = [];
+
+  Object.entries(colors ?? {}).forEach(([key, value]) => {
+    const token = typeof value === "string" ? value.trim() : "";
+    if (!token) {
+      return;
+    }
+    replacements.push([new RegExp(`{{\\s*${escapeRegExp(key)}\\s*}}`, "gi"), token]);
+  });
+
+  Object.entries(fonts ?? {}).forEach(([key, value]) => {
+    const token = typeof value === "string" ? value.trim() : "";
+    if (!token) {
+      return;
+    }
+    replacements.push([new RegExp(`{{\\s*font\\.${escapeRegExp(key)}\\s*}}`, "gi"), token]);
+  });
+
+  let themedCss = css;
+  replacements.forEach(([pattern, replacement]) => {
+    themedCss = themedCss.replace(pattern, replacement);
+  });
+
+  return injectInlineCss(html, themedCss, templateId ?? null);
 }
 
 type DynamicRequire = ((path: string) => unknown) | null | undefined;
@@ -144,25 +223,35 @@ function detectTemplateFromHTML(html: string): string | null {
   return null;
 }
 
-function buildThemeVariables(theme: RenderTemplateOptions["theme"]) {
-  if (!theme) {
+function buildThemeVariables(
+  theme: RenderTemplateOptions["theme"],
+  fonts?: Record<string, string | undefined>
+) {
+  if (!theme && !fonts) {
     return "";
   }
 
   const tokens: string[] = [];
 
-  if (theme.primary) {
+  if (theme?.primary) {
     tokens.push(`--color-primary: ${theme.primary};`);
   }
-  if (theme.secondary) {
+  if (theme?.secondary) {
     tokens.push(`--color-secondary: ${theme.secondary};`);
   }
-  if (theme.background) {
+  if (theme?.background) {
     tokens.push(`--color-bg: ${theme.background};`);
   }
-  if (theme.text) {
+  if (theme?.text) {
     tokens.push(`--color-text: ${theme.text};`);
   }
+
+  Object.entries(fonts ?? {}).forEach(([key, value]) => {
+    if (!value) {
+      return;
+    }
+    tokens.push(`--font-${key}: ${value};`);
+  });
 
   if (!tokens.length) {
     return "";
@@ -188,4 +277,8 @@ function renderModule(module: TemplateModuleDefinition) {
   }
 
   return `${heading}${description}<form class="module-form"><input type="text" placeholder="Your name" /><input type="email" placeholder="you@example.com" /><button type="submit">Send</button></form>`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

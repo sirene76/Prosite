@@ -403,5 +403,14 @@
   "fonts": {
     "heading": "Playfair Display",
     "body": "Poppins"
+  },
+  "builder": {
+    "showTheme": true,
+    "showPages": true,
+    "layout": "two-column",
+    "accentColor": "#2563eb",
+    "customPanels": [
+      { "id": "gallery", "label": "Gallery Manager", "type": "image-grid", "limit": 6 }
+    ]
   }
 }

@@ -11,6 +11,17 @@ export function ThemeSelector() {
   const fontKeys = selectedTemplate.fonts;
 
   const palettes = useMemo(() => buildPalettes(colorKeys), [colorKeys]);
+  const currentColors = useMemo(() => {
+    const entries: Record<string, string> = {};
+    colorDefinitions.forEach((color) => {
+      const key = color.id;
+      const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default ?? "";
+      if (value) {
+        entries[key] = value.toLowerCase();
+      }
+    });
+    return entries;
+  }, [colorDefinitions, theme.colors, themeDefaults.colors]);
 
   return (
     <div className="space-y-4">
@@ -18,32 +29,45 @@ export function ThemeSelector() {
         <div className="space-y-3">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Palettes</p>
           <div className="space-y-2">
-            {palettes.map((preset) => (
-              <button
-                type="button"
-                key={preset.name}
-                onClick={() =>
-                  updateTheme({
-                    colors: preset.colors,
-                    name: preset.name,
-                    label: preset.label ?? preset.name,
-                  })
-                }
-                className="flex w-full items-center justify-between rounded-2xl border border-gray-800 bg-gray-900/40 px-4 py-3 text-left transition hover:border-builder-accent/40"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-100">{preset.name}</p>
-                  <p className="text-xs text-slate-500">Apply this palette</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {Object.values(preset.colors)
-                    .slice(0, 3)
-                    .map((value, index) => (
-                      <span key={`${preset.name}-${index}`} className="h-7 w-7 rounded-full border border-white/10" style={{ backgroundColor: value }} />
-                    ))}
-                </div>
-              </button>
-            ))}
+            {palettes.map((preset) => {
+              const isActive = colorKeys.every((key) => {
+                const presetValue = preset.colors[key]?.toLowerCase();
+                const currentValue = currentColors[key];
+                return presetValue && currentValue === presetValue;
+              });
+
+              return (
+                <button
+                  type="button"
+                  key={preset.name}
+                  onClick={() =>
+                    updateTheme({
+                      colors: preset.colors,
+                      name: preset.name,
+                      label: preset.label ?? preset.name,
+                    })
+                  }
+                  aria-pressed={isActive}
+                  className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition hover:border-builder-accent/40 ${
+                    isActive
+                      ? "border-builder-accent/70 bg-gray-900/60 shadow-[0_0_0_1px_rgba(37,99,235,0.4)]"
+                      : "border-gray-800 bg-gray-900/40"
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">{preset.name}</p>
+                    <p className="text-xs text-slate-500">Apply this palette</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {Object.values(preset.colors)
+                      .slice(0, 3)
+                      .map((value, index) => (
+                        <span key={`${preset.name}-${index}`} className="h-7 w-7 rounded-full border border-white/10" style={{ backgroundColor: value }} />
+                      ))}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : null}

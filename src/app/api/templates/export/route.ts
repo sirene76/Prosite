@@ -42,12 +42,24 @@ export async function POST(request: Request) {
       getTemplateAssetFiles(template.id),
     ]);
 
+    const colorTokens = buildThemeColorTokens(template, body.theme, body.themeDefaults);
+    const fontTokens = buildThemeFontTokens(template, body.theme, body.themeDefaults);
+
     const rendered = renderTemplate({
       html,
       values: body.content ?? {},
       modules: template.modules,
-      theme: resolveThemeColors(template, body.theme, body.themeDefaults),
+      theme: {
+        primary: colorTokens.primary,
+        secondary: colorTokens.secondary,
+        background: colorTokens.background,
+        text: colorTokens.text,
+      },
       css,
+      themeTokens: {
+        colors: colorTokens,
+        fonts: fontTokens,
+      },
     });
 
     const finalHtml = wrapWithDocument(rendered);
@@ -84,27 +96,15 @@ function applyTheme(
   theme: ThemePayload,
   themeDefaults: ThemePayload
 ) {
-  const tokens: string[] = [];
+  const colorTokens = buildThemeColorTokens(template, theme, themeDefaults);
+  const fontTokens = buildThemeFontTokens(template, theme, themeDefaults);
 
-  template.colors.forEach((color: TemplateColorDefinition) => {
-    const key = color.id;
-    const value =
-      theme.colors?.[key] ??
-      themeDefaults.colors?.[key] ??
-      color.default ??
-      "";
-
-    if (value) {
-      tokens.push(`--color-${key}: ${value}; --${key}-color: ${value};`);
-    }
-  });
-
-  template.fonts.forEach((font) => {
-    const value = theme.fonts?.[font] ?? themeDefaults.fonts?.[font] ?? "";
-    if (value) {
-      tokens.push(`--font-${font}: ${value};`);
-    }
-  });
+  const tokens = [
+    ...Object.entries(colorTokens).map(
+      ([key, value]) => `--color-${key}: ${value}; --${key}-color: ${value};`
+    ),
+    ...Object.entries(fontTokens).map(([key, value]) => `--font-${key}: ${value};`),
+  ];
 
   if (!tokens.length) {
     return css;
@@ -113,29 +113,40 @@ function applyTheme(
   return `:root { ${tokens.join(" ")} }\n${css}`;
 }
 
-function resolveThemeColors(
+function buildThemeColorTokens(
   template: TemplateRegistryEntry,
   theme?: ThemePayload,
   themeDefaults?: ThemePayload
 ) {
-  const defaults = new Map(template.colors.map((color) => [color.id, color.default ?? ""] as const));
-
-  const read = (key: string) => {
+  const tokens: Record<string, string> = {};
+  template.colors.forEach((color: TemplateColorDefinition) => {
+    const key = color.id;
     const value =
       theme?.colors?.[key] ??
       themeDefaults?.colors?.[key] ??
-      defaults.get(key) ??
+      color.default ??
       "";
-    const trimmed = typeof value === "string" ? value.trim() : "";
-    return trimmed || undefined;
-  };
 
-  return {
-    primary: read("primary"),
-    secondary: read("secondary"),
-    background: read("background"),
-    text: read("text"),
-  };
+    if (value) {
+      tokens[key] = value;
+    }
+  });
+  return tokens;
+}
+
+function buildThemeFontTokens(
+  template: TemplateRegistryEntry,
+  theme?: ThemePayload,
+  themeDefaults?: ThemePayload
+) {
+  const tokens: Record<string, string> = {};
+  template.fonts.forEach((font) => {
+    const value = theme?.fonts?.[font] ?? themeDefaults?.fonts?.[font] ?? "";
+    if (value) {
+      tokens[font] = value;
+    }
+  });
+  return tokens;
 }
 
 function wrapWithDocument(html: string) {
