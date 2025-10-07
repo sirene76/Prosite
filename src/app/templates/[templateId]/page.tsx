@@ -32,7 +32,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
 
           <div className="flex justify-center gap-4">
             <Link
-              href={`/builder/new?template=${(template as any).slug || template.id}`}
+              href={`/builder/new?template=${template.slug ?? template.id}`}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-md text-white font-medium"
             >
               Use this Template

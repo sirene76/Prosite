@@ -34,8 +34,14 @@ export function resolveBuilderBasePath(pathname: string | null | undefined) {
 
   const maybeWebsiteId = segments[1];
 
-  if (maybeWebsiteId && !isBuilderStep(maybeWebsiteId)) {
-    return { basePath: `/builder/${maybeWebsiteId}`, websiteId: maybeWebsiteId };
+  if (maybeWebsiteId) {
+    if (maybeWebsiteId === "new") {
+      return { basePath: "/builder/new", websiteId: undefined };
+    }
+
+    if (!isBuilderStep(maybeWebsiteId)) {
+      return { basePath: `/builder/${maybeWebsiteId}`, websiteId: maybeWebsiteId };
+    }
   }
 
   return { basePath: "/builder", websiteId: undefined as string | undefined };
