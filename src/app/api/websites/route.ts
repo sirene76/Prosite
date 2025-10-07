@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const templateId = searchParams.get("templateId");
 
+  // ✅ Handle /api/websites?templateId=... to load template assets
   if (templateId) {
     try {
       const assets = await getTemplateAssets(templateId);
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     }
   }
 
+  // ✅ Ensure user is logged in
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,32 +32,34 @@ export async function GET(request: Request) {
 
   await connectDB();
 
-  const websites = await Website.find({ user: session.user.email })
+  // ✅ Explicit array typing for lean()
+  const websites = (await Website.find({ user: session.user.email })
     .sort({ createdAt: -1 })
-    .lean<WebsiteModel & {
-      _id: Types.ObjectId | string;
-      createdAt?: Date;
-      updatedAt?: Date;
-    }>();
+    .lean()) as (WebsiteModel & {
+    _id: Types.ObjectId | string;
+    createdAt?: Date;
+    updatedAt?: Date;
+  })[];
 
-  const sanitizedWebsites: DashboardWebsite[] = websites.map((website) => {
-    const { _id, createdAt, updatedAt, ...rest } = website;
-    const normalizedId =
-      typeof _id === "string"
-        ? _id
-        : typeof _id?.toString === "function"
+  // ✅ Explicit map parameter typing
+  const sanitizedWebsites: DashboardWebsite[] = websites.map(
+    (website: WebsiteModel & { _id: Types.ObjectId | string }) => {
+      const { _id, createdAt, updatedAt, ...rest } = website;
+      const normalizedId =
+        typeof _id === "string"
+          ? _id
+          : typeof _id?.toString === "function"
           ? _id.toString()
           : String(_id);
 
-    return {
-      ...rest,
-      _id: normalizedId,
-      createdAt:
-        createdAt instanceof Date ? createdAt.toISOString() : createdAt,
-      updatedAt:
-        updatedAt instanceof Date ? updatedAt.toISOString() : updatedAt,
-    } satisfies DashboardWebsite;
-  });
+      return {
+        ...rest,
+        _id: normalizedId,
+        createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
+        updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : updatedAt,
+      } satisfies DashboardWebsite;
+    }
+  );
 
   return NextResponse.json({ websites: sanitizedWebsites });
 }
