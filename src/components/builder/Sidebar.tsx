@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { useBuilder, type TemplateContentSection } from "@/context/BuilderContext";
-import type { TemplateColorDefinition, TemplateModuleDefinition } from "@/lib/templates";
+import type { BuilderPanel, TemplateColorDefinition, TemplateModuleDefinition } from "@/lib/templates";
+import { DynamicPanelRenderer } from "./panels/DynamicPanels";
 import { PageList } from "./PageList";
 import { ThemeSelector } from "./ThemeSelector";
 import { ContentForm } from "./ContentForm";
 
-const tabs = [
+const baseTabs = [
   { id: "pages", label: "Pages" },
   { id: "theme", label: "Theme" },
   { id: "content", label: "Content" },
@@ -18,7 +19,7 @@ function formatStepLabel(step: string) {
   return step.charAt(0).toUpperCase() + step.slice(1);
 }
 
-type TabId = (typeof tabs)[number]["id"];
+type TabId = (typeof baseTabs)[number]["id"] | string;
 
 export function Sidebar() {
   const {
@@ -38,6 +39,29 @@ export function Sidebar() {
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
   const currentStepKey = steps[currentStep] ?? steps[0];
+
+  const customPanels = useMemo(() => {
+    const panels = selectedTemplate.meta?.builder?.customPanels;
+    return Array.isArray(panels) ? (panels as BuilderPanel[]) : [];
+  }, [selectedTemplate]);
+  const allTabs = useMemo(
+    () => [...baseTabs, ...customPanels.map((panel) => ({ id: panel.id, label: panel.label }))],
+    [customPanels]
+  );
+
+  useEffect(() => {
+    if (baseTabs.some((tab) => tab.id === activeTab)) {
+      return;
+    }
+    if (customPanels.some((panel) => panel.id === activeTab)) {
+      return;
+    }
+    if (customPanels.length > 0) {
+      setActiveTab(customPanels[0].id);
+      return;
+    }
+    setActiveTab("pages");
+  }, [activeTab, customPanels]);
 
   return (
     <aside
@@ -65,7 +89,7 @@ export function Sidebar() {
           <div className="flex flex-1 flex-col overflow-hidden">
             <div className="px-4 pt-4">
               <div className="grid grid-cols-3 gap-2 rounded-full bg-gray-800/60 p-1 text-xs font-medium text-slate-400">
-                {tabs.map((tab) => (
+                {allTabs.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
@@ -110,6 +134,12 @@ export function Sidebar() {
                     modules={selectedTemplate.modules}
                   />
                 ) : null}
+
+                {customPanels.map((panel) =>
+                  activeTab === panel.id ? (
+                    <DynamicPanelRenderer key={panel.id} panel={panel} />
+                  ) : null
+                )}
               </div>
             </div>
           </div>
@@ -127,8 +157,8 @@ type ThemeValues = {
 
 type ContentPanelProps = {
   sections: TemplateContentSection[];
-  content: Record<string, string>;
-  updateContent: (changes: Record<string, string>) => void;
+  content: Record<string, unknown>;
+  updateContent: (changes: Record<string, unknown>) => void;
   previewFrame: HTMLIFrameElement | null;
   colors: TemplateColorDefinition[];
   theme: ThemeValues;

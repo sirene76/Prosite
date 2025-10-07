@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
-import { applyThemeTokens, renderTemplate } from "@/lib/renderTemplate";
+import { injectThemeTokens, renderTemplate } from "@/lib/renderTemplate";
 
 const DEVICE_WIDTHS = {
   desktop: 1440,
@@ -140,7 +140,7 @@ export function WebsitePreview() {
       },
     });
 
-    const themedDocument = applyThemeTokens({
+    const themedDocument = injectThemeTokens({
       html: rendered,
       css: assets.css,
       templateId: selectedTemplate.id,

@@ -10,7 +10,7 @@ const inputBaseClass =
 
 export type ContentFormProps = {
   section: TemplateContentSection;
-  values: Record<string, string>;
+  values: Record<string, unknown>;
   onChange: (key: string, value: string) => void;
 };
 
@@ -18,10 +18,25 @@ export function ContentForm({ section, values, onChange }: ContentFormProps) {
   return (
     <form className="space-y-4" onSubmit={(event) => event.preventDefault()}>
       {section.fields.map((field) => (
-        <Fragment key={field.key}>{renderField(field, values[field.key] ?? "", onChange)}</Fragment>
+        <Fragment key={field.key}>
+          {renderField(field, toInputValue(values[field.key]), onChange)}
+        </Fragment>
       ))}
     </form>
   );
+}
+
+function toInputValue(value: unknown): string {
+  if (value == null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
 }
 
 function renderField(

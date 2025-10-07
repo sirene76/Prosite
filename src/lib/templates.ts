@@ -71,19 +71,25 @@ export type TemplateModuleDefinition = {
   height?: number;
 };
 
-export type TemplateBuilderCustomPanel = {
-  id: string;
-  label: string;
-  type: string;
-  limit?: number;
-};
+export const BuilderPanelSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: z.enum(["image-grid", "table-editor", "text-list"]),
+  storageKey: z.string(),
+  limit: z.number().optional(),
+  fields: z.array(z.string()).optional(),
+});
+
+export type BuilderPanel = z.infer<typeof BuilderPanelSchema>;
+
+export type TemplateBuilderCustomPanel = BuilderPanel;
 
 export type TemplateBuilderConfig = {
   showTheme?: boolean;
   showPages?: boolean;
-  layout?: string;
+  layout?: "one-column" | "two-column";
   accentColor?: string;
-  customPanels?: TemplateBuilderCustomPanel[];
+  customPanels?: BuilderPanel[];
 };
 
 export type TemplateDefinition = {
@@ -103,7 +109,7 @@ export type TemplateDefinition = {
   modules: TemplateModuleDefinition[];
   html?: string;
   css?: string;
-  meta?: Record<string, unknown>;
+  meta?: MetaJson;
   isDynamic?: boolean;
   builder?: TemplateBuilderConfig;
 };
@@ -116,7 +122,7 @@ export type TemplateRegistryEntry = TemplateDefinition & {
 export type DynamicTemplateDefinition = TemplateDefinition & {
   html: string;
   css: string;
-  meta: Record<string, unknown>;
+  meta: MetaJson;
   isDynamic: true;
 };
 
@@ -139,22 +145,16 @@ const TemplateSectionSchema = z
   })
   .passthrough();
 
-const TemplateBuilderPanelSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  type: z.string(),
-  limit: z.number().int().positive().optional(),
-});
+const TemplateBuilderPanelSchema = BuilderPanelSchema;
 
 const TemplateBuilderSchema = z
   .object({
     showTheme: z.boolean().optional(),
     showPages: z.boolean().optional(),
-    layout: z.string().optional(),
+    layout: z.enum(["one-column", "two-column"]).optional(),
     accentColor: z.string().optional(),
     customPanels: z.array(TemplateBuilderPanelSchema).optional(),
   })
-  .partial()
   .passthrough();
 
 const TemplateColorsSchema = z.union([
@@ -189,7 +189,9 @@ export const MetaJsonSchema = z
   })
   .passthrough();
 
-type RawTemplateMeta = z.infer<typeof MetaJsonSchema>;
+export type MetaJson = z.infer<typeof MetaJsonSchema>;
+
+type RawTemplateMeta = MetaJson;
 
 export async function getTemplates(): Promise<TemplateDefinition[]> {
   const entries = await readTemplateRegistry();
@@ -303,7 +305,7 @@ function buildDatabaseTemplateDefinition(template: DatabaseTemplateDocument): Dy
     builder,
     html: typeof template.html === "string" ? template.html : "",
     css: typeof template.css === "string" ? template.css : "",
-    meta: meta as Record<string, unknown>,
+    meta,
     isDynamic: true,
   } satisfies DynamicTemplateDefinition;
 }
@@ -800,32 +802,20 @@ function normaliseBuilder(raw: RawTemplateMeta["builder"]): TemplateBuilderConfi
 
   const showTheme = typeof raw.showTheme === "boolean" ? raw.showTheme : undefined;
   const showPages = typeof raw.showPages === "boolean" ? raw.showPages : undefined;
-  const layout = typeof raw.layout === "string" && raw.layout.trim() ? raw.layout.trim() : undefined;
+  const layout = raw.layout === "two-column" || raw.layout === "one-column" ? raw.layout : undefined;
   const accentColor = typeof raw.accentColor === "string" && raw.accentColor.trim() ? raw.accentColor.trim() : undefined;
 
   const customPanels = Array.isArray(raw.customPanels)
     ? raw.customPanels
         .map((panel) => {
-          if (!panel || typeof panel !== "object") {
+          const parsed = BuilderPanelSchema.safeParse(panel);
+          if (!parsed.success) {
+            console.warn("Skipping invalid builder panel", parsed.error.flatten());
             return null;
           }
-
-          const id = typeof panel.id === "string" && panel.id.trim() ? panel.id.trim() : undefined;
-          const label = typeof panel.label === "string" && panel.label.trim() ? panel.label.trim() : undefined;
-          const type = typeof panel.type === "string" && panel.type.trim() ? panel.type.trim() : undefined;
-          if (!id || !label || !type) {
-            return null;
-          }
-
-          const rawLimit = (panel as { limit?: unknown }).limit;
-          const limit =
-            typeof rawLimit === "number" && Number.isFinite(rawLimit) && rawLimit > 0
-              ? Math.floor(rawLimit)
-              : undefined;
-
-          return { id, label, type, limit } satisfies TemplateBuilderCustomPanel;
+          return parsed.data;
         })
-        .filter((panel): panel is TemplateBuilderCustomPanel => Boolean(panel))
+        .filter((panel): panel is BuilderPanel => Boolean(panel))
     : undefined;
 
   const builder: TemplateBuilderConfig = {
