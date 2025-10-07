@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
-import { renderTemplate } from "@/lib/renderTemplate";
+import { applyThemeTokens, renderTemplate } from "@/lib/renderTemplate";
 
 const DEVICE_WIDTHS = {
   desktop: 1440,
@@ -102,38 +102,36 @@ export function WebsitePreview() {
 
   const mergedData = useMemo(() => ({ ...content }), [content]);
 
-  const srcDoc = useMemo(() => {
+  const previewDocument = useMemo(() => {
     if (!assets) {
       return "";
     }
 
     const colorPalette: Record<string, string> = {};
-    const colorVariables = selectedTemplate.colors
-      .map((color) => {
-        const key = color.id;
-        const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
-        if (!value) {
-          return null;
-        }
-        colorPalette[key] = value;
-        return `--color-${key}: ${value}; --${key}-color: ${value};`;
-      })
-      .filter(Boolean)
-      .join(" ");
+    const fontPalette: Record<string, string> = {};
+    const rootTokens: string[] = [];
 
-    const fontVariables = selectedTemplate.fonts
-      .map((key) => {
-        const value = theme.fonts[key] ?? themeDefaults.fonts[key];
-        if (!value) {
-          return null;
-        }
-        return `--font-${key}: ${value};`;
-      })
-      .filter(Boolean)
-      .join(" ");
+    selectedTemplate.colors.forEach((color) => {
+      const key = color.id;
+      const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default ?? "";
+      if (!value) {
+        return;
+      }
+      colorPalette[key] = value;
+      rootTokens.push(`--color-${key}: ${value};`, `--${key}-color: ${value};`);
+    });
 
-    const themeTokens = [colorVariables, fontVariables].filter(Boolean).join(" ");
-    const themedCss = themeTokens ? `:root { ${themeTokens} }` : "";
+    selectedTemplate.fonts.forEach((key) => {
+      const value = theme.fonts[key] ?? themeDefaults.fonts[key] ?? "";
+      if (!value) {
+        return;
+      }
+      fontPalette[key] = value;
+      rootTokens.push(`--font-${key}: ${value};`);
+    });
+
+    const rootCss = rootTokens.length ? `:root { ${rootTokens.join(" ")} }` : "";
+    const combinedCss = [rootCss, assets.css].filter(Boolean).join("\n");
 
     const rendered = renderTemplate({
       html: assets.html,
@@ -145,20 +143,26 @@ export function WebsitePreview() {
         background: colorPalette.background,
         text: colorPalette.text,
       },
-      css: assets.css,
+      inlineCss: false,
     });
 
     const renderedWithScroll = injectScrollScript(rendered);
+    const baseDocument = buildPreviewDocument(renderedWithScroll, selectedTemplate.name);
 
-    const themeStyleTag = themedCss ? `<style>${themedCss}</style>` : "";
-
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />${themeStyleTag}</head><body>${renderedWithScroll}</body></html>`;
+    return applyThemeTokens({
+      html: baseDocument,
+      css: combinedCss,
+      templateId: selectedTemplate.id,
+      theme: { colors: colorPalette, fonts: fontPalette },
+    });
   }, [
     assets,
     mergedData,
     selectedTemplate.colors,
     selectedTemplate.fonts,
     selectedTemplate.modules,
+    selectedTemplate.name,
+    selectedTemplate.id,
     theme.colors,
     theme.fonts,
     themeDefaults.colors,
@@ -166,8 +170,24 @@ export function WebsitePreview() {
   ]);
 
   useEffect(() => {
-    updatePreviewDocument(srcDoc);
-  }, [srcDoc, updatePreviewDocument]);
+    updatePreviewDocument(previewDocument);
+  }, [previewDocument, updatePreviewDocument]);
+
+  useEffect(() => {
+    const frame = iframeRef.current;
+    if (!frame) {
+      return;
+    }
+
+    const document = frame.contentDocument;
+    if (!document) {
+      return;
+    }
+
+    document.open();
+    document.write(previewDocument || "");
+    document.close();
+  }, [previewDocument]);
 
   const handleZoomIn = useCallback(() => {
     setIsAutoFit(false);
@@ -363,7 +383,6 @@ export function WebsitePreview() {
                     ref={setIframeRef}
                     id="preview-frame"
                     title="Website preview"
-                    srcDoc={srcDoc}
                     data-preview-frame="true"
                     className="border-0 bg-white"
                     style={{
@@ -432,6 +451,39 @@ export function WebsitePreview() {
       </div>
     </div>
   );
+}
+
+function buildPreviewDocument(html: string, title?: string) {
+  const trimmed = html.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^<!DOCTYPE/i.test(trimmed) || /^<html/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const safeTitle = title?.trim() ? escapeHtml(title.trim()) : "Prosite Preview";
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${safeTitle}</title></head><body>${trimmed}</body></html>`;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, (match) => {
+    switch (match) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return match;
+    }
+  });
 }
 
 function injectScrollScript(html: string) {

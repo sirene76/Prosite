@@ -11,9 +11,17 @@ export type RenderTemplateOptions = {
     text?: string;
   };
   css?: string;
+  inlineCss?: boolean;
 };
 
-export function renderTemplate({ html, values, modules = [], theme, css }: RenderTemplateOptions) {
+export function renderTemplate({
+  html,
+  values,
+  modules = [],
+  theme,
+  css,
+  inlineCss = true,
+}: RenderTemplateOptions) {
   if (!html) return "";
 
   // --- Inject absolute asset paths dynamically ---
@@ -21,11 +29,11 @@ export function renderTemplate({ html, values, modules = [], theme, css }: Rende
   const templateId = templateMatch ? templateMatch[1] : detectTemplateFromHTML(html);
 
   let processedHtml = html;
-  let inlineCss = css ?? "";
+  let inlineCssContent = inlineCss ? css ?? "" : "";
 
   if (templateId) {
-    if (!inlineCss) {
-      inlineCss = resolveTemplateCss(templateId);
+    if (inlineCss && !inlineCssContent) {
+      inlineCssContent = resolveTemplateCss(templateId);
     }
 
     processedHtml = processedHtml
@@ -34,8 +42,8 @@ export function renderTemplate({ html, values, modules = [], theme, css }: Rende
       .replace(/url\((['"]?)\.\/assets\//gi, `url($1/templates/${templateId}/assets/`);
   }
 
-  if (inlineCss.trim()) {
-    processedHtml = injectInlineCss(processedHtml, inlineCss, templateId);
+  if (inlineCss && inlineCssContent.trim()) {
+    processedHtml = injectInlineCss(processedHtml, inlineCssContent, templateId);
   }
 
   const moduleMap = new Map<string, string>();
@@ -61,6 +69,71 @@ export function renderTemplate({ html, values, modules = [], theme, css }: Rende
   }
 
   return `${colorVars}${rendered}`;
+}
+
+type ThemeTokenValues = {
+  colors?: Record<string, string | undefined>;
+  fonts?: Record<string, string | undefined>;
+};
+
+type ApplyThemeTokenOptions = {
+  html: string;
+  css?: string;
+  templateId?: string | null;
+  theme?: ThemeTokenValues;
+};
+
+export function applyThemeTokens({ html, css, templateId, theme }: ApplyThemeTokenOptions): string {
+  if (!html) {
+    return "";
+  }
+
+  const resolvedTemplateId = templateId ?? detectTemplateFromHTML(html);
+  const tokenMap = buildThemeTokenMap(theme);
+
+  const replaceTokens = (input: string) => {
+    if (!input.trim() || !tokenMap.size) {
+      return input;
+    }
+
+    return input.replace(/{{\s*([^{}]+?)\s*}}/g, (match, rawToken: string) => {
+      const key = rawToken.trim();
+      if (!key) {
+        return match;
+      }
+
+      const direct = tokenMap.get(key);
+      if (typeof direct !== "undefined") {
+        return direct;
+      }
+
+      if (key.startsWith("font.")) {
+        const fallback = tokenMap.get(`fonts.${key.slice(5)}`);
+        return typeof fallback !== "undefined" ? fallback : match;
+      }
+
+      const withoutPrefix = key.replace(/^(color|colors)\./, "");
+      const colorValue = tokenMap.get(withoutPrefix);
+      if (typeof colorValue !== "undefined") {
+        return colorValue;
+      }
+
+      return match;
+    });
+  };
+
+  let processedHtml = html;
+
+  if (css && css.trim()) {
+    const themedCss = replaceTokens(css);
+    processedHtml = injectInlineCss(processedHtml, themedCss, resolvedTemplateId);
+  } else if (tokenMap.size) {
+    processedHtml = processedHtml.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi, (full, open, content, close) => {
+      return `${open}${replaceTokens(content)}${close}`;
+    });
+  }
+
+  return processedHtml;
 }
 
 const cssCache = new Map<string, string>();
@@ -169,6 +242,37 @@ function buildThemeVariables(theme: RenderTemplateOptions["theme"]) {
   }
 
   return `\n<style>\n  :root {\n    ${tokens.join("\n    ")}\n  }\n</style>\n`;
+}
+
+function buildThemeTokenMap(theme: ThemeTokenValues | undefined) {
+  const tokens = new Map<string, string>();
+  if (!theme) {
+    return tokens;
+  }
+
+  const addToken = (key: string, value: string | undefined) => {
+    if (!value) {
+      return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    tokens.set(key, trimmed);
+  };
+
+  Object.entries(theme.colors ?? {}).forEach(([key, value]) => {
+    addToken(key, value);
+    addToken(`color.${key}`, value);
+    addToken(`colors.${key}`, value);
+  });
+
+  Object.entries(theme.fonts ?? {}).forEach(([key, value]) => {
+    addToken(`font.${key}`, value);
+    addToken(`fonts.${key}`, value);
+  });
+
+  return tokens;
 }
 
 function renderModule(module: TemplateModuleDefinition) {
