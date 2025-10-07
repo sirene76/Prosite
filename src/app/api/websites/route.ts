@@ -33,13 +33,15 @@ export async function GET(request: Request) {
   await connectDB();
 
   // ✅ Explicit array typing for lean()
-  const websites = (await Website.find({ user: session.user.email })
-    .sort({ createdAt: -1 })
-    .lean()) as (WebsiteModel & {
-    _id: Types.ObjectId | string;
-    createdAt?: Date;
-    updatedAt?: Date;
-  })[];
+const websites = (await Website.find({ user: session.user.email })
+  .sort({ createdAt: -1 })
+  .lean()) as unknown as (WebsiteModel & {
+  _id: Types.ObjectId | string;
+  createdAt?: Date;
+  updatedAt?: Date;
+})[];
+
+
 
   // ✅ Explicit map parameter typing
   const sanitizedWebsites: DashboardWebsite[] = websites.map(
