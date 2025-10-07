@@ -7,9 +7,10 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "images.unsplash.com"
-      }
-    ]
+        hostname: "utfs.io",
+        pathname: "/**", // allow all paths from utfs.io,
+        },
+    ],
   }
 };
 
