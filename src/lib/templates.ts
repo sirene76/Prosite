@@ -1,6 +1,8 @@
 import { promises as fsPromises, type Dirent } from "fs";
 import path from "path";
 
+import { z } from "zod";
+
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 
@@ -69,6 +71,21 @@ export type TemplateModuleDefinition = {
   height?: number;
 };
 
+export type TemplateBuilderCustomPanel = {
+  id: string;
+  label: string;
+  type: string;
+  limit?: number;
+};
+
+export type TemplateBuilderConfig = {
+  showTheme?: boolean;
+  showPages?: boolean;
+  layout?: string;
+  accentColor?: string;
+  customPanels?: TemplateBuilderCustomPanel[];
+};
+
 export type TemplateDefinition = {
   id: string;
   slug?: string;
@@ -88,6 +105,7 @@ export type TemplateDefinition = {
   css?: string;
   meta?: Record<string, unknown>;
   isDynamic?: boolean;
+  builder?: TemplateBuilderConfig;
 };
 
 export type TemplateRegistryEntry = TemplateDefinition & {
@@ -102,22 +120,76 @@ export type DynamicTemplateDefinition = TemplateDefinition & {
   isDynamic: true;
 };
 
-type RawTemplateMeta = {
-  id?: unknown;
-  name?: unknown;
-  category?: unknown;
-  description?: unknown;
-  previewImage?: unknown;
-  preview?: unknown;
-  video?: unknown;
-  previewImages?: unknown;
-  features?: unknown;
-  sections?: unknown;
-  fields?: unknown;
-  colors?: unknown;
-  fonts?: unknown;
-  modules?: unknown;
-};
+const TemplateFieldConfigSchema = z
+  .object({
+    type: z.string().optional(),
+    label: z.string().optional(),
+    placeholder: z.string().optional(),
+    description: z.string().optional(),
+    default: z.string().optional(),
+  })
+  .passthrough();
+
+const TemplateSectionSchema = z
+  .object({
+    id: z.string().optional(),
+    label: z.string().optional(),
+    description: z.string().optional(),
+    fields: z.array(TemplateFieldConfigSchema).optional(),
+  })
+  .passthrough();
+
+const TemplateBuilderPanelSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: z.string(),
+  limit: z.number().int().positive().optional(),
+});
+
+const TemplateBuilderSchema = z
+  .object({
+    showTheme: z.boolean().optional(),
+    showPages: z.boolean().optional(),
+    layout: z.string().optional(),
+    accentColor: z.string().optional(),
+    customPanels: z.array(TemplateBuilderPanelSchema).optional(),
+  })
+  .partial()
+  .passthrough();
+
+const TemplateColorsSchema = z.union([
+  z.record(z.string()),
+  z.array(z.union([z.string(), z.record(z.any())])),
+]);
+
+const TemplateFontsSchema = z.union([
+  z.record(z.union([z.string(), z.record(z.any())])),
+  z.array(z.union([z.string(), z.record(z.any())])),
+]);
+
+export const MetaJsonSchema = z
+  .object({
+    id: z.string().optional(),
+    slug: z.string().optional(),
+    name: z.string().optional(),
+    category: z.string().optional(),
+    description: z.string().optional(),
+    previewImage: z.string().optional(),
+    preview: z.string().optional(),
+    previewVideo: z.string().optional(),
+    video: z.string().optional(),
+    previewImages: z.array(z.string()).optional(),
+    features: z.array(z.string()).optional(),
+    sections: z.array(z.union([z.string(), TemplateSectionSchema])).optional(),
+    fields: z.record(TemplateFieldConfigSchema).optional(),
+    colors: TemplateColorsSchema.optional(),
+    fonts: TemplateFontsSchema.optional(),
+    modules: z.array(z.record(z.any())).optional(),
+    builder: TemplateBuilderSchema.optional(),
+  })
+  .passthrough();
+
+type RawTemplateMeta = z.infer<typeof MetaJsonSchema>;
 
 export async function getTemplates(): Promise<TemplateDefinition[]> {
   const entries = await readTemplateRegistry();
@@ -194,23 +266,24 @@ function buildDatabaseTemplateDefinition(template: DatabaseTemplateDocument): Dy
 
   const meta = parseTemplateMeta(template.meta);
 
-  const metaPreviewImages = normaliseStringArray(meta["previewImages"]);
-  const metaFeatures = normaliseStringArray(meta["features"]);
-  const metaPreviewImage = readOptionalString(meta["previewImage"] ?? meta["preview"]);
+  const metaPreviewImages = normaliseStringArray(meta.previewImages);
+  const metaFeatures = normaliseStringArray(meta.features);
+  const metaPreviewImage = readOptionalString(meta.previewImage ?? meta.preview);
   const previewImage = readOptionalString(template.previewImage) ?? metaPreviewImage ?? metaPreviewImages[0] ?? "";
-  const previewVideo = readOptionalString(meta["previewVideo"] ?? meta["video"]);
-  const name = readOptionalString(template.name) ?? readOptionalString(meta["name"]) ?? toTitleCase(slug);
-  const category = readOptionalString(template.category) ?? readOptionalString(meta["category"]);
+  const previewVideo = readOptionalString(meta.previewVideo ?? meta.video);
+  const name = readOptionalString(template.name) ?? readOptionalString(meta.name) ?? toTitleCase(slug);
+  const category = readOptionalString(template.category) ?? readOptionalString(meta.category);
   const description =
     typeof template.description === "string"
       ? template.description
-      : readOptionalString(meta["description"]) ?? "";
+      : readOptionalString(meta.description) ?? "";
 
-  const sectionsFromFields = normaliseFieldMap(meta["fields"]);
-  const sections = sectionsFromFields.length ? sectionsFromFields : normaliseSections(meta["sections"]);
-  const colors = normaliseColors(meta["colors"]);
-  const fonts = normaliseFonts(meta["fonts"]);
-  const modules = normaliseModules(meta["modules"]);
+  const sectionsFromFields = normaliseFieldMap(meta.fields);
+  const sections = sectionsFromFields.length ? sectionsFromFields : normaliseSections(meta.sections);
+  const colors = normaliseColors(meta.colors);
+  const fonts = normaliseFonts(meta.fonts);
+  const modules = normaliseModules(meta.modules);
+  const builder = normaliseBuilder(meta.builder);
 
   return {
     id: slug,
@@ -227,36 +300,45 @@ function buildDatabaseTemplateDefinition(template: DatabaseTemplateDocument): Dy
     colors,
     fonts,
     modules,
+    builder,
     html: typeof template.html === "string" ? template.html : "",
     css: typeof template.css === "string" ? template.css : "",
-    meta,
+    meta: meta as Record<string, unknown>,
     isDynamic: true,
   } satisfies DynamicTemplateDefinition;
 }
 
-function parseTemplateMeta(meta: unknown): Record<string, unknown> {
+function parseTemplateMeta(meta: unknown): RawTemplateMeta {
   if (!meta) {
-    return {};
+    return {} as RawTemplateMeta;
   }
+
+  let candidate: unknown = meta;
 
   if (typeof meta === "string") {
     const trimmed = meta.trim();
     if (!trimmed) {
-      return {};
+      return {} as RawTemplateMeta;
     }
     try {
-      return JSON.parse(trimmed) as Record<string, unknown>;
+      candidate = JSON.parse(trimmed) as unknown;
     } catch (error) {
       console.warn("Failed to parse template meta JSON", error);
-      return {};
+      return {} as RawTemplateMeta;
     }
   }
 
-  if (typeof meta === "object" && !Array.isArray(meta)) {
-    return meta as Record<string, unknown>;
+  if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
+    return {} as RawTemplateMeta;
   }
 
-  return {};
+  const result = MetaJsonSchema.safeParse(candidate);
+  if (!result.success) {
+    console.warn("Template meta.json validation failed", result.error.format());
+    return {} as RawTemplateMeta;
+  }
+
+  return result.data;
 }
 
 function readOptionalString(value: unknown): string | undefined {
@@ -358,7 +440,7 @@ async function readTemplateRegistry(): Promise<TemplateRegistryEntry[]> {
 
     try {
       const raw = await fsPromises.readFile(metaPath, "utf-8");
-      const meta = JSON.parse(raw) as RawTemplateMeta;
+      const meta = parseTemplateMeta(raw);
       const template = await buildTemplateDefinition(meta, folderName, folderPath);
       templates.push(template);
     } catch (error) {
@@ -407,6 +489,7 @@ async function buildTemplateDefinition(
   const colors = normaliseColors(meta.colors);
   const fonts = normaliseFonts(meta.fonts);
   const modules = normaliseModules(meta.modules);
+  const builder = normaliseBuilder(meta.builder);
 
   const assetsDirectory = await normaliseAssetsDirectory(folderPath);
 
@@ -425,6 +508,7 @@ async function buildTemplateDefinition(
     colors,
     fonts,
     modules,
+    builder,
     directory: folderPath,
     assetsDirectory,
   };
@@ -707,6 +791,59 @@ function normaliseModuleType(value: unknown): TemplateModuleType {
     return value;
   }
   return "form";
+}
+
+function normaliseBuilder(raw: RawTemplateMeta["builder"]): TemplateBuilderConfig | undefined {
+  if (!raw || typeof raw !== "object") {
+    return undefined;
+  }
+
+  const showTheme = typeof raw.showTheme === "boolean" ? raw.showTheme : undefined;
+  const showPages = typeof raw.showPages === "boolean" ? raw.showPages : undefined;
+  const layout = typeof raw.layout === "string" && raw.layout.trim() ? raw.layout.trim() : undefined;
+  const accentColor = typeof raw.accentColor === "string" && raw.accentColor.trim() ? raw.accentColor.trim() : undefined;
+
+  const customPanels = Array.isArray(raw.customPanels)
+    ? raw.customPanels
+        .map((panel) => {
+          if (!panel || typeof panel !== "object") {
+            return null;
+          }
+
+          const id = typeof panel.id === "string" && panel.id.trim() ? panel.id.trim() : undefined;
+          const label = typeof panel.label === "string" && panel.label.trim() ? panel.label.trim() : undefined;
+          const type = typeof panel.type === "string" && panel.type.trim() ? panel.type.trim() : undefined;
+          if (!id || !label || !type) {
+            return null;
+          }
+
+          const rawLimit = (panel as { limit?: unknown }).limit;
+          const limit =
+            typeof rawLimit === "number" && Number.isFinite(rawLimit) && rawLimit > 0
+              ? Math.floor(rawLimit)
+              : undefined;
+
+          return { id, label, type, limit } satisfies TemplateBuilderCustomPanel;
+        })
+        .filter((panel): panel is TemplateBuilderCustomPanel => Boolean(panel))
+    : undefined;
+
+  const builder: TemplateBuilderConfig = {
+    showTheme,
+    showPages,
+    layout,
+    accentColor,
+    customPanels,
+  };
+
+  const hasContent =
+    typeof builder.showTheme === "boolean" ||
+    typeof builder.showPages === "boolean" ||
+    typeof builder.layout === "string" ||
+    typeof builder.accentColor === "string" ||
+    (Array.isArray(builder.customPanels) && builder.customPanels.length > 0);
+
+  return hasContent ? builder : undefined;
 }
 
 async function normaliseAssetsDirectory(folderPath: string): Promise<string | null> {

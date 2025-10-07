@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
-import { renderTemplate } from "@/lib/renderTemplate";
+import { applyThemeTokens, renderTemplate } from "@/lib/renderTemplate";
 
 const DEVICE_WIDTHS = {
   desktop: 1440,
@@ -102,38 +102,27 @@ export function WebsitePreview() {
 
   const mergedData = useMemo(() => ({ ...content }), [content]);
 
-  const srcDoc = useMemo(() => {
+  const previewDocument = useMemo(() => {
     if (!assets) {
       return "";
     }
 
     const colorPalette: Record<string, string> = {};
-    const colorVariables = selectedTemplate.colors
-      .map((color) => {
-        const key = color.id;
-        const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
-        if (!value) {
-          return null;
-        }
+    selectedTemplate.colors.forEach((color) => {
+      const key = color.id;
+      const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
+      if (value) {
         colorPalette[key] = value;
-        return `--color-${key}: ${value}; --${key}-color: ${value};`;
-      })
-      .filter(Boolean)
-      .join(" ");
+      }
+    });
 
-    const fontVariables = selectedTemplate.fonts
-      .map((key) => {
-        const value = theme.fonts[key] ?? themeDefaults.fonts[key];
-        if (!value) {
-          return null;
-        }
-        return `--font-${key}: ${value};`;
-      })
-      .filter(Boolean)
-      .join(" ");
-
-    const themeTokens = [colorVariables, fontVariables].filter(Boolean).join(" ");
-    const themedCss = themeTokens ? `:root { ${themeTokens} }` : "";
+    const fontTokens: Record<string, string> = {};
+    selectedTemplate.fonts.forEach((key) => {
+      const value = theme.fonts[key] ?? themeDefaults.fonts[key] ?? "";
+      if (value) {
+        fontTokens[key] = value;
+      }
+    });
 
     const rendered = renderTemplate({
       html: assets.html,
@@ -145,20 +134,28 @@ export function WebsitePreview() {
         background: colorPalette.background,
         text: colorPalette.text,
       },
-      css: assets.css,
+      themeTokens: {
+        colors: colorPalette,
+        fonts: fontTokens,
+      },
     });
 
-    const renderedWithScroll = injectScrollScript(rendered);
+    const themedDocument = applyThemeTokens({
+      html: rendered,
+      css: assets.css,
+      templateId: selectedTemplate.id,
+      colors: colorPalette,
+      fonts: fontTokens,
+    });
 
-    const themeStyleTag = themedCss ? `<style>${themedCss}</style>` : "";
-
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />${themeStyleTag}</head><body>${renderedWithScroll}</body></html>`;
+    return injectScrollScript(themedDocument);
   }, [
     assets,
     mergedData,
     selectedTemplate.colors,
     selectedTemplate.fonts,
     selectedTemplate.modules,
+    selectedTemplate.id,
     theme.colors,
     theme.fonts,
     themeDefaults.colors,
@@ -166,8 +163,24 @@ export function WebsitePreview() {
   ]);
 
   useEffect(() => {
-    updatePreviewDocument(srcDoc);
-  }, [srcDoc, updatePreviewDocument]);
+    updatePreviewDocument(previewDocument);
+  }, [previewDocument, updatePreviewDocument]);
+
+  useEffect(() => {
+    if (!previewDocument) {
+      return;
+    }
+
+    const frame = iframeRef.current;
+    const doc = frame?.contentDocument;
+    if (!frame || !doc) {
+      return;
+    }
+
+    doc.open();
+    doc.write(previewDocument);
+    doc.close();
+  }, [previewDocument, selectedTemplate.id]);
 
   const handleZoomIn = useCallback(() => {
     setIsAutoFit(false);
@@ -363,7 +376,6 @@ export function WebsitePreview() {
                     ref={setIframeRef}
                     id="preview-frame"
                     title="Website preview"
-                    srcDoc={srcDoc}
                     data-preview-frame="true"
                     className="border-0 bg-white"
                     style={{

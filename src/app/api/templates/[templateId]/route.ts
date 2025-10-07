@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getTemplateAssets, getTemplates } from "@/lib/templates";
-import { renderTemplate } from "@/lib/renderTemplate";
+import { applyThemeTokens, renderTemplate } from "@/lib/renderTemplate";
 
 export async function GET(
   request: Request,
@@ -38,23 +38,32 @@ export async function GET(
       (templateMeta?.colors ?? []).map((color) => [color.id, color.default ?? ""])
     );
 
+    const colorTokens = buildColorTokens(templateMeta?.colors ?? [], themeDefaults);
+    const fontTokens = buildFontTokens(assets.css, templateMeta?.fonts ?? []);
+
     const rendered = renderTemplate({
       html: assets.html,
       values: sampleData,
       modules: templateMeta?.modules ?? [],
       theme: {
-        primary: themeDefaults.primary,
-        secondary: themeDefaults.secondary,
-        background: themeDefaults.background,
-        text: themeDefaults.text,
+        primary: colorTokens.primary,
+        secondary: colorTokens.secondary,
+        background: colorTokens.background,
+        text: colorTokens.text,
       },
-      css: assets.css,
+      themeTokens: {
+        colors: colorTokens,
+        fonts: fontTokens,
+      },
     });
 
-    const document = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
-<title>${templateMeta?.name ?? "Template preview"}</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>${assets.css}</style></head><body>${rendered}</body></html>`;
+    const document = applyThemeTokens({
+      html: rendered,
+      css: assets.css,
+      templateId,
+      colors: colorTokens,
+      fonts: fontTokens,
+    });
 
     const cacheHeaders = {
       "Cache-Control": "s-maxage=300, stale-while-revalidate=900",
@@ -62,7 +71,7 @@ export async function GET(
 
     if (wantsJson) {
       return NextResponse.json(
-        { html: assets.html, css: assets.css, rendered, document },
+        { html: assets.html, css: assets.css, rendered: document, document },
         { headers: cacheHeaders }
       );
     }
@@ -81,6 +90,36 @@ export async function GET(
     }
     return new Response("Template not found", { status: 404 });
   }
+}
+
+function buildColorTokens(
+  colors: Array<{ id: string; default?: string }>,
+  defaults: Record<string, string>
+) {
+  const tokens: Record<string, string> = {};
+  colors.forEach((color) => {
+    const value = defaults[color.id] ?? color.default ?? "";
+    if (value) {
+      tokens[color.id] = value;
+    }
+  });
+  return tokens;
+}
+
+function buildFontTokens(css: string, fontKeys: string[]) {
+  const tokens: Record<string, string> = {};
+  fontKeys.forEach((key) => {
+    const pattern = new RegExp(`var\\(\\s*--font-${escapeRegExp(key)}\\s*,\\s*([^\\)]+)\\)`, "gi");
+    const match = pattern.exec(css);
+    if (match) {
+      tokens[key] = match[1].trim();
+    }
+  });
+  return tokens;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function extractPlaceholders(html: string) {
