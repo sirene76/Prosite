@@ -5,15 +5,14 @@ import { useRouter } from "next/navigation";
 
 type TemplateInput = {
   _id?: string;
-  name: string;
+  name?: string;
+  slug?: string;
   category?: string;
   description?: string;
   previewImage?: string;
-  previewVideo?: string;
-  previewImages?: string[];
-  features?: string[];
-  path?: string;
-  isActive?: boolean;
+  html?: string;
+  css?: string;
+  meta?: string | Record<string, unknown>;
 };
 
 type TemplateFormProps = {
@@ -21,42 +20,52 @@ type TemplateFormProps = {
   mode: "create" | "edit";
 };
 
-const defaultValues: TemplateInput = {
+function formatMeta(meta: TemplateInput["meta"]): string {
+  if (!meta) {
+    return "";
+  }
+
+  if (typeof meta === "string") {
+    return meta;
+  }
+
+  try {
+    return JSON.stringify(meta, null, 2);
+  } catch (error) {
+    console.warn("Failed to stringify template meta", error);
+    return "";
+  }
+}
+
+const defaultValues = {
   name: "",
+  slug: "",
   category: "",
   description: "",
   previewImage: "",
-  previewVideo: "",
-  previewImages: [],
-  features: [],
-  path: "",
-  isActive: true,
+  html: "",
+  css: "",
+  meta: "",
 };
 
 export function TemplateForm({ template, mode }: TemplateFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState(() => ({
+  const [formData, setFormData] = useState(() => ({
     name: template?.name ?? defaultValues.name,
+    slug: template?.slug ?? defaultValues.slug,
     category: template?.category ?? defaultValues.category,
     description: template?.description ?? defaultValues.description,
     previewImage: template?.previewImage ?? defaultValues.previewImage,
-    previewVideo: template?.previewVideo ?? defaultValues.previewVideo,
-    previewImages: template?.previewImages?.join(", ") ?? "",
-    features: template?.features?.join(", ") ?? "",
-    path: template?.path ?? defaultValues.path,
-    isActive: template?.isActive ?? defaultValues.isActive,
+    html: template?.html ?? defaultValues.html,
+    css: template?.css ?? defaultValues.css,
+    meta: formatMeta(template?.meta) || defaultValues.meta,
   }));
 
-  function handleInputChange(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  }
-
-  function handleCheckboxChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const { name, checked } = event.target;
-    setForm((prev) => ({ ...prev, [name]: checked }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -65,21 +74,14 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
     setIsSubmitting(true);
 
     const payload = {
-      name: form.name.trim(),
-      category: form.category.trim() || null,
-      description: form.description.trim(),
-      previewImage: form.previewImage.trim() || null,
-      previewVideo: form.previewVideo.trim() || null,
-      previewImages: form.previewImages
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      features: form.features
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      path: form.path.trim() || null,
-      isActive: form.isActive,
+      name: formData.name.trim(),
+      slug: formData.slug.trim() || undefined,
+      category: formData.category.trim() || undefined,
+      description: formData.description,
+      previewImage: formData.previewImage.trim() || undefined,
+      html: formData.html,
+      css: formData.css,
+      meta: formData.meta,
     };
 
     const url = mode === "create" ? "/api/admin/templates" : `/api/admin/templates/${template?._id}`;
@@ -114,18 +116,33 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="name">
-            Name
-          </label>
-          <input
-            id="name"
-            name="name"
-            value={form.name}
-            onChange={handleInputChange}
-            className={inputClassName}
-            required
-          />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-slate-300" htmlFor="name">
+              Name
+            </label>
+            <input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className={inputClassName}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300" htmlFor="slug">
+              Slug
+            </label>
+            <input
+              id="slug"
+              name="slug"
+              value={formData.slug}
+              onChange={handleChange}
+              className={inputClassName}
+              placeholder="my-template"
+            />
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -136,9 +153,10 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
             <input
               id="category"
               name="category"
-              value={form.category}
-              onChange={handleInputChange}
+              value={formData.category}
+              onChange={handleChange}
               className={inputClassName}
+              placeholder="Portfolio"
             />
           </div>
 
@@ -149,70 +167,12 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
             <input
               id="previewImage"
               name="previewImage"
-              value={form.previewImage}
-              onChange={handleInputChange}
+              value={formData.previewImage}
+              onChange={handleChange}
               className={inputClassName}
               placeholder="https://.../preview.png"
             />
           </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-slate-300" htmlFor="previewVideo">
-              Preview Video URL
-            </label>
-            <input
-              id="previewVideo"
-              name="previewVideo"
-              value={form.previewVideo}
-              onChange={handleInputChange}
-              className={inputClassName}
-              placeholder="https://.../preview.mp4"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300" htmlFor="path">
-              Custom Path (optional)
-            </label>
-            <input
-              id="path"
-              name="path"
-              value={form.path}
-              onChange={handleInputChange}
-              className={inputClassName}
-              placeholder="/templates/custom"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="previewImages">
-            Additional Preview Images (comma separated URLs)
-          </label>
-          <input
-            id="previewImages"
-            name="previewImages"
-            value={form.previewImages}
-            onChange={handleInputChange}
-            className={inputClassName}
-            placeholder="https://.../1.png, https://.../2.png"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="features">
-            Features (comma separated)
-          </label>
-          <input
-            id="features"
-            name="features"
-            value={form.features}
-            onChange={handleInputChange}
-            className={inputClassName}
-            placeholder="Responsive, SEO ready, Blog"
-          />
         </div>
 
         <div>
@@ -222,22 +182,48 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
           <textarea
             id="description"
             name="description"
-            value={form.description}
-            onChange={handleInputChange}
+            value={formData.description}
+            onChange={handleChange}
             className={`${inputClassName} min-h-[120px]`}
+            placeholder="Short description of the template"
           />
         </div>
 
-        <label className="flex items-center gap-3 text-sm text-slate-300">
-          <input
-            type="checkbox"
-            name="isActive"
-            checked={form.isActive}
-            onChange={handleCheckboxChange}
-            className="h-4 w-4 rounded border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500"
-          />
-          Published
+        <label className="block text-sm font-medium text-slate-300" htmlFor="html">
+          Template HTML
         </label>
+        <textarea
+          id="html"
+          name="html"
+          placeholder="<section>...</section>"
+          className={`${inputClassName} h-40 font-mono`}
+          value={formData.html}
+          onChange={handleChange}
+        />
+
+        <label className="block text-sm font-medium text-slate-300" htmlFor="css">
+          Template CSS
+        </label>
+        <textarea
+          id="css"
+          name="css"
+          placeholder="body { font-family: sans-serif; }"
+          className={`${inputClassName} h-32 font-mono`}
+          value={formData.css}
+          onChange={handleChange}
+        />
+
+        <label className="block text-sm font-medium text-slate-300" htmlFor="meta">
+          Meta JSON
+        </label>
+        <textarea
+          id="meta"
+          name="meta"
+          placeholder='{ "theme": "light", "color": "#000" }'
+          className={`${inputClassName} h-32 font-mono`}
+          value={formData.meta}
+          onChange={handleChange}
+        />
       </div>
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}

@@ -16,14 +16,13 @@ function getBaseUrl(): string {
 type TemplateResponse = {
   _id: string;
   name: string;
+  slug: string;
   category?: string;
   description?: string;
   previewImage?: string;
-  previewVideo?: string;
-  previewImages?: string[];
-  features?: string[];
-  path?: string;
-  isActive: boolean;
+  html?: string;
+  css?: string;
+  meta?: Record<string, unknown>;
 };
 
 async function getTemplate(id: string): Promise<TemplateResponse | null> {
