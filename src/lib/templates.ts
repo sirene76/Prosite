@@ -71,6 +71,7 @@ export type TemplateModuleDefinition = {
 
 export type TemplateDefinition = {
   id: string;
+  slug?: string;
   name: string;
   category?: string;
   description: string;
@@ -213,6 +214,7 @@ function buildDatabaseTemplateDefinition(template: DatabaseTemplateDocument): Dy
 
   return {
     id: slug,
+    slug,
     name,
     category: category ?? undefined,
     description,
@@ -410,6 +412,7 @@ async function buildTemplateDefinition(
 
   return {
     id,
+    slug: id,
     name,
     category,
     description,

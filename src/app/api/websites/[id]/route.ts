@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import { Website } from "@/models/website";
+import { isValidObjectId } from "mongoose";
 
 export async function GET(
   _req: Request,
@@ -11,6 +12,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({ error: "Invalid website ID" }, { status: 400 });
+    }
     await connectDB();
     const website = await Website.findById(id);
     if (!website) {
@@ -44,6 +48,9 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({ error: "Invalid website ID" }, { status: 400 });
+    }
     const updates = (await req.json()) as {
       theme?: ThemeUpdatePayload;
       content?: Record<string, string> | Map<string, string>;
@@ -135,6 +142,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid website ID" }, { status: 400 });
+  }
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
