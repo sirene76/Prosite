@@ -31,6 +31,7 @@ export function CheckoutClient({
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("pro");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
+  const resolvedThemeName = themeName?.trim() ? themeName : "Default";
 
   const handleProceed = async () => {
     if (isSubmitting) return;
@@ -71,7 +72,7 @@ export function CheckoutClient({
             </div>
             <div className="text-sm text-slate-300">
               <p><span className="font-medium text-white">Template:</span> {templateName}</p>
-              <p><span className="font-medium text-white">Theme:</span> {themeName}</p>
+              <p><span className="font-medium text-white">Theme:</span> {resolvedThemeName}</p>
             </div>
           </div>
 
@@ -131,7 +132,7 @@ export function CheckoutClient({
             </div>
             <div className="flex justify-between">
               <dt>Theme</dt>
-              <dd className="text-white">{themeName}</dd>
+              <dd className="text-white">{resolvedThemeName}</dd>
             </div>
             <div className="flex justify-between">
               <dt>Plan</dt>

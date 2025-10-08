@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { TemplateImageUploader } from "@/components/admin/TemplateImageUploader";
+import ImageDropInput from "@/components/ui/ImageDropInput";
 
 type TemplateInput = {
   _id?: string;
@@ -169,26 +169,23 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              Preview Image
-            </label>
-            <TemplateImageUploader
-onUploadComplete={(urls) =>
-  setFormData((prev) => ({
-    ...prev,
-    previewImage: Array.isArray(urls) ? urls[0] : urls,
-  }))
-}
-
+          <div className="space-y-2">
+            <ImageDropInput
+              label="Upload Preview Image"
+              value={formData.previewImage}
+              onChange={(url) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  previewImage: url,
+                }))
+              }
+              onClear={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  previewImage: "",
+                }))
+              }
             />
-            {formData.previewImage && (
-              <img
-                src={formData.previewImage}
-                alt="Preview"
-                className="mt-2 w-40 rounded border border-slate-700"
-              />
-            )}
           </div>
         </div>
 

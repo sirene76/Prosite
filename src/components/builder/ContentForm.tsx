@@ -1,9 +1,9 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
-import { Fragment, type ChangeEvent } from "react";
+import { Fragment } from "react";
 
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
+import ImageDropInput from "@/components/ui/ImageDropInput";
 
 const inputBaseClass =
   "w-full rounded-xl border border-gray-800 bg-gray-950/60 px-3 py-2 text-sm text-slate-100 transition focus:border-builder-accent focus:outline-none";
@@ -64,12 +64,12 @@ function renderField(
 
   if (type === "image") {
     return (
-      <ImageField
+      <ImageDropInput
         label={label}
         value={value}
-        fieldKey={key}
+        onChange={(url) => onChange(key, url)}
+        onClear={() => onChange(key, "")}
         description={description}
-        onChange={onChange}
       />
     );
   }
@@ -126,71 +126,4 @@ function ensureColorValue(value: string | undefined) {
     return "#000000";
   }
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : "#000000";
-}
-
-type ImageFieldProps = {
-  label: string;
-  value: string;
-  fieldKey: string;
-  onChange: (key: string, value: string) => void;
-  description?: string;
-};
-
-function ImageField({ label, value, onChange, fieldKey, description }: ImageFieldProps) {
-  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      return;
-    }
-
-    const data = await response.json();
-
-    if (data.url) {
-      onChange(fieldKey, data.url as string);
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</label>
-
-      {value ? (
-        <div className="relative">
-          <img
-            src={value}
-            alt={label}
-            className="h-40 w-full rounded-lg object-cover border border-gray-800"
-          />
-          <button
-            type="button"
-            onClick={() => onChange(fieldKey, "")}
-            className="absolute right-2 top-2 rounded bg-black/60 px-2 py-1 text-xs text-white"
-          >
-            Remove
-          </button>
-        </div>
-      ) : null}
-
-      <input
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-        className="block w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-blue-500"
-      />
-
-      {description ? <span className="text-[11px] text-slate-500">{description}</span> : null}
-    </div>
-  );
 }
