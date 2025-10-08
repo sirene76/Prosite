@@ -247,12 +247,23 @@ function mapFieldType(fieldType: TemplateContentField["type"] | string | undefin
   return inferFieldType(key);
 }
 
-function createDefaultContent(placeholders: string[], defaults: Record<string, string>) {
+function createDefaultContent(
+  placeholders: string[],
+  defaults: Record<string, string>,
+  metaSources: Array<Record<string, unknown>> = []
+) {
   const result: Record<string, unknown> = {};
   placeholders.forEach((placeholder) => {
     const key = placeholder.trim();
     if (!key) {
       return;
+    }
+    for (const source of metaSources) {
+      const metaValue = getValueAtPath(source, key);
+      if (metaValue !== undefined) {
+        result[key] = cloneValue(metaValue);
+        return;
+      }
     }
     if (typeof defaults[key] === "string") {
       result[key] = defaults[key];
@@ -260,6 +271,182 @@ function createDefaultContent(placeholders: string[], defaults: Record<string, s
     }
     const label = key.split(".").pop() ?? key;
     result[key] = toSentence(label);
+  });
+  return result;
+}
+
+function cloneValue<T>(value: T): T {
+  return toPlainValue(value) as T;
+}
+
+function toPlainValue(value: unknown): unknown {
+  if (value instanceof Map) {
+    return toPlainValue(Object.fromEntries(value));
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => toPlainValue(item));
+  }
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value).map(([key, entry]) => [key, toPlainValue(entry)] as const);
+    return Object.fromEntries(entries);
+  }
+  return value;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getValueAtPath(source: Record<string, unknown>, path: string): unknown {
+  if (!path) {
+    return undefined;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(source, path)) {
+    return source[path];
+  }
+
+  const segments = path.split(".");
+  let current: unknown = source;
+
+  for (const segment of segments) {
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      if (!Number.isFinite(index) || index < 0 || index >= current.length) {
+        return undefined;
+      }
+      current = current[index];
+      continue;
+    }
+
+    if (isPlainObject(current)) {
+      if (!Object.prototype.hasOwnProperty.call(current, segment)) {
+        return undefined;
+      }
+      current = (current as Record<string, unknown>)[segment];
+      continue;
+    }
+
+    return undefined;
+  }
+
+  return current;
+}
+
+function extractMetaContentSources(meta: unknown): Array<Record<string, unknown>> {
+  const result: Array<Record<string, unknown>> = [];
+  const base = normaliseRecord(meta);
+  if (!base) {
+    return result;
+  }
+
+  const contentRecord = normaliseRecord(base["content"]);
+  if (contentRecord) {
+    result.push(contentRecord);
+  }
+
+  const placeholderRecord = normaliseRecord(base["placeholders"]);
+  if (placeholderRecord) {
+    result.push(placeholderRecord);
+  }
+
+  if (!result.length) {
+    result.push(base);
+  }
+
+  return result;
+}
+
+function normaliseRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return normaliseRecord(parsed);
+    } catch {
+      return null;
+    }
+  }
+
+  if (value instanceof Map) {
+    return normaliseRecord(Object.fromEntries(value));
+  }
+
+  if (!isPlainObject(value)) {
+    return null;
+  }
+
+  const entries = Object.entries(value).map(([key, entry]) => [key, toPlainValue(entry)] as const);
+  return Object.fromEntries(entries);
+}
+
+function flattenContentRecord(record: Record<string, unknown>, prefix = ""): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  Object.entries(record).forEach(([key, entry]) => {
+    const nextKey = prefix ? `${prefix}.${key}` : key;
+
+    if (isPlainObject(entry)) {
+      Object.assign(result, flattenContentRecord(entry, nextKey));
+      return;
+    }
+
+    result[nextKey] = entry;
+  });
+
+  return result;
+}
+
+function flattenContentSources(sources: Array<Record<string, unknown>>): Record<string, unknown> {
+  return sources.reduce<Record<string, unknown>>((accumulator, source) => {
+    return { ...accumulator, ...flattenContentRecord(source) };
+  }, {});
+}
+
+function normaliseWebsiteContent(content: unknown): Record<string, unknown> | null {
+  const record = normaliseRecord(content);
+  if (!record) {
+    return null;
+  }
+
+  return flattenContentRecord(record);
+}
+
+function normaliseWebsiteTheme(theme: unknown): {
+  name?: string;
+  label?: string;
+  colors?: Record<string, string>;
+  fonts?: Record<string, string>;
+} | null {
+  const record = normaliseRecord(theme);
+  if (!record) {
+    return null;
+  }
+
+  const colors = toStringRecord(normaliseRecord(record["colors"]));
+  const fonts = toStringRecord(normaliseRecord(record["fonts"]));
+
+  return {
+    name: typeof record["name"] === "string" ? record["name"] : undefined,
+    label: typeof record["label"] === "string" ? record["label"] : undefined,
+    colors,
+    fonts,
+  };
+}
+
+function toStringRecord(record: Record<string, unknown> | null): Record<string, string> {
+  if (!record) {
+    return {};
+  }
+
+  const result: Record<string, string> = {};
+  Object.entries(record).forEach(([key, value]) => {
+    if (typeof value === "string") {
+      result[key] = value;
+      return;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      result[key] = String(value);
+    }
   });
   return result;
 }
@@ -335,6 +522,9 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     websiteId: websiteIdState,
     templateId: templates[0]?.id,
   });
+  const websiteMetaRef = useRef<Record<string, unknown> | null>(null);
+  const hydratedWebsiteContentRef = useRef<string | null>(null);
+  const hydratedWebsiteThemeRef = useRef<string | null>(null);
 
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId) ?? fallbackTemplate,
@@ -476,21 +666,20 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         const current = prev[resolvedKey];
         let nextValue: unknown = value;
 
-        if (resolvedKey === "gallery") {
-          if (Array.isArray(value)) {
-            nextValue = value;
-          } else if (typeof value === "string") {
+        if (Array.isArray(value)) {
+          nextValue = value;
+        } else if (Array.isArray(current)) {
+          if (typeof value === "string") {
             const trimmed = value.trim();
             if (trimmed.length === 0) {
               nextValue = [];
             } else {
-              const existing = Array.isArray(current) ? current : [];
-              nextValue = [...existing, trimmed];
+              nextValue = [...current, trimmed];
             }
           } else if (value == null) {
             nextValue = [];
           } else {
-            nextValue = Array.isArray(current) ? current : [];
+            nextValue = current;
           }
         }
 
@@ -513,6 +702,9 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     setThemeDefaults(createInitialTheme(nextTemplate));
     setContent({});
     setContentSections([]);
+    websiteMetaRef.current = null;
+    hydratedWebsiteContentRef.current = null;
+    hydratedWebsiteThemeRef.current = null;
   }, [templates]);
 
   const registerPreviewFrame = useCallback((frame: HTMLIFrameElement | null) => {
@@ -525,7 +717,11 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       setContentSections(sections);
 
       setContent((prev) => {
-        const fallback = createDefaultContent(keys, defaults);
+        const metaSources = [
+          ...extractMetaContentSources(selectedTemplate.meta),
+          ...extractMetaContentSources(websiteMetaRef.current),
+        ];
+        const fallback = createDefaultContent(keys, defaults, metaSources);
         const next: Record<string, unknown> = { ...prev };
         keys.forEach((key) => {
           if (prev[key] !== undefined) {
@@ -591,6 +787,12 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   }, [setStoreWebsiteId, websiteId]);
 
   useEffect(() => {
+    websiteMetaRef.current = null;
+    hydratedWebsiteContentRef.current = null;
+    hydratedWebsiteThemeRef.current = null;
+  }, [websiteId]);
+
+  useEffect(() => {
     lastSyncedTemplateRef.current = {
       websiteId,
       templateId: selectedTemplateId,
@@ -609,8 +811,9 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     }
 
     const controller = new AbortController();
+    let isMounted = true;
 
-    const synchronizeTemplate = async () => {
+    const loadWebsite = async () => {
       try {
         const response = await fetch(`/api/websites/${websiteId}`, {
           signal: controller.signal,
@@ -624,23 +827,66 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         }
 
         const data = await response.json();
-        const templateId: string | undefined = data?.templateId ?? data?.template?.id;
-
-        if (!templateId) {
+        if (!isMounted) {
           return;
         }
 
+        const templateId: string | undefined = data?.templateId ?? data?.template?.id;
         const lastSynced = lastSyncedTemplateRef.current;
+
         if (
-          templateId === selectedTemplateId ||
-          (lastSynced.websiteId === websiteId && lastSynced.templateId === templateId)
+          templateId &&
+          templateId !== selectedTemplateId &&
+          (lastSynced.websiteId !== websiteId || lastSynced.templateId !== templateId)
         ) {
           lastSyncedTemplateRef.current = { websiteId, templateId };
+          selectTemplate(templateId);
           return;
         }
 
         lastSyncedTemplateRef.current = { websiteId, templateId };
-        selectTemplate(templateId);
+
+        const websiteMeta = normaliseRecord(data?.meta);
+        if (websiteMeta) {
+          websiteMetaRef.current = websiteMeta;
+        }
+
+        const websiteContent = normaliseWebsiteContent(data?.content);
+        const websiteTheme = normaliseWebsiteTheme(data?.theme);
+
+        const metaSources = [
+          ...extractMetaContentSources(selectedTemplate.meta),
+          ...extractMetaContentSources(websiteMeta),
+        ];
+        const metaContent = flattenContentSources(metaSources);
+        const mergedContent = {
+          ...metaContent,
+          ...(websiteContent ?? {}),
+        };
+
+        if (
+          Object.keys(mergedContent).length > 0 &&
+          hydratedWebsiteContentRef.current !== websiteId
+        ) {
+          setContent((prev) => {
+            if (Object.keys(prev).length === 0) {
+              return mergedContent;
+            }
+            return { ...prev, ...mergedContent };
+          });
+          hydratedWebsiteContentRef.current = websiteId;
+        }
+
+        if (websiteTheme && hydratedWebsiteThemeRef.current !== websiteId) {
+          setTheme((prev) => ({
+            ...prev,
+            name: websiteTheme.name ?? prev.name,
+            label: websiteTheme.label ?? prev.label,
+            colors: { ...prev.colors, ...(websiteTheme.colors ?? {}) },
+            fonts: { ...prev.fonts, ...(websiteTheme.fonts ?? {}) },
+          }));
+          hydratedWebsiteThemeRef.current = websiteId;
+        }
       } catch (error) {
         if (controller.signal.aborted) {
           return;
@@ -649,12 +895,13 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       }
     };
 
-    void synchronizeTemplate();
+    void loadWebsite();
 
     return () => {
+      isMounted = false;
       controller.abort();
     };
-  }, [selectTemplate, selectedTemplateId, websiteId]);
+  }, [selectTemplate, selectedTemplate, selectedTemplateId, setTheme, websiteId]);
 
   const builderBasePath = useMemo(() => {
     if (websiteId) {

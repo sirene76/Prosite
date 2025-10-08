@@ -90,33 +90,43 @@ export default async function AdminTemplatesPage() {
             </div>
           ) : (
             templates.map((template) => (
-              <article key={template._id} className="flex flex-col justify-between rounded-xl border border-slate-900 bg-gray-900/60 p-5 shadow-lg shadow-black/10">
-                <div className="space-y-3">
+              <div
+                key={template._id}
+                className="flex flex-col justify-between rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-lg shadow-black/10"
+              >
+                <div className="space-y-4">
+                  {template.previewImage ? (
+                    <Image
+                      src={template.previewImage}
+                      alt={template.name}
+                      width={400}
+                      height={300}
+                      className="h-[200px] w-full rounded-md object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-[200px] w-full items-center justify-center rounded-md bg-slate-800 text-slate-500">
+                      No Preview
+                    </div>
+                  )}
+
                   <div className="space-y-1">
-                    <h3 className="text-lg font-semibold text-white">{template.name}</h3>
-                    <p className="text-xs uppercase tracking-wide text-slate-400">/{template.slug}</p>
+                    <h3 className="text-lg font-semibold text-slate-100">{template.name}</h3>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">/{template.slug}</p>
                     {template.category ? (
-                      <p className="text-xs text-slate-400">{template.category}</p>
+                      <p className="text-sm text-slate-400">{template.category}</p>
                     ) : null}
                   </div>
+
                   {template.description ? (
                     <p className="text-sm text-slate-400">{template.description}</p>
-                  ) : null}
-                  {template.previewImage ? (
-                    <div className="relative h-32 overflow-hidden rounded-lg border border-slate-800">
-                      <Image
-                        src={template.previewImage}
-                        alt={`${template.name} preview`}
-                        fill
-                        sizes="(min-width: 1280px) 320px, (min-width: 768px) 33vw, 100vw"
-                        className="object-cover"
-                      />
-                    </div>
                   ) : null}
                 </div>
 
                 <div className="mt-6 flex items-center justify-between text-sm">
-                  <Link href={`/admin/templates/${template._id}/edit`} className="font-medium text-blue-400 transition hover:text-blue-300">
+                  <Link
+                    href={`/admin/templates/${template._id}/edit`}
+                    className="font-medium text-blue-400 transition hover:text-blue-300"
+                  >
                     Edit
                   </Link>
                   <form action={deleteTemplate}>
@@ -129,7 +139,7 @@ export default async function AdminTemplatesPage() {
                     </button>
                   </form>
                 </div>
-              </article>
+              </div>
             ))
           )}
         </div>
