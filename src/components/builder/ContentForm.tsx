@@ -6,6 +6,8 @@ import { Fragment } from "react";
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
 import ImageDropInput from "@/components/ui/ImageDropInput";
 
+const IMAGE_URL_PATTERN = /\.(jpe?g|png|gif|webp|svg)$/i;
+
 const inputBaseClass =
   "w-full rounded-xl border border-gray-800 bg-gray-950/60 px-3 py-2 text-sm text-slate-100 transition focus:border-builder-accent focus:outline-none";
 
@@ -32,9 +34,10 @@ function renderField(
   value: unknown,
   onChange: (key: string, value: unknown) => void
 ) {
-  const { key, label, type, placeholder, description } = field;
+  const { key, label, placeholder, description } = field;
+  const resolvedType = determineFieldType(field, value);
 
-  if (type === "textarea") {
+  if (resolvedType === "textarea") {
     const stringValue = toTextValue(value);
     return (
       <label className="flex flex-col gap-2">
@@ -51,7 +54,7 @@ function renderField(
     );
   }
 
-  if (type === "image") {
+  if (resolvedType === "image") {
     const stringValue = toTextValue(value);
     return (
       <ImageDropInput
@@ -64,7 +67,7 @@ function renderField(
     );
   }
 
-  if (type === "gallery") {
+  if (resolvedType === "gallery") {
     const galleryItems = toGalleryItems(value);
 
     return (
@@ -108,7 +111,7 @@ function renderField(
     );
   }
 
-  if (type === "color") {
+  if (resolvedType === "color") {
     const stringValue = toTextValue(value);
     return (
       <label className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
@@ -139,7 +142,7 @@ function renderField(
     );
   }
 
-  const inputType = type === "email" ? "email" : "text";
+  const inputType = resolvedType === "email" ? "email" : "text";
   const stringValue = toTextValue(value);
 
   return (
@@ -162,6 +165,43 @@ function ensureColorValue(value: string | undefined) {
     return "#000000";
   }
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : "#000000";
+}
+
+function determineFieldType(field: TemplateContentField, value: unknown): TemplateContentField["type"] {
+  if (Array.isArray(value)) {
+    return "gallery";
+  }
+
+  if (field.type === "gallery" || field.type === "image" || field.type === "color") {
+    return field.type;
+  }
+
+  if (typeof value === "string" && isLikelyImageUrl(value)) {
+    return "image";
+  }
+
+  if (field.type === "textarea" || field.type === "email") {
+    return field.type;
+  }
+
+  return field.type ?? "text";
+}
+
+function isLikelyImageUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (/^data:image\//i.test(trimmed)) {
+    return true;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return true;
+  }
+
+  return IMAGE_URL_PATTERN.test(trimmed);
 }
 
 function toTextValue(value: unknown): string {
