@@ -4,7 +4,7 @@ import { create } from "zustand";
 
 export type BuilderDevice = "desktop" | "tablet" | "mobile";
 
-const DEFAULT_PAGE_NAMES = ["Home", "About", "Contact"] as const;
+const DEFAULT_PAGE_NAMES = ["Home"] as const;
 
 type BuilderStoreState = {
   websiteId: string | null;
@@ -15,21 +15,9 @@ type BuilderStoreState = {
   setWebsiteId: (websiteId: string | null | undefined) => void;
   setWebsiteName: (websiteName: string | null | undefined) => void;
   setThemeName: (themeName: string | null | undefined) => void;
-  setPages: (pages: Array<string | null | undefined> | null | undefined) => void;
+  setPages: (pages: string[] | null | undefined) => void;
   setDevice: (device: BuilderDevice) => void;
 };
-
-function normalizePages(pages: Array<string | null | undefined> | null | undefined) {
-  if (!Array.isArray(pages)) {
-    return [...DEFAULT_PAGE_NAMES];
-  }
-
-  const normalized = pages
-    .map((page) => (typeof page === "string" ? page.trim() : ""))
-    .filter((page) => page.length > 0);
-
-  return normalized.length > 0 ? Array.from(new Set(normalized)) : [...DEFAULT_PAGE_NAMES];
-}
 
 export const useBuilderStore = create<BuilderStoreState>((set) => ({
   websiteId: null,
@@ -49,7 +37,8 @@ export const useBuilderStore = create<BuilderStoreState>((set) => ({
     set({ themeName: resolved.length > 0 ? resolved : "Default" });
   },
   setPages: (pages) => {
-    set({ pages: normalizePages(pages) });
+    const nextPages = Array.isArray(pages) && pages.length > 0 ? pages : [...DEFAULT_PAGE_NAMES];
+    set({ pages: nextPages });
   },
   setDevice: (device) => {
     set({ device });

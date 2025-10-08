@@ -40,6 +40,23 @@ export function PageList({ pages = [] }: PageListProps) {
     [previewFrame]
   );
 
+  if (!pagesToRender.length) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
+          <span>Pages</span>
+          <button
+            type="button"
+            className="text-[10px] font-semibold text-slate-500 transition hover:text-slate-300"
+          >
+            Manage
+          </button>
+        </div>
+        <p className="text-slate-400 text-sm px-3">No pages yet.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
@@ -52,20 +69,16 @@ export function PageList({ pages = [] }: PageListProps) {
         </button>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-2">
-        {pagesToRender.length > 0 ? (
-          pagesToRender.map((page) => (
-            <button
-              type="button"
-              key={page.id}
-              onClick={() => handleNavigate(page)}
-              className="whitespace-nowrap rounded-full border border-gray-800 bg-gray-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
-            >
-              {page.label}
-            </button>
-          ))
-        ) : (
-          <p className="px-2 text-sm text-slate-400">No pages yet.</p>
-        )}
+        {pagesToRender.map((page) => (
+          <button
+            type="button"
+            key={page.id}
+            onClick={() => handleNavigate(page)}
+            className="whitespace-nowrap rounded-full border border-gray-800 bg-gray-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
+          >
+            {page.label}
+          </button>
+        ))}
       </div>
     </div>
   );

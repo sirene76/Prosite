@@ -12,7 +12,11 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 
 import type { TemplateDefinition } from "@/lib/templates";
-import { useBuilderStore, type BuilderDevice } from "@/store/builderStore";
+import {
+  DEFAULT_BUILDER_PAGES,
+  useBuilderStore,
+  type BuilderDevice,
+} from "@/store/builderStore";
 
 type Device = BuilderDevice;
 
@@ -339,7 +343,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         ? section.label.trim()
         : toSentence(section.id)
     );
-    setStorePages(sectionLabels);
+    setStorePages(sectionLabels.length > 0 ? sectionLabels : [...DEFAULT_BUILDER_PAGES]);
   }, [selectedTemplate, setStorePages]);
 
   const websiteNameForStore = useMemo(() => {
