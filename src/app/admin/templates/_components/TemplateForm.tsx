@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ImageDropInput from "@/components/ui/ImageDropInput";
+import clsx from "clsx";
 
 type TemplateInput = {
   _id?: string;
@@ -78,6 +79,10 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
 
     return () => clearTimeout(timeout);
   }, [previewDocument]);
+
+  const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">(
+    "desktop"
+  );
 
   // Handle text input / textarea change
   function handleChange(
@@ -280,17 +285,70 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
         <h3 className="text-lg font-semibold text-white mb-2">
           Live Template Preview
         </h3>
-        <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800">
-          <iframe
-            title="Template Preview"
-            srcDoc={renderedPreview}
-            className="w-full h-[600px] border-none bg-white"
-            sandbox="allow-same-origin allow-scripts"
-          />
+
+        {/* 🧭 Device Controls */}
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-sm text-slate-400">Preview as:</span>
+          <button
+            type="button"
+            onClick={() => setDevice("desktop")}
+            className={clsx(
+              "px-3 py-1 rounded text-sm font-medium transition",
+              device === "desktop"
+                ? "bg-blue-600 text-white"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            )}
+          >
+            Desktop
+          </button>
+          <button
+            type="button"
+            onClick={() => setDevice("tablet")}
+            className={clsx(
+              "px-3 py-1 rounded text-sm font-medium transition",
+              device === "tablet"
+                ? "bg-blue-600 text-white"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            )}
+          >
+            Tablet
+          </button>
+          <button
+            type="button"
+            onClick={() => setDevice("mobile")}
+            className={clsx(
+              "px-3 py-1 rounded text-sm font-medium transition",
+              device === "mobile"
+                ? "bg-blue-600 text-white"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            )}
+          >
+            Mobile
+          </button>
         </div>
-        <p className="text-xs text-slate-400 mt-2">
-          This is a sandboxed preview. CSS and HTML render in isolation as you
-          type.
+
+        <div className="flex justify-center bg-slate-900 py-6 rounded-lg">
+          <div
+            className={clsx(
+              "border border-slate-700 rounded-lg overflow-hidden shadow-lg transition-all duration-300",
+              {
+                "w-full": device === "desktop",
+                "w-[768px]": device === "tablet",
+                "w-[375px]": device === "mobile",
+              }
+            )}
+          >
+            <iframe
+              title="Template Preview"
+              srcDoc={renderedPreview}
+              className="w-full h-[600px] border-none bg-white"
+              sandbox="allow-same-origin allow-scripts"
+            />
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-400 mt-3 text-center">
+          Responsive preview — switch between devices above.
         </p>
       </div>
 
