@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ImageDropInput from "@/components/ui/ImageDropInput";
 
@@ -57,6 +57,27 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
     css: template?.css ?? defaultValues.css,
     meta: formatMeta(template?.meta) || defaultValues.meta,
   }));
+  const [renderedPreview, setRenderedPreview] = useState("");
+
+  const previewDocument = useMemo(
+    () => `
+      <html>
+        <head>
+          <style>${formData.css}</style>
+        </head>
+        <body style="margin:0;padding:0">${formData.html}</body>
+      </html>
+    `,
+    [formData.html, formData.css]
+  );
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setRenderedPreview(previewDocument);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [previewDocument]);
 
   // Handle text input / textarea change
   function handleChange(
@@ -119,7 +140,7 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
     "w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+    <form onSubmit={handleSubmit} className="space-y-6 mt-6 py-10">
       <div className="space-y-4">
         {/* Name + Slug */}
         <div className="grid gap-4 md:grid-cols-2">
@@ -253,6 +274,25 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
 
       {/* Error Message */}
       {error && <p className="text-sm text-red-400">{error}</p>}
+
+      {/* 🔍 Live Preview */}
+      <div className="mt-10">
+        <h3 className="text-lg font-semibold text-white mb-2">
+          Live Template Preview
+        </h3>
+        <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800">
+          <iframe
+            title="Template Preview"
+            srcDoc={renderedPreview}
+            className="w-full h-[600px] border-none bg-white"
+            sandbox="allow-same-origin allow-scripts"
+          />
+        </div>
+        <p className="text-xs text-slate-400 mt-2">
+          This is a sandboxed preview. CSS and HTML render in isolation as you
+          type.
+        </p>
+      </div>
 
       {/* Submit */}
       <button
