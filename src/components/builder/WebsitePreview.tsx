@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
@@ -358,7 +359,14 @@ export function WebsitePreview() {
                 }}
               >
                 <div
-                  className="mx-auto overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/80 shadow-[0_45px_90px_-40px_rgba(0,0,0,0.85)]"
+                  className={clsx(
+                    "mx-auto overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/80 shadow-[0_45px_90px_-40px_rgba(0,0,0,0.85)] transition-all duration-300",
+                    {
+                      "w-[375px]": device === "mobile",
+                      "w-[768px]": device === "tablet",
+                      "w-[1440px]": device === "desktop",
+                    }
+                  )}
                   style={{ width: `${currentWidth}px` }}
                 >
                   <div className="flex items-center gap-3 border-b border-gray-800/70 bg-gray-900 px-4 py-3">
@@ -377,9 +385,8 @@ export function WebsitePreview() {
                     id="preview-frame"
                     title="Website preview"
                     data-preview-frame="true"
-                    className="border-0 bg-white"
+                    className="w-full border-0 bg-white"
                     style={{
-                      width: `${currentWidth}px`,
                       height: `${currentHeight}px`
                     }}
                   />

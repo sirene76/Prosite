@@ -12,8 +12,9 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 
 import type { TemplateDefinition } from "@/lib/templates";
+import { useBuilderStore, type BuilderDevice } from "@/store/builderStore";
 
-type Device = "desktop" | "tablet" | "mobile";
+type Device = BuilderDevice;
 
 export type ThemeState = {
   name?: string;
@@ -260,7 +261,12 @@ type BuilderProviderProps = {
 };
 
 export function BuilderProvider({ children, templates }: BuilderProviderProps) {
-  const [device, setDevice] = useState<Device>("desktop");
+  const device = useBuilderStore((state) => state.device);
+  const setDevice = useBuilderStore((state) => state.setDevice);
+  const setStorePages = useBuilderStore((state) => state.setPages);
+  const setStoreWebsiteName = useBuilderStore((state) => state.setWebsiteName);
+  const setStoreThemeName = useBuilderStore((state) => state.setThemeName);
+  const setStoreWebsiteId = useBuilderStore((state) => state.setWebsiteId);
   const [previewFrame, setPreviewFrame] = useState<HTMLIFrameElement | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templates[0]?.id ?? "");
@@ -326,6 +332,55 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     [fallbackTemplate, selectedTemplateId, templates]
   );
   const selectedTemplateIdRef = selectedTemplate.id;
+
+  useEffect(() => {
+    const sectionLabels = selectedTemplate.sections.map((section) =>
+      typeof section.label === "string" && section.label.trim().length > 0
+        ? section.label.trim()
+        : toSentence(section.id)
+    );
+    setStorePages(sectionLabels);
+  }, [selectedTemplate, setStorePages]);
+
+  const websiteNameForStore = useMemo(() => {
+    const contentRecord = content as Record<string, unknown>;
+    const candidates: unknown[] = [
+      contentRecord["siteName"],
+      contentRecord["websiteName"],
+      contentRecord["businessName"],
+      contentRecord["name"],
+      selectedTemplate?.name,
+    ];
+
+    const resolved = candidates.find(
+      (value): value is string => typeof value === "string" && value.trim().length > 0
+    );
+
+    return resolved ? resolved.trim() : "Untitled Website";
+  }, [content, selectedTemplate?.name]);
+
+  useEffect(() => {
+    setStoreWebsiteName(websiteNameForStore);
+  }, [setStoreWebsiteName, websiteNameForStore]);
+
+  const themeNameForStore = useMemo(() => {
+    const candidates: unknown[] = [
+      theme.name,
+      theme.label,
+      themeDefaults.name,
+      themeDefaults.label,
+    ];
+
+    const resolved = candidates.find(
+      (value): value is string => typeof value === "string" && value.trim().length > 0
+    );
+
+    return resolved ? resolved.trim() : "Default";
+  }, [themeDefaults.label, themeDefaults.name, theme.label, theme.name]);
+
+  useEffect(() => {
+    setStoreThemeName(themeNameForStore);
+  }, [setStoreThemeName, themeNameForStore]);
 
   const toggleSidebar = useCallback(() => setIsSidebarCollapsed((prev) => !prev), []);
 
@@ -483,15 +538,22 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     [pathname]
   );
 
-  const setWebsiteId = useCallback((nextWebsiteId: string | undefined) => {
-    console.log("DEBUG BuilderContext → setWebsiteId:", nextWebsiteId);
-    setWebsiteIdState((previous) => {
-      if (previous === nextWebsiteId) {
-        return previous;
-      }
-      return nextWebsiteId;
-    });
-  }, []);
+  const setWebsiteId = useCallback(
+    (nextWebsiteId: string | undefined) => {
+      setWebsiteIdState((previous) => {
+        if (previous === nextWebsiteId) {
+          return previous;
+        }
+        return nextWebsiteId;
+      });
+      setStoreWebsiteId(nextWebsiteId ?? null);
+    },
+    [setStoreWebsiteId]
+  );
+
+  useEffect(() => {
+    setStoreWebsiteId(websiteId ?? null);
+  }, [setStoreWebsiteId, websiteId]);
 
   useEffect(() => {
     lastSyncedTemplateRef.current = {

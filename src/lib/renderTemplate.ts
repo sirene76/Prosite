@@ -189,23 +189,28 @@ export function renderWithContent(html: string, content: Record<string, unknown>
 }
 
 function replaceScalars(template: string, scope: Record<string, unknown>) {
-  return template.replace(/{{\s*([\w.]+)\s*}}/g, (_, keyPath: string) => {
+  return template.replace(/{{\s*([^#\/{!>][^}]*)\s*}}/g, (_, rawKey: string) => {
+    const keyPath = rawKey.trim();
+    if (!keyPath) {
+      return "";
+    }
+
     const value = resolvePath(scope, keyPath);
-    return formatScalar(value);
+    return formatScalar(value, keyPath);
   });
 }
 
-function formatScalar(value: unknown) {
+function formatScalar(value: unknown, keyPath: string) {
   if (value == null) {
-    return "";
+    return `[${keyPath}]`;
   }
   if (typeof value === "string") {
-    return value;
+    return value.trim().length > 0 ? value : `[${keyPath}]`;
   }
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
-  return "";
+  return `[${keyPath}]`;
 }
 
 function createScope(value: unknown): Record<string, unknown> {
