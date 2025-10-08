@@ -98,7 +98,9 @@ export function renderTemplate({
     contentForRendering.modules = modulesContent;
   }
 
-  const rendered = renderWithContent(processedHtml, contentForRendering);
+  const rendered = renderWithContent(processedHtml, contentForRendering, {
+    moduleMap,
+  });
 
   const colorVars = buildThemeVariables(theme, themeTokens?.fonts);
   if (!colorVars) {
@@ -163,7 +165,15 @@ export function applyThemeTokens(html: string, css: string, theme: ThemeState) {
   return { html, css: themedCss };
 }
 
-export function renderWithContent(html: string, content: Record<string, unknown>) {
+type RenderContext = {
+  moduleMap?: Map<string, string>;
+};
+
+export function renderWithContent(
+  html: string,
+  content: Record<string, unknown>,
+  context: RenderContext = {}
+) {
   if (!html) {
     return html;
   }
@@ -178,50 +188,85 @@ export function renderWithContent(html: string, content: Record<string, unknown>
     return list
       .map((item) => {
         const scope = createScope(item);
-        return renderWithContent(block, scope);
+        return renderWithContent(block, scope, context);
       })
       .join("");
   });
 
-  output = replaceScalars(output, content);
+  output = replaceScalars(output, content, context);
 
   return output;
 }
 
-function replaceScalars(template: string, scope: Record<string, unknown>) {
-  return template.replace(/{{\s*([^#\/{!>][^}]*)\s*}}/g, (_, rawKey: string) => {
-    const keyPath = rawKey.trim();
-    if (!keyPath) {
-      return "";
+function replaceScalars(
+  template: string,
+  scope: Record<string, unknown>,
+  context: RenderContext
+) {
+  const { moduleMap } = context;
+
+  return template.replace(/{{(.*?)}}/g, (match: string, rawKey: string) => {
+    const key = rawKey.trim();
+    if (!key || /^[#\/!>{]/.test(key)) {
+      return match;
     }
 
-    const value = resolvePath(scope, keyPath);
-    return formatScalar(value, keyPath);
+    if (moduleMap?.has(key)) {
+      return moduleMap.get(key) ?? "";
+    }
+
+    const value = resolvePath(scope, key);
+
+    if (value === undefined || value === null || value === "") {
+      return `[${key}]`;
+    }
+
+    return formatScalar(value, key);
   });
 }
 
 function formatScalar(value: unknown, keyPath: string) {
-  if (value == null) {
-    return `[${keyPath}]`;
-  }
   if (Array.isArray(value)) {
-    const markup = value
+    const images = value
       .map((item) => (typeof item === "string" ? item.trim() : ""))
       .filter((item) => item.length > 0)
-      .map(
-        (url) =>
-          `<img src="${escapeAttribute(url)}" alt="gallery" style="max-width:100%;border-radius:8px;margin-bottom:8px;" />`
+      .map((item) =>
+        createImageMarkup(item, {
+          alt: "Gallery Image",
+        })
       )
-      .join("");
+      .filter((item) => item.length > 0);
 
-    return markup || `[${keyPath}]`;
+    if (images.length > 0) {
+      return images.join("");
+    }
+
+    return `[${keyPath}]`;
   }
   if (typeof value === "string") {
-    return value.trim().length > 0 ? value : `[${keyPath}]`;
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return `[${keyPath}]`;
+    }
+
+    if (isImageUrl(trimmed)) {
+      return createImageMarkup(trimmed, { alt: keyPath });
+    }
+
+    return trimmed;
   }
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
   return `[${keyPath}]`;
 }
 
@@ -295,6 +340,25 @@ function escapeAttribute(value: string) {
         return char;
     }
   });
+}
+
+function isImageUrl(value: string) {
+  if (!/^https?:\/\//i.test(value)) {
+    return false;
+  }
+
+  return /\.(jpg|jpeg|png|gif|webp|avif)(\?.*)?$/i.test(value);
+}
+
+function createImageMarkup(url: string, options: { alt?: string }) {
+  if (!isImageUrl(url)) {
+    return "";
+  }
+
+  const safeUrl = escapeAttribute(url);
+  const alt = escapeAttribute(options.alt ?? "Image");
+
+  return `<img src="${safeUrl}" alt="${alt}" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;display:block;"/>`;
 }
 
 export function composePreviewDocument(

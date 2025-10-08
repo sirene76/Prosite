@@ -21,6 +21,7 @@ type ImageDropInputProps = {
   description?: string;
   disabled?: boolean;
   className?: string;
+  mode?: "single" | "append";
 };
 
 export default function ImageDropInput({
@@ -31,6 +32,7 @@ export default function ImageDropInput({
   description,
   disabled = false,
   className,
+  mode = "single",
 }: ImageDropInputProps) {
   const { startUpload, isUploading } = useUploadThing("templateAssets");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -44,15 +46,30 @@ export default function ImageDropInput({
 
       try {
         const result = await startUpload(files);
-        const url = result?.[0]?.url;
-        if (url) {
-          onChange(url);
+        const uploads = (result ?? [])
+          .map((item) => item?.url ?? "")
+          .filter((item): item is string => typeof item === "string" && item.length > 0);
+
+        if (!uploads.length) {
+          return;
+        }
+
+        if (mode === "append") {
+          uploads.forEach((url) => {
+            onChange(url);
+          });
+          return;
+        }
+
+        const [firstUpload] = uploads;
+        if (firstUpload) {
+          onChange(firstUpload);
         }
       } catch (error) {
         console.error("Image upload failed", error);
       }
     },
-    [onChange, startUpload]
+    [mode, onChange, startUpload]
   );
 
   const handleFileChange = useCallback(

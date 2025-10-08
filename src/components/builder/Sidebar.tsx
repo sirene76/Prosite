@@ -158,7 +158,7 @@ type ThemeValues = {
 type ContentPanelProps = {
   sections: TemplateContentSection[];
   content: Record<string, unknown>;
-  updateContent: (changes: Record<string, unknown>) => void;
+  updateContent: (key: string, value: unknown) => void;
   previewFrame: HTMLIFrameElement | null;
   colors: TemplateColorDefinition[];
   theme: ThemeValues;
@@ -221,8 +221,8 @@ function ContentPanel({
     );
   }
 
-  const handleContentChange = (key: string, value: string) => {
-    updateContent({ [key]: value });
+  const handleContentChange = (key: string, value: unknown) => {
+    updateContent(key, value);
   };
 
   return (

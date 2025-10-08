@@ -33,19 +33,19 @@ export function TableEditorPanel({ panel }: { panel: BuilderPanel }) {
     });
     const next = [...rows, empty];
     setRows(next);
-    updateContent({ [key]: next });
+    updateContent(key, next);
   }
 
   function removeRow(index: number) {
     const next = rows.filter((_, i) => i !== index);
     setRows(next);
-    updateContent({ [key]: next });
+    updateContent(key, next);
   }
 
   function updateCell(index: number, col: string, value: string) {
     const next = rows.map((row, i) => (i === index ? { ...row, [col]: value } : row));
     setRows(next);
-    updateContent({ [key]: next });
+    updateContent(key, next);
   }
 
   return (

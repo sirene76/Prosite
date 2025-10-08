@@ -27,13 +27,13 @@ export function TextListPanel({ panel }: { panel: BuilderPanel }) {
     }
     const next = [...items, trimmed].slice(0, limit);
     setItems(next);
-    updateContent({ [key]: next });
+    updateContent(key, next);
   }
 
   function removeItem(index: number) {
     const next = items.filter((_, i) => i !== index);
     setItems(next);
-    updateContent({ [key]: next });
+    updateContent(key, next);
   }
 
   return (
