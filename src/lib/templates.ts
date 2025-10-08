@@ -36,7 +36,7 @@ export const templates: TemplateSummary[] = [
   },
 ];
 
-export type TemplateFieldType = "text" | "textarea" | "image" | "color";
+export type TemplateFieldType = "text" | "textarea" | "image" | "gallery" | "color";
 
 export type TemplateFieldDefinition = {
   id: string;

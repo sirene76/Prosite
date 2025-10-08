@@ -23,13 +23,13 @@ export function ImageGridPanel({ panel }: { panel: BuilderPanel }) {
   function addImage(url: string) {
     const next = [...images, url].slice(0, limit);
     setImages(next);
-    updateContent({ [key]: next });
+    updateContent(key, next);
   }
 
   function removeImage(index: number) {
     const next = images.filter((_, i) => i !== index);
     setImages(next);
-    updateContent({ [key]: next });
+    updateContent(key, next);
   }
 
   return (

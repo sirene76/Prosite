@@ -37,7 +37,7 @@ export default function ContentPage() {
             {type === "textarea" ? (
               <textarea
                 value={content[key] ?? ""}
-                onChange={(event) => updateContent({ [key]: event.target.value })}
+                onChange={(event) => updateContent(key, event.target.value)}
                 rows={4}
                 className="min-h-[120px] rounded-xl border border-slate-800/70 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 shadow-inner shadow-black/40 focus:border-builder-accent focus:outline-none"
               />
@@ -45,7 +45,7 @@ export default function ContentPage() {
               <input
                 type={type ?? "text"}
                 value={content[key] ?? ""}
-                onChange={(event) => updateContent({ [key]: event.target.value })}
+                onChange={(event) => updateContent(key, event.target.value)}
                 className="rounded-xl border border-slate-800/70 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:border-builder-accent focus:outline-none"
               />
             )}

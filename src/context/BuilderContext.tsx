@@ -30,7 +30,7 @@ export type ThemeState = {
 export type TemplateContentField = {
   key: string;
   label: string;
-  type: "text" | "textarea" | "email" | "image" | "color";
+  type: "text" | "textarea" | "email" | "image" | "gallery" | "color";
   placeholder?: string;
   description?: string;
   defaultValue?: string;
@@ -66,7 +66,7 @@ type BuilderContextValue = {
   updateTheme: (changes: Partial<ThemeState>) => void;
   registerThemeDefaults: (defaults: Partial<ThemeState>) => void;
   content: Record<string, unknown>;
-  updateContent: (changes: Record<string, unknown>) => void;
+  updateContent: (key: string, value: unknown) => void;
   contentSections: TemplateContentSection[];
   registerContentPlaceholders: (placeholders: string[]) => void;
   isPreviewReady: boolean;
@@ -233,7 +233,12 @@ function buildContentSections(
 
 
 function mapFieldType(fieldType: TemplateContentField["type"] | string | undefined, key: string) {
-  if (fieldType === "textarea" || fieldType === "image" || fieldType === "color") {
+  if (
+    fieldType === "textarea" ||
+    fieldType === "image" ||
+    fieldType === "gallery" ||
+    fieldType === "color"
+  ) {
     return fieldType;
   }
   if (fieldType === "email") {
@@ -461,9 +466,35 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   }, []);
 
   const updateContent = useCallback(
-    (changes: Record<string, unknown>) => {
+    (key: string, value: unknown) => {
+      const resolvedKey = key.trim();
+      if (!resolvedKey) {
+        return;
+      }
+
       setContent((prev) => {
-        const next = { ...prev, ...changes };
+        const current = prev[resolvedKey];
+        let nextValue: unknown = value;
+
+        if (resolvedKey === "gallery") {
+          if (Array.isArray(value)) {
+            nextValue = value;
+          } else if (typeof value === "string") {
+            const trimmed = value.trim();
+            if (trimmed.length === 0) {
+              nextValue = [];
+            } else {
+              const existing = Array.isArray(current) ? current : [];
+              nextValue = [...existing, trimmed];
+            }
+          } else if (value == null) {
+            nextValue = [];
+          } else {
+            nextValue = Array.isArray(current) ? current : [];
+          }
+        }
+
+        const next = { ...prev, [resolvedKey]: nextValue };
 
         if (websiteId) {
           void saveWebsiteChanges(websiteId, { content: next });
