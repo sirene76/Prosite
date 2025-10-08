@@ -118,6 +118,7 @@ export async function POST(request: Request) {
       meta: parsedMeta,
       theme: metaTheme,
       content: metaContent,
+      pages: ["Home"],
     });
 
     return NextResponse.json(website, { status: 201 });

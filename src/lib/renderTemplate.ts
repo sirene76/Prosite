@@ -204,6 +204,18 @@ function formatScalar(value: unknown, keyPath: string) {
   if (value == null) {
     return `[${keyPath}]`;
   }
+  if (Array.isArray(value)) {
+    const markup = value
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item) => item.length > 0)
+      .map(
+        (url) =>
+          `<img src="${escapeAttribute(url)}" alt="gallery" style="max-width:100%;border-radius:8px;margin-bottom:8px;" />`
+      )
+      .join("");
+
+    return markup || `[${keyPath}]`;
+  }
   if (typeof value === "string") {
     return value.trim().length > 0 ? value : `[${keyPath}]`;
   }
@@ -264,6 +276,25 @@ function resolvePath(obj: unknown, path: string): unknown {
   }
 
   return current;
+}
+
+function escapeAttribute(value: string) {
+  return value.replace(/[&"'<>]/g, (char) => {
+    switch (char) {
+      case "&":
+        return "&amp;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      default:
+        return char;
+    }
+  });
 }
 
 export function composePreviewDocument(

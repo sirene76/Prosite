@@ -167,22 +167,6 @@ export function WebsitePreview() {
     updatePreviewDocument(previewDocument);
   }, [previewDocument, updatePreviewDocument]);
 
-  useEffect(() => {
-    if (!previewDocument) {
-      return;
-    }
-
-    const frame = iframeRef.current;
-    const doc = frame?.contentDocument;
-    if (!frame || !doc) {
-      return;
-    }
-
-    doc.open();
-    doc.write(previewDocument);
-    doc.close();
-  }, [previewDocument, selectedTemplate.id]);
-
   const handleZoomIn = useCallback(() => {
     setIsAutoFit(false);
     setZoom((current) => {
@@ -380,15 +364,16 @@ export function WebsitePreview() {
                     </div>
                   </div>
                   <iframe
-                    key={`${selectedTemplate.id}-${device}`}
                     ref={setIframeRef}
                     id="preview-frame"
                     title="Website preview"
                     data-preview-frame="true"
-                    className="w-full border-0 bg-white"
+                    className="w-full border-0 bg-white transition-all duration-300"
                     style={{
                       height: `${currentHeight}px`
                     }}
+                    srcDoc={previewDocument}
+                    sandbox="allow-same-origin allow-scripts"
                   />
                 </div>
               </div>
