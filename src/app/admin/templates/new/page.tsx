@@ -1,16 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import { UploadButton, UploadDropzone } from "@/utils/uploadthing";
+import TemplateLivePreview from "@/components/admin/TemplateLivePreview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useTemplatePreview } from "@/hooks/useTemplatePreview";
-import TemplateLivePreview from "@/components/admin/TemplateLivePreview";
+import type { TemplateMeta } from "@/hooks/useTemplatePreview";
+
+import "ace-builds/src-noconflict/mode-html";
+import "ace-builds/src-noconflict/mode-css";
+import "ace-builds/src-noconflict/mode-json";
+import "ace-builds/src-noconflict/theme-one_dark";
+
+const AceEditor = dynamic(async () => (await import("react-ace")).default, { ssr: false });
 
 type FormState = {
   name: string;
@@ -21,46 +29,14 @@ type FormState = {
   tags: string;
   version: string;
   changelog: string;
-  htmlUrl: string;
-  cssUrl: string;
-  metaUrl: string;
   previewUrl: string;
   html: string;
   css: string;
   meta: string;
 };
 
-type UploadKey = "htmlUrl" | "cssUrl" | "metaUrl" | "previewUrl";
-type UploadType = "preview" | "html" | "css" | "meta";
-type UploadUrlKey = Extract<UploadKey, `${UploadType}Url`>;
-
-const uploadFieldOrder: Array<{
-  key: Extract<UploadKey, "htmlUrl" | "cssUrl" | "metaUrl">;
-  label: string;
-  helper: string;
-  variant: Extract<UploadType, "html" | "css" | "meta">;
-}> = [
-  {
-    key: "htmlUrl",
-    label: "HTML File",
-    helper: "Upload the compiled HTML file for this template.",
-    variant: "html",
-  },
-  {
-    key: "cssUrl",
-    label: "CSS File",
-    helper: "Upload the styles that accompany the template.",
-    variant: "css",
-  },
-  {
-    key: "metaUrl",
-    label: "meta.json File",
-    helper: "Provide the template metadata JSON file.",
-    variant: "meta",
-  },
-];
-
 const videoExtensions = [".mp4", ".webm", ".ogg", ".mov"];
+const defaultMeta = '{\n  "themes": [],\n  "fields": []\n}';
 
 const uploadDropzoneClassName =
   "ut-upload-area flex min-h-[200px] w-full items-center justify-center rounded-lg border border-slate-700 bg-slate-900/40 p-6 text-center text-sm text-slate-300 transition-colors";
@@ -81,65 +57,54 @@ export default function NewTemplatePage() {
     tags: "",
     version: "1.0.0",
     changelog: "",
-    htmlUrl: "",
-    cssUrl: "",
-    metaUrl: "",
     previewUrl: "",
     html: "",
     css: "",
-    meta: "",
+    meta: defaultMeta,
   });
   const [loading, setLoading] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<
     | { type: "success" | "error"; message: string }
     | null
   >(null);
-  const { ready, html, css, meta, loading: previewLoading } = useTemplatePreview(
-    form.htmlUrl,
-    form.cssUrl,
-    form.metaUrl,
-  );
-
-  useEffect(() => {
-    console.log("🔍 Form URLs:", {
-      htmlUrl: form.htmlUrl,
-      cssUrl: form.cssUrl,
-      metaUrl: form.metaUrl,
-    });
-  }, [form.htmlUrl, form.cssUrl, form.metaUrl]);
-
-  useEffect(() => {
-    console.log("🛰️ Template preview state changed", {
-      ready,
-      previewLoading,
-      hasHtml: !!html,
-      hasCss: !!css,
-      hasMeta: !!meta,
-    });
-  }, [ready, previewLoading, html, css, meta]);
-
-  useEffect(() => {
-    if (form.htmlUrl && form.cssUrl) {
-      console.log("🔁 Refreshing live preview with new uploads...");
+  const [parsedMeta, setParsedMeta] = useState<TemplateMeta | Record<string, unknown> | null>(() => {
+    try {
+      return JSON.parse(defaultMeta);
+    } catch {
+      return null;
     }
-  }, [form.htmlUrl, form.cssUrl]);
+  });
+  const [metaError, setMetaError] = useState<string | null>(null);
 
-  function handleUploadComplete(type: UploadType, res?: Array<{ url?: string }>) {
+  useEffect(() => {
+    try {
+      if (!form.meta.trim()) {
+        setParsedMeta({});
+        setMetaError(null);
+        setUploadFeedback((prev) =>
+          prev && prev.type === "error" && prev.message.includes("meta.json") ? null : prev,
+        );
+        return;
+      }
+      const parsed = JSON.parse(form.meta) as TemplateMeta;
+      setParsedMeta(parsed);
+      setMetaError(null);
+      setUploadFeedback((prev) =>
+        prev && prev.type === "error" && prev.message.includes("meta.json") ? null : prev,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid JSON";
+      setMetaError(message);
+      setParsedMeta(null);
+    }
+  }, [form.meta]);
+
+  function handleUploadComplete(res?: Array<{ url?: string }>) {
     const url = res?.[0]?.url;
-    if (!url) return console.error(`❌ Missing URL for ${type} upload`, res);
+    if (!url) return console.error("❌ Missing URL for preview upload", res);
 
-    const key = `${type}Url` as UploadUrlKey;
-    setForm((prev) => ({ ...prev, [key]: url }));
-    console.log(`✅ ${type.toUpperCase()} uploaded:`, url);
-
-    const typeLabelMap: Record<UploadType, string> = {
-      preview: "Preview asset",
-      html: "HTML file",
-      css: "CSS file",
-      meta: "Metadata file",
-    };
-
-    setUploadFeedback({ type: "success", message: `${typeLabelMap[type]} uploaded successfully.` });
+    setForm((prev) => ({ ...prev, previewUrl: url }));
+    setUploadFeedback({ type: "success", message: "Preview asset uploaded successfully." });
   }
 
   function handleUploadError(error: Error) {
@@ -154,6 +119,10 @@ export default function NewTemplatePage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (metaError) {
+      return setUploadFeedback({ type: "error", message: "Please fix meta.json before saving." });
+    }
+
     setLoading(true);
 
     const tags = form.tags
@@ -163,32 +132,31 @@ export default function NewTemplatePage() {
     const versionNumber = form.version.trim() || "1.0.0";
 
     try {
+      const payload = {
+        name: form.name,
+        slug: form.slug,
+        description: form.description,
+        category: form.category,
+        subcategory: form.subcategory,
+        tags,
+        versions: [
+          {
+            number: versionNumber,
+            changelog: form.changelog,
+            previewUrl: form.previewUrl,
+            inlineHtml: form.html,
+            inlineCss: form.css,
+            inlineMeta: form.meta,
+          },
+        ],
+        currentVersion: versionNumber,
+        published: true,
+      };
+
       const response = await fetch("/api/admin/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          slug: form.slug,
-          description: form.description,
-          category: form.category,
-          subcategory: form.subcategory,
-          tags,
-          versions: [
-            {
-              number: versionNumber,
-              changelog: form.changelog,
-              htmlUrl: form.htmlUrl,
-              cssUrl: form.cssUrl,
-              metaUrl: form.metaUrl,
-              previewUrl: form.previewUrl,
-              inlineHtml: form.html,
-              inlineCss: form.css,
-              inlineMeta: form.meta,
-            },
-          ],
-          currentVersion: versionNumber,
-          published: true,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -280,10 +248,10 @@ export default function NewTemplatePage() {
 
           <Card>
             <CardHeader className="border-none pb-0">
-              <CardTitle>Template Uploads</CardTitle>
-              <CardDescription>Upload preview media and the core files associated with this template.</CardDescription>
+              <CardTitle>Template Preview Asset</CardTitle>
+              <CardDescription>Upload the image or video shown in the template catalog.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-10 pt-6 lg:grid-cols-2">
+            <CardContent className="grid gap-8 pt-6 lg:grid-cols-2">
               {uploadFeedback && (
                 <div
                   className={`lg:col-span-2 rounded-lg border px-4 py-3 text-sm ${
@@ -295,101 +263,108 @@ export default function NewTemplatePage() {
                   {uploadFeedback.message}
                 </div>
               )}
-              <div>
-                <p className="text-sm font-semibold text-slate-200">Preview Image / Video</p>
-                <p className="text-xs text-slate-400">
-                  Drag and drop an image or video or click inside the dropzone to choose a file.
-                </p>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-200">Preview Image / Video</p>
+                  <p className="text-xs text-slate-400">
+                    Drag and drop a file or click inside the dropzone to choose one.
+                  </p>
+                </div>
                 <UploadDropzone
                   endpoint="templateFiles"
-                  onClientUploadComplete={(res) => {
-                    console.log("📁 Preview dropzone upload result:", res);
-                    handleUploadComplete("preview", res);
-                  }}
+                  onClientUploadComplete={handleUploadComplete}
                   onUploadError={handleUploadError}
-                  className={`${uploadDropzoneClassName} mt-4 cursor-pointer hover:border-pink-400`}
+                  className={`${uploadDropzoneClassName} cursor-pointer hover:border-pink-400`}
                 />
-                {form.previewUrl ? (
-                  <>
-                    <div className="mt-4 overflow-hidden rounded-xl border border-slate-800 bg-black/40">
-                      {isPreviewVideo ? (
-                        <video
-                          key={form.previewUrl}
-                          src={form.previewUrl}
-                          controls
-                          className="h-64 w-full rounded-xl object-cover"
-                        />
-                      ) : (
-                        <div className="relative h-64 w-full">
-                          <Image
-                            alt="Template preview"
-                            src={form.previewUrl}
-                            fill
-                            sizes="(min-width: 1024px) 480px, 100vw"
-                            className="rounded-xl object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                      <span>Uploaded: {getUploadedFileName(form.previewUrl)}</span>
-                      <UploadButton
-                        endpoint="templateFiles"
-                        onClientUploadComplete={(res) => handleUploadComplete("preview", res)}
-                        onUploadError={handleUploadError}
-                        appearance={{
-                          container: "",
-                          button:
-                            "rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-pink-400 hover:text-white",
-                        }}
-                        content={{
-                          button: ({ ready }) => (ready ? "Replace file" : "Uploading..."),
-                        }}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <p className="mt-3 text-xs text-slate-500">
-                    Supports images (JPG, PNG, GIF) and videos (MP4, WEBM, MOV).
-                  </p>
-                )}
+                <p className="text-xs text-slate-500">
+                  Supports images (JPG, PNG, GIF) and videos (MP4, WEBM, MOV).
+                </p>
               </div>
-              <div className="space-y-6">
-                {uploadFieldOrder.map(({ key, label, helper, variant }) => (
-                  <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
-                    <p className="text-sm font-semibold text-slate-200">{label}</p>
-                    <p className="text-xs text-slate-400">{helper}</p>
-                    <UploadDropzone
-                      endpoint="templateFiles"
-                      onClientUploadComplete={(res) => {
-                        console.log(`📁 ${label} dropzone upload result:`, res);
-                        handleUploadComplete(variant, res);
-                      }}
-                      onUploadError={handleUploadError}
-                      className={`${uploadDropzoneClassName} mt-4 cursor-pointer hover:border-pink-400`}
-                    />
-                    {form[key] ? (
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                        <span>Uploaded: {getUploadedFileName(form[key])}</span>
-                        <UploadButton
-                          endpoint="templateFiles"
-                          onClientUploadComplete={(res) => handleUploadComplete(variant, res)}
-                          onUploadError={handleUploadError}
-                          appearance={{
-                            container: "",
-                            button:
-                              "rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-pink-400 hover:text-white",
-                          }}
-                          content={{
-                            button: ({ ready }) => (ready ? "Replace file" : "Uploading..."),
-                          }}
+              <div>
+                {form.previewUrl ? (
+                  <div className="overflow-hidden rounded-xl border border-slate-800 bg-black/40">
+                    {isPreviewVideo ? (
+                      <video key={form.previewUrl} src={form.previewUrl} controls className="h-64 w-full object-cover" />
+                    ) : (
+                      <div className="relative h-64 w-full">
+                        <Image
+                          alt="Template preview"
+                          src={form.previewUrl}
+                          fill
+                          sizes="(min-width: 1024px) 480px, 100vw"
+                          className="object-cover"
                         />
                       </div>
-                    ) : (
-                      <p className="mt-3 text-xs text-slate-500">No file uploaded yet.</p>
                     )}
                   </div>
-                ))}
+                ) : (
+                  <div className="flex h-64 w-full items-center justify-center rounded-xl border border-dashed border-slate-800 text-xs text-slate-500">
+                    Preview asset not uploaded yet.
+                  </div>
+                )}
+                {form.previewUrl && (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                    <span>Uploaded: {getUploadedFileName(form.previewUrl)}</span>
+                    <UploadButton
+                      endpoint="templateFiles"
+                      onClientUploadComplete={handleUploadComplete}
+                      onUploadError={handleUploadError}
+                      appearance={{
+                        container: "",
+                        button:
+                          "rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-pink-400 hover:text-white",
+                      }}
+                      content={{
+                        button: ({ ready }) => (ready ? "Replace file" : "Uploading..."),
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="border-none pb-0">
+              <CardTitle>Template Code</CardTitle>
+              <CardDescription>Author HTML, CSS, and metadata directly with live preview updates.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8 pt-6">
+              <div>
+                <p className="font-semibold mb-2 text-sm text-gray-400">HTML</p>
+                <AceEditor
+                  mode="html"
+                  theme="one_dark"
+                  width="100%"
+                  height="250px"
+                  value={form.html}
+                  onChange={(value) => updateField("html", value)}
+                  setOptions={{ useWorker: false }}
+                />
+              </div>
+              <div>
+                <p className="font-semibold mb-2 text-sm text-gray-400">CSS</p>
+                <AceEditor
+                  mode="css"
+                  theme="one_dark"
+                  width="100%"
+                  height="250px"
+                  value={form.css}
+                  onChange={(value) => updateField("css", value)}
+                  setOptions={{ useWorker: false }}
+                />
+              </div>
+              <div>
+                <p className="font-semibold mb-2 text-sm text-gray-400">meta.json</p>
+                <AceEditor
+                  mode="json"
+                  theme="one_dark"
+                  width="100%"
+                  height="250px"
+                  value={form.meta}
+                  onChange={(value) => updateField("meta", value)}
+                  setOptions={{ useWorker: false }}
+                />
               </div>
             </CardContent>
           </Card>
@@ -398,46 +373,16 @@ export default function NewTemplatePage() {
             <CardHeader className="border-none pb-0">
               <CardTitle>Template Live Preview</CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="space-y-4 pt-6">
               <p className="text-xs text-gray-400">
-                {form.htmlUrl && form.cssUrl
-                  ? ready
-                    ? "✅ Code files detected, preview should load below."
-                    : "⏳ Files uploaded. Fetching preview content..."
-                  : "⏳ Waiting for HTML & CSS uploads..."}
+                {form.html
+                  ? "Typing updates the preview automatically."
+                  : "Start writing HTML to see the live preview."}
               </p>
-              <TemplateLivePreview html={html} css={css} meta={meta} loading={previewLoading} />
+              {metaError && <p className="text-xs text-rose-300">meta.json error: {metaError}</p>}
+              <TemplateLivePreview html={form.html} css={form.css} meta={parsedMeta ?? undefined} />
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="border-none pb-0">
-              <CardTitle>Template Code</CardTitle>
-              <CardDescription>Draft inline HTML, CSS, and metadata to accompany this template.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 lg:grid-cols-3">
-              <CodeEditorField
-                label="HTML"
-                placeholder="Paste or write the core HTML structure here."
-                value={form.html}
-                onChange={(value) => updateField("html", value)}
-              />
-              <CodeEditorField
-                label="CSS"
-                placeholder="Include scoped CSS for this template."
-                value={form.css}
-                onChange={(value) => updateField("css", value)}
-              />
-              <CodeEditorField
-                label="meta.json"
-                placeholder='{"title": "Landing Page", "tags": ["marketing"]}'
-                value={form.meta}
-                onChange={(value) => updateField("meta", value)}
-                languageHint="JSON"
-              />
-            </CardContent>
-          </Card>
-
           <div className="flex flex-col items-end gap-4 pb-4">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Templates are saved with the latest upload and inline code snippets for the selected version.
@@ -448,40 +393,6 @@ export default function NewTemplatePage() {
           </div>
         </form>
       </div>
-    </div>
-  );
-}
-
-type CodeEditorFieldProps = {
-  label: string;
-  placeholder?: string;
-  value: string;
-  onChange: (value: string) => void;
-  languageHint?: string;
-};
-
-function CodeEditorField({ label, placeholder, value, onChange, languageHint }: CodeEditorFieldProps) {
-  const characterCount = value.length;
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
-          {languageHint ? (
-            <span className="text-xs uppercase tracking-wide text-indigo-400">{languageHint}</span>
-          ) : (
-            <span className="text-xs uppercase tracking-wide text-indigo-400">{label}</span>
-          )}
-        </div>
-        <span className="text-xs text-slate-500 dark:text-slate-400">{characterCount} chars</span>
-      </div>
-      <Textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="min-h-[18rem] w-full resize-y rounded-xl border-slate-200/70 bg-slate-950/5 font-mono text-[13px] leading-6 text-slate-800 shadow-inner focus-visible:ring-indigo-500 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-100"
-      />
     </div>
   );
 }

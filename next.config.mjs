@@ -1,3 +1,8 @@
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -10,6 +15,29 @@ const nextConfig = {
       // Pinterest CDN
       { protocol: "https", hostname: "i.pinimg.com" },
     ],
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "react-ace": path.resolve(__dirname, "src/lib/stub-react-ace.tsx"),
+      "ace-builds/src-noconflict/mode-html": path.resolve(
+        __dirname,
+        "src/lib/ace-stubs/mode-html.ts",
+      ),
+      "ace-builds/src-noconflict/mode-css": path.resolve(
+        __dirname,
+        "src/lib/ace-stubs/mode-css.ts",
+      ),
+      "ace-builds/src-noconflict/mode-json": path.resolve(
+        __dirname,
+        "src/lib/ace-stubs/mode-json.ts",
+      ),
+      "ace-builds/src-noconflict/theme-one_dark": path.resolve(
+        __dirname,
+        "src/lib/ace-stubs/theme-one_dark.ts",
+      ),
+    };
+    return config;
   },
 };
 

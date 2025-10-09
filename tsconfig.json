@@ -27,6 +27,21 @@
       ],
       "lucide-react": [
         "src/icons/lucide-react"
+      ],
+      "react-ace": [
+        "src/lib/stub-react-ace"
+      ],
+      "ace-builds/src-noconflict/mode-html": [
+        "src/lib/ace-stubs/mode-html"
+      ],
+      "ace-builds/src-noconflict/mode-css": [
+        "src/lib/ace-stubs/mode-css"
+      ],
+      "ace-builds/src-noconflict/mode-json": [
+        "src/lib/ace-stubs/mode-json"
+      ],
+      "ace-builds/src-noconflict/theme-one_dark": [
+        "src/lib/ace-stubs/theme-one_dark"
       ]
     },
     "plugins": [
