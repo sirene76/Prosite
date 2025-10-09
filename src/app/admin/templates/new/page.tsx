@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useTemplatePreview } from "@/hooks/useTemplatePreview";
+import TemplateLivePreview from "@/components/admin/TemplateLivePreview";
 
 type FormState = {
   name: string;
@@ -82,6 +84,11 @@ export default function NewTemplatePage() {
     previewUrl: "",
   });
   const [loading, setLoading] = useState(false);
+  const { ready: previewReady, html, css, meta } = useTemplatePreview(
+    form.htmlUrl,
+    form.cssUrl,
+    form.metaUrl,
+  );
 
   const isPreviewVideo = useMemo(() => {
     if (!form.previewUrl) return false;
@@ -310,6 +317,21 @@ export default function NewTemplatePage() {
                   ))}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="border-none pb-0">
+              <CardTitle>Template Live Preview</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {previewReady && html ? (
+                <TemplateLivePreview html={html} css={css} meta={meta} />
+              ) : (
+                <p className="text-slate-500 dark:text-slate-400">
+                  Upload HTML, CSS, and meta.json to see the live preview.
+                </p>
+              )}
             </CardContent>
           </Card>
 
