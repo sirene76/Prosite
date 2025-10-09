@@ -10,6 +10,8 @@ const VersionSchema = new mongoose.Schema(
     previewUrl: String,
     previewVideo: String,
     createdAt: { type: Date, default: Date.now },
+    status: { type: String, enum: ["draft", "published"], default: "draft" },
+    previewToken: String,
   },
   { _id: false }
 );
