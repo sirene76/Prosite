@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
 import { injectThemeTokens, renderTemplate } from "@/lib/renderTemplate";
+import { useBuilderStore } from "@/store/builderStore";
 
 const DEVICE_WIDTHS = {
   desktop: 1440,
@@ -48,6 +49,8 @@ export function WebsitePreview() {
   const [isExporting, setIsExporting] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const storeTheme = useBuilderStore((state) => state.theme);
+  const storeValues = useBuilderStore((state) => state.values);
   const setIframeRef = useCallback(
     (node: HTMLIFrameElement | null) => {
       iframeRef.current = node;
@@ -106,7 +109,18 @@ export function WebsitePreview() {
     };
   }, [registerContentPlaceholders, registerThemeDefaults, selectedTemplate.colors, selectedTemplate.fonts, selectedTemplate.id]);
 
-  const mergedData = useMemo(() => ({ ...content }), [content]);
+  const mergedData = useMemo(() => {
+    const baseContent = typeof content === "object" && content !== null ? content : {};
+    return { ...baseContent, ...storeValues } as Record<string, unknown>;
+  }, [content, storeValues]);
+
+  const getStoreThemeColor = useCallback(
+    (key: string) => {
+      const value = storeTheme[key];
+      return typeof value === "string" && value.trim() ? value : undefined;
+    },
+    [storeTheme]
+  );
 
   const previewDocument = useMemo(() => {
     if (!assets) {
@@ -116,8 +130,15 @@ export function WebsitePreview() {
     const colorPalette: Record<string, string> = {};
     selectedTemplate.colors.forEach((color) => {
       const key = color.id;
-      const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
+      const value =
+        storeTheme[key] ?? theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
       if (value) {
+        colorPalette[key] = value;
+      }
+    });
+
+    Object.entries(storeTheme).forEach(([key, value]) => {
+      if (typeof value === "string" && value.trim()) {
         colorPalette[key] = value;
       }
     });
@@ -135,10 +156,10 @@ export function WebsitePreview() {
       values: mergedData,
       modules: selectedTemplate.modules,
       theme: {
-        primary: colorPalette.primary,
-        secondary: colorPalette.secondary,
-        background: colorPalette.background,
-        text: colorPalette.text,
+        primary: colorPalette.primary ?? getStoreThemeColor("primary"),
+        secondary: colorPalette.secondary ?? getStoreThemeColor("secondary"),
+        background: colorPalette.background ?? getStoreThemeColor("background"),
+        text: colorPalette.text ?? getStoreThemeColor("text"),
       },
       themeTokens: {
         colors: colorPalette,
@@ -160,6 +181,8 @@ export function WebsitePreview() {
     selectedTemplate.colors,
     selectedTemplate.fonts,
     selectedTemplate.modules,
+    storeTheme,
+    getStoreThemeColor,
     theme.colors,
     theme.fonts,
     themeDefaults.colors,
@@ -368,7 +391,7 @@ export function WebsitePreview() {
                   </div>
                   <iframe
                     ref={setIframeRef}
-                    id="preview-frame"
+                    id="livePreview"
                     title="Website preview"
                     data-preview-frame="true"
                     className="w-full border-0 bg-white transition-all duration-300"
@@ -446,7 +469,7 @@ function injectScrollScript(html: string) {
     return html;
   }
 
-  const script = `\n<script>\n  window.addEventListener("message", (e) => {\n    if (e.data?.type === "scrollTo") {\n      const el = document.getElementById(e.data.target);\n      if (el) {\n        el.scrollIntoView({ behavior: "smooth" });\n      }\n    }\n  });\n</script>\n`;
+  const script = `\n<script>\n  window.addEventListener("message", (e) => {\n    if (e.data?.type !== "scrollTo") return;\n    if (typeof e.data.anchor !== "string") return;\n    try {\n      const target = document.querySelector(e.data.anchor);\n      if (target) {\n        target.scrollIntoView({ behavior: "smooth" });\n      }\n    } catch (err) {\n      /* ignored */\n    }\n  });\n</script>\n`;
 
   if (/<\/body>/i.test(html)) {
     return html.replace(/<\/body>/i, `${script}</body>`);

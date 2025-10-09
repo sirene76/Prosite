@@ -1,186 +1,60 @@
 "use client";
 
 import { useMemo } from "react";
-import { useBuilder } from "@/context/BuilderContext";
 
-export function ThemeSelector() {
-  const { selectedTemplate, theme, themeDefaults, updateTheme } = useBuilder();
+import { useBuilderStore } from "@/store/builderStore";
 
-  const colorDefinitions = selectedTemplate.colors;
-  const colorKeys = colorDefinitions.map((color) => color.id);
-  const fontKeys = selectedTemplate.fonts;
+type ThemeOption = {
+  name: string;
+  colors: Record<string, string>;
+};
 
-  const palettes = useMemo(() => buildPalettes(colorKeys), [colorKeys]);
-  const currentColors = useMemo(() => {
-    const entries: Record<string, string> = {};
-    colorDefinitions.forEach((color) => {
-      const key = color.id;
-      const value = theme.colors[key] ?? themeDefaults.colors[key] ?? color.default ?? "";
-      if (value) {
-        entries[key] = value.toLowerCase();
-      }
-    });
-    return entries;
-  }, [colorDefinitions, theme.colors, themeDefaults.colors]);
+type ThemeSelectorProps = {
+  themes?: ThemeOption[];
+};
+
+export function ThemeSelector({ themes }: ThemeSelectorProps) {
+  const theme = useBuilderStore((state) => state.theme);
+  const setTheme = useBuilderStore((state) => state.setTheme);
+
+  const hasThemes = Array.isArray(themes) && themes.length > 0;
+  const activeName = useMemo(() => {
+    if (!hasThemes) return undefined;
+    return themes?.find((option) => isSameTheme(option.colors, theme))?.name;
+  }, [hasThemes, theme, themes]);
+
+  if (!hasThemes) return <p className="text-sm text-slate-400">No theme variations</p>;
 
   return (
-    <div className="space-y-4">
-      {colorKeys.length ? (
-        <div className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Palettes</p>
-          <div className="space-y-2">
-            {palettes.map((preset) => {
-              const isActive = colorKeys.every((key) => {
-                const presetValue = preset.colors[key]?.toLowerCase();
-                const currentValue = currentColors[key];
-                return presetValue && currentValue === presetValue;
-              });
-
-              return (
-                <button
-                  type="button"
-                  key={preset.name}
-                  onClick={() =>
-                    updateTheme({
-                      colors: preset.colors,
-                      name: preset.name,
-                      label: preset.label ?? preset.name,
-                    })
-                  }
-                  aria-pressed={isActive}
-                  className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition hover:border-builder-accent/40 ${
-                    isActive
-                      ? "border-builder-accent/70 bg-gray-900/60 shadow-[0_0_0_1px_rgba(37,99,235,0.4)]"
-                      : "border-gray-800 bg-gray-900/40"
-                  }`}
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-100">{preset.name}</p>
-                    <p className="text-xs text-slate-500">Apply this palette</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {Object.values(preset.colors)
-                      .slice(0, 3)
-                      .map((value, index) => (
-                        <span key={`${preset.name}-${index}`} className="h-7 w-7 rounded-full border border-white/10" style={{ backgroundColor: value }} />
-                      ))}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      {colorKeys.length ? (
-        <div className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Fine tune colors</p>
-          <div className="space-y-3">
-            {colorDefinitions.map((color) => {
-              const key = color.id;
-              const appliedValue =
-                theme.colors[key] ?? themeDefaults.colors[key] ?? color.default ?? "";
-              return (
-                <label key={key} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
-                  <div
-                    className="h-10 w-10 flex-shrink-0 rounded-lg border border-white/10"
-                    style={{ backgroundColor: appliedValue || "transparent" }}
-                  />
-                  <div className="flex-1 space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                      {color.label ?? formatTokenLabel(key)}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={ensureColorValue(
-                          theme.colors[key] ?? themeDefaults.colors[key] ?? color.default
-                        )}
-                        onChange={(event) => updateTheme({ colors: { [key]: event.target.value } })}
-                        className="h-8 w-16 cursor-pointer rounded border border-gray-800 bg-gray-900"
-                      />
-                      <input
-                        type="text"
-                        value={theme.colors[key] ?? ""}
-                        placeholder={themeDefaults.colors[key] ?? color.default ?? "#000000"}
-                        onChange={(event) => updateTheme({ colors: { [key]: event.target.value } })}
-                        className="flex-1 rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      {fontKeys.length ? (
-        <div className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Fonts</p>
-          <div className="space-y-3">
-            {fontKeys.map((key) => (
-              <label key={key} className="flex flex-col gap-2 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{formatTokenLabel(key)}</span>
-                <input
-                  type="text"
-                  value={theme.fonts[key] ?? ""}
-                  placeholder={themeDefaults.fonts[key] ?? '"Inter", sans-serif'}
-                  onChange={(event) => updateTheme({ fonts: { [key]: event.target.value } })}
-                  className="w-full rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
-                />
-                <span className="text-[11px] text-slate-500">e.g. &ldquo;Outfit&rdquo;, sans-serif</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ) : null}
+    <div className="flex flex-wrap gap-3">
+      {themes!.map((themeOption) => {
+        const isActive = activeName === themeOption.name;
+        return (
+          <button
+            key={themeOption.name}
+            onClick={() => setTheme(themeOption.colors)}
+            className={`px-3 py-2 rounded-lg border transition text-sm ${
+              isActive
+                ? "border-builder-accent/60 bg-builder-accent/10 text-builder-accent"
+                : "border-gray-800/70 bg-gray-900/60 text-slate-200 hover:bg-gray-900"
+            }`}
+            type="button"
+          >
+            {themeOption.name}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-function formatTokenLabel(token: string) {
-  return token
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/[-_]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^./, (match) => match.toUpperCase());
-}
-
-function ensureColorValue(value: string | undefined) {
-  return value && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : "#000000";
-}
-
-const basePalettes = [
-  ["#38bdf8", "#0ea5e9", "#f472b6", "#020617", "#e2e8f0"],
-  ["#f59e0b", "#d97706", "#fde68a", "#0b1120", "#f8fafc"],
-  ["#34d399", "#10b981", "#86efac", "#022c22", "#ecfdf5"],
-];
-
-type PaletteDefinition = {
-  name: string;
-  label?: string;
-  colors: Record<string, string>;
-};
-
-function buildPalettes(colorKeys: string[]): PaletteDefinition[] {
-  if (!colorKeys.length) {
-    return [];
+function isSameTheme(a: Record<string, string>, b: Record<string, unknown>) {
+  const aEntries = Object.entries(a);
+  if (aEntries.length === 0) {
+    return false;
   }
-
-  return basePalettes.map((paletteValues, paletteIndex) => {
-    const colors: Record<string, string> = {};
-    colorKeys.forEach((key, index) => {
-      const value = paletteValues[index % paletteValues.length];
-      colors[key] = value;
-    });
-    const names = ["Aurora", "Luxe", "Verdant"];
-    const name = names[paletteIndex] ?? `Palette ${paletteIndex + 1}`;
-    return {
-      name,
-      label: name,
-      colors,
-    } satisfies PaletteDefinition;
+  return aEntries.every(([key, value]) => {
+    const current = typeof b[key] === "string" ? (b[key] as string) : undefined;
+    return current?.toLowerCase() === value?.toLowerCase();
   });
 }
