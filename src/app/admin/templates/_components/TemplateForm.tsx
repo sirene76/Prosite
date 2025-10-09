@@ -1,8 +1,9 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import ImageDropInput from "@/components/ui/ImageDropInput";
+import { TemplateImageUploader } from "./TemplateImageUploader";
 import clsx from "clsx";
 
 type TemplateInput = {
@@ -195,23 +196,40 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <ImageDropInput
-              label="Upload Preview Image"
-              value={formData.previewImage}
-              onChange={(url) =>
+          <div>
+            <p className="mb-1 text-sm text-slate-400">Preview Image</p>
+            <TemplateImageUploader
+              label="Upload Template Image"
+              onUploadComplete={(urls) => {
+                const imageUrl = Array.isArray(urls) ? urls[0] : urls;
                 setFormData((prev) => ({
                   ...prev,
-                  previewImage: url,
-                }))
-              }
-              onClear={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  previewImage: "",
-                }))
-              }
+                  previewImage: imageUrl || "",
+                }));
+              }}
             />
+
+            {formData.previewImage && (
+              <div className="mt-4 space-y-3">
+                <img
+                  src={formData.previewImage}
+                  alt="Preview"
+                  className="w-64 rounded-md border border-slate-700 shadow-md"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      previewImage: "",
+                    }))
+                  }
+                  className="inline-flex items-center justify-center rounded-md border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:bg-slate-800"
+                >
+                  Remove Image
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
