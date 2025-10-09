@@ -12,11 +12,16 @@ type BuilderStoreState = {
   themeName: string;
   pages: string[];
   device: BuilderDevice;
+  theme: Record<string, string>;
+  values: Record<string, unknown>;
   setWebsiteId: (websiteId: string | null | undefined) => void;
   setWebsiteName: (websiteName: string | null | undefined) => void;
   setThemeName: (themeName: string | null | undefined) => void;
   setPages: (pages: string[] | null | undefined) => void;
   setDevice: (device: BuilderDevice) => void;
+  setTheme: (colors: Record<string, string> | null | undefined) => void;
+  updateValue: (key: string, value: unknown) => void;
+  resetValues: () => void;
 };
 
 export const useBuilderStore = create<BuilderStoreState>((set) => ({
@@ -25,6 +30,8 @@ export const useBuilderStore = create<BuilderStoreState>((set) => ({
   themeName: "Default",
   pages: [...DEFAULT_PAGE_NAMES],
   device: "desktop",
+  theme: {},
+  values: {},
   setWebsiteId: (websiteId) => {
     set({ websiteId: websiteId ?? null });
   },
@@ -42,6 +49,18 @@ export const useBuilderStore = create<BuilderStoreState>((set) => ({
   },
   setDevice: (device) => {
     set({ device });
+  },
+  setTheme: (colors) => {
+    set({ theme: colors ?? {} });
+  },
+  updateValue: (key, value) => {
+    if (typeof key !== "string" || !key.trim()) {
+      return;
+    }
+    set((state) => ({ values: { ...state.values, [key]: value } }));
+  },
+  resetValues: () => {
+    set({ values: {} });
   },
 }));
 

@@ -4,10 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { useBuilder, type TemplateContentSection } from "@/context/BuilderContext";
 import type { BuilderPanel, TemplateColorDefinition, TemplateModuleDefinition } from "@/lib/templates";
+import { useTemplateMeta } from "@/hooks/useTemplateMeta";
+import { useBuilderStore } from "@/store/builderStore";
 import { DynamicPanelRenderer } from "./panels/DynamicPanels";
 import { PageList } from "./PageList";
 import { ThemeSelector } from "./ThemeSelector";
 import { ContentForm } from "./ContentForm";
+import { ContentEditor } from "./ContentEditor";
 
 const baseTabs = [
   { id: "pages", label: "Pages" },
@@ -36,6 +39,9 @@ export function Sidebar() {
     steps,
     currentStep,
   } = useBuilder();
+  const meta = useTemplateMeta(selectedTemplate);
+  const resetValues = useBuilderStore((state) => state.resetValues);
+  const setStoreTheme = useBuilderStore((state) => state.setTheme);
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
   const currentStepKey = steps[currentStep] ?? steps[0];
@@ -62,6 +68,43 @@ export function Sidebar() {
     }
     setActiveTab("pages");
   }, [activeTab, customPanels]);
+
+  useEffect(() => {
+    resetValues();
+  }, [resetValues, selectedTemplate.id]);
+
+  useEffect(() => {
+    if (!meta?.themes?.length) {
+      setStoreTheme({});
+      return;
+    }
+    setStoreTheme(meta.themes[0]?.colors ?? {});
+  }, [meta?.themes, selectedTemplate.id, setStoreTheme]);
+
+  const pagesToRender = useMemo(() => {
+    if (Array.isArray(meta?.pages) && meta.pages.length > 0) {
+      return meta.pages
+        .filter((page: unknown): page is { id: string; label: string; scrollAnchor?: string } => {
+          return (
+            typeof page === "object" &&
+            page !== null &&
+            typeof (page as { id?: unknown }).id === "string" &&
+            typeof (page as { label?: unknown }).label === "string"
+          );
+        })
+        .map((page) => ({
+          id: page.id,
+          label: page.label,
+          scrollAnchor: page.scrollAnchor,
+        }));
+    }
+
+    return (selectedTemplate.sections ?? []).map((section) => ({
+      id: section.id,
+      label: section.label ?? formatStepLabel(section.id),
+      scrollAnchor: `#${section.id}`,
+    }));
+  }, [meta?.pages, selectedTemplate.sections]);
 
   return (
     <aside
@@ -115,24 +158,30 @@ export function Sidebar() {
                       <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Structure</p>
                       <p className="text-sm font-semibold text-slate-100">{selectedTemplate.name}</p>
                     </div>
-                    <PageList pages={selectedTemplate.sections} />
+                    <div className="overflow-x-auto w-full">
+                      <PageList pages={pagesToRender} />
+                    </div>
                   </div>
                 ) : null}
 
-                {activeTab === "theme" ? <ThemeSelector /> : null}
+                {activeTab === "theme" ? <ThemeSelector themes={meta?.themes} /> : null}
 
                 {activeTab === "content" ? (
-                  <ContentPanel
-                    sections={contentSections}
-                    content={content}
-                    updateContent={updateContent}
-                    previewFrame={previewFrame}
-                    colors={selectedTemplate.colors}
-                    theme={theme}
-                    themeDefaults={themeDefaults}
-                    updateTheme={updateTheme}
-                    modules={selectedTemplate.modules}
-                  />
+                  meta?.fields?.length ? (
+                    <ContentEditor fields={meta.fields} />
+                  ) : (
+                    <ContentPanel
+                      sections={contentSections}
+                      content={content}
+                      updateContent={updateContent}
+                      previewFrame={previewFrame}
+                      colors={selectedTemplate.colors}
+                      theme={theme}
+                      themeDefaults={themeDefaults}
+                      updateTheme={updateTheme}
+                      modules={selectedTemplate.modules}
+                    />
+                  )
                 ) : null}
 
                 {customPanels.map((panel) =>

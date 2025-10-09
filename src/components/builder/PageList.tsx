@@ -1,93 +1,43 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-
-import { useBuilder } from "@/context/BuilderContext";
-import type { TemplateSectionDefinition } from "@/lib/templates";
-import { useBuilderStore } from "@/store/builderStore";
-
-type PageListProps = {
-  pages?: TemplateSectionDefinition[];
+type PageDefinition = {
+  id: string;
+  label: string;
+  scrollAnchor?: string;
 };
 
-export function PageList({ pages = [] }: PageListProps) {
-  const { previewFrame } = useBuilder();
-  const fallbackPages = useBuilderStore((state) => state.pages);
+export function PageList({ pages = [] }: { pages?: PageDefinition[] }) {
+  const scrollToSection = (anchor?: string) => {
+    const resolvedAnchor = normaliseAnchor(anchor);
+    const iframe = document.querySelector<HTMLIFrameElement>("#livePreview");
+    if (!iframe?.contentWindow) return;
+    iframe.contentWindow.postMessage({ type: "scrollTo", anchor: resolvedAnchor }, "*");
+  };
 
-  const pagesToRender = useMemo<TemplateSectionDefinition[]>(() => {
-    if (pages && pages.length > 0) {
-      return pages;
-    }
-
-    if (!fallbackPages.length) {
-      return [];
-    }
-
-    return fallbackPages.map((label) => ({
-      id: toSectionId(label),
-      label,
-      fields: [],
-    }));
-  }, [fallbackPages, pages]);
-
-  const handleNavigate = useCallback(
-    (page: TemplateSectionDefinition) => {
-      const id = toSectionId(page.id);
-      const iframe =
-        document.querySelector<HTMLIFrameElement>("#preview-frame") ?? previewFrame;
-      iframe?.contentWindow?.postMessage({ type: "scrollTo", target: id }, "*");
-    },
-    [previewFrame]
-  );
-
-  if (!pagesToRender.length) {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
-          <span>Pages</span>
-          <button
-            type="button"
-            className="text-[10px] font-semibold text-slate-500 transition hover:text-slate-300"
-          >
-            Manage
-          </button>
-        </div>
-        <p className="text-slate-400 text-sm px-3">No pages yet.</p>
-      </div>
-    );
+  if (!pages?.length) {
+    return <p className="text-sm text-slate-400">No pages configured.</p>;
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
-        <span>Pages</span>
+    <div className="flex overflow-x-auto gap-2 pb-2 border-b border-gray-200/10">
+      {pages.map((page) => (
         <button
+          key={page.id}
+          className="px-4 py-2 rounded-lg bg-gray-900/60 hover:bg-gray-900 whitespace-nowrap text-sm text-slate-200 border border-gray-800/60"
+          onClick={() => scrollToSection(page.scrollAnchor ?? page.id)}
           type="button"
-          className="text-[10px] font-semibold text-slate-500 transition hover:text-slate-300"
         >
-          Manage
+          {page.label}
         </button>
-      </div>
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {pagesToRender.map((page) => (
-          <button
-            type="button"
-            key={page.id}
-            onClick={() => handleNavigate(page)}
-            className="whitespace-nowrap rounded-full border border-gray-800 bg-gray-950/70 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-builder-accent/60 hover:text-white"
-          >
-            {page.label}
-          </button>
-        ))}
-      </div>
+      ))}
     </div>
   );
 }
 
-function toSectionId(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+function normaliseAnchor(anchor?: string) {
+  if (!anchor) return "#";
+  const trimmed = anchor.trim();
+  if (!trimmed) return "#";
+  return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
 }
 
