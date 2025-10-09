@@ -93,11 +93,29 @@ export default function NewTemplatePage() {
     | { type: "success" | "error"; message: string }
     | null
   >(null);
-  const { html, css, meta, loading: previewLoading } = useTemplatePreview(
+  const { ready, html, css, meta, loading: previewLoading } = useTemplatePreview(
     form.htmlUrl,
     form.cssUrl,
     form.metaUrl,
   );
+
+  useEffect(() => {
+    console.log("🔍 Form URLs:", {
+      htmlUrl: form.htmlUrl,
+      cssUrl: form.cssUrl,
+      metaUrl: form.metaUrl,
+    });
+  }, [form.htmlUrl, form.cssUrl, form.metaUrl]);
+
+  useEffect(() => {
+    console.log("🛰️ Template preview state changed", {
+      ready,
+      previewLoading,
+      hasHtml: !!html,
+      hasCss: !!css,
+      hasMeta: !!meta,
+    });
+  }, [ready, previewLoading, html, css, meta]);
 
   useEffect(() => {
     if (form.htmlUrl && form.cssUrl) {
@@ -108,10 +126,17 @@ export default function NewTemplatePage() {
   function handleUploadComplete(type: UploadVariant, res: Array<{ url?: string }>) {
     const url = res?.[0]?.url;
     if (!url) {
+      console.warn("⚠️ Upload did not return a URL", { type, res });
       return;
     }
 
-    setForm((prev) => ({ ...prev, [`${type}Url`]: url } as FormState));
+    console.log(`✅ Upload complete for ${type}:`, res);
+
+    setForm((prev) => {
+      const updated = { ...prev, [`${type}Url`]: url } as FormState;
+      console.log("🧾 Updated form state:", updated);
+      return updated;
+    });
 
     const typeLabelMap: Record<UploadVariant, string> = {
       preview: "Preview asset",
@@ -124,7 +149,7 @@ export default function NewTemplatePage() {
   }
 
   function handleUploadError(error: Error) {
-    console.error("Upload failed", error);
+    console.error("❌ Upload failed:", error);
     setUploadFeedback({ type: "error", message: `Upload failed: ${error.message}` });
   }
 
@@ -283,7 +308,10 @@ export default function NewTemplatePage() {
                 </p>
                 <UploadDropzone
                   endpoint="templateFiles"
-                  onClientUploadComplete={(res) => handleUploadComplete("preview", res)}
+                  onClientUploadComplete={(res) => {
+                    console.log("📁 Preview dropzone upload result:", res);
+                    handleUploadComplete("preview", res);
+                  }}
                   onUploadError={handleUploadError}
                   className={`${uploadDropzoneClassName} mt-4 cursor-pointer hover:border-pink-400`}
                 />
@@ -339,7 +367,10 @@ export default function NewTemplatePage() {
                     <p className="text-xs text-slate-400">{helper}</p>
                     <UploadDropzone
                       endpoint="templateFiles"
-                      onClientUploadComplete={(res) => handleUploadComplete(variant, res)}
+                      onClientUploadComplete={(res) => {
+                        console.log(`📁 ${label} dropzone upload result:`, res);
+                        handleUploadComplete(variant, res);
+                      }}
                       onUploadError={handleUploadError}
                       className={`${uploadDropzoneClassName} mt-4 cursor-pointer hover:border-pink-400`}
                     />
@@ -374,6 +405,13 @@ export default function NewTemplatePage() {
               <CardTitle>Template Live Preview</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
+              <p className="text-xs text-gray-400">
+                {form.htmlUrl && form.cssUrl
+                  ? ready
+                    ? "✅ Code files detected, preview should load below."
+                    : "⏳ Files uploaded. Fetching preview content..."
+                  : "⏳ Waiting for HTML & CSS uploads..."}
+              </p>
               <TemplateLivePreview html={html} css={css} meta={meta} loading={previewLoading} />
             </CardContent>
           </Card>
