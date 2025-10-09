@@ -2,7 +2,7 @@ import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { getServerSession } from "next-auth"; // ✅ simpler import
 import { authOptions } from "@/lib/auth";
 
-const f = createUploadthing();
+const f = createUploadthing({ access: "public" });
 
 export const ourFileRouter = {
   templateFiles: f({

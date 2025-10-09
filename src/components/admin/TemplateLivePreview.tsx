@@ -49,8 +49,16 @@ export default function TemplateLivePreview({ html, css, meta, loading }: Templa
   }
 
   if (!html) {
+    console.warn("🚫 No HTML passed to TemplateLivePreview");
+    console.log("Props received:", { html, css, meta, loading });
     return <div className="p-6 text-gray-500">Upload HTML & CSS to see live preview.</div>;
   }
+
+  console.log("🖥️ Rendering TemplateLivePreview", {
+    htmlLength: html.length,
+    cssLength: css.length,
+    hasMeta: !!meta,
+  });
 
   return (
     <div className="mt-6 border rounded-lg overflow-hidden">
