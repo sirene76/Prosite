@@ -1,18 +1,31 @@
-import mongoose, { Schema, models } from "mongoose";
+import mongoose from "mongoose";
 
-const TemplateSchema = new Schema(
+const TemplateSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    description: { type: String },
-    category: { type: String },
     slug: { type: String, required: true, unique: true },
-    previewImage: { type: String },
-    html: { type: String },
-    css: { type: String },
-    meta: { type: Schema.Types.Mixed },
+    description: String,
+    category: String,
+    previewUrl: String,
+    previewVideo: String,
+    htmlUrl: String,
+    cssUrl: String,
+    metaUrl: String,
+    themes: [
+      {
+        name: String,
+        colors: { type: Map, of: String },
+      },
+    ],
+    published: { type: Boolean, default: false },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
 
 export const Template =
-  models.Template || mongoose.model("Template", TemplateSchema);
+  mongoose.models.Template || mongoose.model("Template", TemplateSchema);
+
+export type TemplateDocument = mongoose.InferSchemaType<typeof TemplateSchema> & {
+  _id: mongoose.Types.ObjectId;
+};

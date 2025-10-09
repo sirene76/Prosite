@@ -19,10 +19,10 @@ type TemplateResponse = {
   slug: string;
   category?: string;
   description?: string;
-  previewImage?: string;
-  html?: string;
-  css?: string;
-  meta?: Record<string, unknown>;
+  previewUrl?: string;
+  htmlUrl?: string;
+  cssUrl?: string;
+  metaUrl?: string;
 };
 
 async function getTemplate(id: string): Promise<TemplateResponse | null> {

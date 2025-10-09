@@ -1,10 +1,10 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { TemplateImageUploader } from "./TemplateImageUploader";
-import clsx from "clsx";
+
+const inputClassName =
+  "w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
 
 type TemplateInput = {
   _id?: string;
@@ -12,10 +12,10 @@ type TemplateInput = {
   slug?: string;
   category?: string;
   description?: string;
-  previewImage?: string;
-  html?: string;
-  css?: string;
-  meta?: string | Record<string, unknown>;
+  previewUrl?: string;
+  htmlUrl?: string;
+  cssUrl?: string;
+  metaUrl?: string;
 };
 
 type TemplateFormProps = {
@@ -23,72 +23,22 @@ type TemplateFormProps = {
   mode: "create" | "edit";
 };
 
-function formatMeta(meta: TemplateInput["meta"]): string {
-  if (!meta) return "";
-  if (typeof meta === "string") return meta;
-  try {
-    return JSON.stringify(meta, null, 2);
-  } catch (error) {
-    console.warn("Failed to stringify template meta", error);
-    return "";
-  }
-}
-
-const defaultValues = {
-  name: "",
-  slug: "",
-  category: "",
-  description: "",
-  previewImage: "",
-  html: "",
-  css: "",
-  meta: "",
-};
-
 export function TemplateForm({ template, mode }: TemplateFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState(() => ({
-    name: template?.name ?? defaultValues.name,
-    slug: template?.slug ?? defaultValues.slug,
-    category: template?.category ?? defaultValues.category,
-    description: template?.description ?? defaultValues.description,
-    previewImage: template?.previewImage ?? defaultValues.previewImage,
-    html: template?.html ?? defaultValues.html,
-    css: template?.css ?? defaultValues.css,
-    meta: formatMeta(template?.meta) || defaultValues.meta,
+    name: template?.name ?? "",
+    slug: template?.slug ?? "",
+    category: template?.category ?? "",
+    description: template?.description ?? "",
+    previewUrl: template?.previewUrl ?? "",
+    htmlUrl: template?.htmlUrl ?? "",
+    cssUrl: template?.cssUrl ?? "",
+    metaUrl: template?.metaUrl ?? "",
   }));
-  const [renderedPreview, setRenderedPreview] = useState("");
 
-  const previewDocument = useMemo(
-    () => `
-      <html>
-        <head>
-          <style>${formData.css}</style>
-        </head>
-        <body style="margin:0;padding:0">${formData.html}</body>
-      </html>
-    `,
-    [formData.html, formData.css]
-  );
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setRenderedPreview(previewDocument);
-    }, 400);
-
-    return () => clearTimeout(timeout);
-  }, [previewDocument]);
-
-  const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">(
-    "desktop"
-  );
-
-  // Handle text input / textarea change
-  function handleChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
+  function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
@@ -100,21 +50,16 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
 
     const payload = {
       name: formData.name.trim(),
-      slug:
-        formData.slug.trim() ||
-        formData.name.trim().toLowerCase().replace(/\s+/g, "-"),
+      slug: formData.slug.trim() || formData.name.trim().toLowerCase().replace(/\s+/g, "-"),
       category: formData.category.trim() || undefined,
-      description: formData.description,
-      previewImage: formData.previewImage.trim() || undefined,
-      html: formData.html,
-      css: formData.css,
-      meta: formData.meta,
+      description: formData.description.trim() || undefined,
+      previewUrl: formData.previewUrl.trim() || undefined,
+      htmlUrl: formData.htmlUrl.trim() || undefined,
+      cssUrl: formData.cssUrl.trim() || undefined,
+      metaUrl: formData.metaUrl.trim() || undefined,
     };
 
-    const url =
-      mode === "create"
-        ? "/api/admin/templates"
-        : `/api/admin/templates/${template?._id}`;
+    const url = mode === "create" ? "/api/admin/templates" : `/api/admin/templates/${template?._id}`;
     const method = mode === "create" ? "POST" : "PUT";
 
     try {
@@ -125,263 +70,156 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        setError(data.error ?? "Something went wrong. Please try again.");
-        return;
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Failed to save template");
       }
 
       router.push("/admin/templates");
       router.refresh();
-    } catch (cause) {
-      console.error("❌ Failed to submit template form:", cause);
-      setError("Failed to save template. Please try again.");
+    } catch (submitError) {
+      console.error("Failed to save template", submitError);
+      setError(submitError instanceof Error ? submitError.message : "Failed to save template. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  const inputClassName =
-    "w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 mt-6 py-10">
-      <div className="space-y-4">
-        {/* Name + Slug */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-slate-300" htmlFor="name">
-              Name
-            </label>
-            <input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={inputClassName}
-              placeholder="Modern Portfolio"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300" htmlFor="slug">
-              Slug
-            </label>
-            <input
-              id="slug"
-              name="slug"
-              value={formData.slug}
-              onChange={handleChange}
-              className={inputClassName}
-              placeholder="modern-portfolio"
-            />
-          </div>
-        </div>
-
-        {/* Category + Preview Image */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-slate-300" htmlFor="category">
-              Category
-            </label>
-            <input
-              id="category"
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className={inputClassName}
-              placeholder="Portfolio"
-            />
-          </div>
-
-          <div>
-            <p className="mb-1 text-sm text-slate-400">Preview Image</p>
-            <TemplateImageUploader
-              label="Upload Template Image"
-              onUploadComplete={(urls) => {
-                const imageUrl = Array.isArray(urls) ? urls[0] : urls;
-                setFormData((prev) => ({
-                  ...prev,
-                  previewImage: imageUrl || "",
-                }));
-              }}
-            />
-
-            {formData.previewImage && (
-              <div className="mt-4 space-y-3">
-                <img
-                  src={formData.previewImage}
-                  alt="Preview"
-                  className="w-64 rounded-md border border-slate-700 shadow-md"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      previewImage: "",
-                    }))
-                  }
-                  className="inline-flex items-center justify-center rounded-md border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 transition hover:bg-slate-800"
-                >
-                  Remove Image
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Description */}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="description">
-            Description
+          <label className="block text-sm font-medium text-slate-300" htmlFor="name">
+            Name
           </label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
+          <input
+            id="name"
+            name="name"
+            value={formData.name}
             onChange={handleChange}
-            className={`${inputClassName} min-h-[100px]`}
-            placeholder="Short description of the template"
-          />
-        </div>
-
-        {/* 🧩 HTML Section */}
-        <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="html">
-            Template HTML
-          </label>
-          <textarea
-            id="html"
-            name="html"
-            placeholder="<section>...</section>"
-            className={`${inputClassName} h-52 font-mono text-sm`}
-            value={formData.html}
-            onChange={handleChange}
+            className={inputClassName}
+            placeholder="Modern Portfolio"
             required
           />
         </div>
-
-        {/* 🎨 CSS Section */}
         <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="css">
-            Template CSS
+          <label className="block text-sm font-medium text-slate-300" htmlFor="slug">
+            Slug
           </label>
-          <textarea
-            id="css"
-            name="css"
-            placeholder="body { font-family: sans-serif; }"
-            className={`${inputClassName} h-40 font-mono text-sm`}
-            value={formData.css}
+          <input
+            id="slug"
+            name="slug"
+            value={formData.slug}
             onChange={handleChange}
-          />
-        </div>
-
-        {/* ⚙️ Meta JSON Section */}
-        <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="meta">
-            Meta JSON
-          </label>
-          <textarea
-            id="meta"
-            name="meta"
-            placeholder='{ "theme": "light", "primaryColor": "#2563eb" }'
-            className={`${inputClassName} h-36 font-mono text-sm`}
-            value={formData.meta}
-            onChange={handleChange}
+            className={inputClassName}
+            placeholder="modern-portfolio"
           />
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && <p className="text-sm text-red-400">{error}</p>}
-
-      {/* 🔍 Live Preview */}
-      <div className="mt-10">
-        <h3 className="text-lg font-semibold text-white mb-2">
-          Live Template Preview
-        </h3>
-
-        {/* 🧭 Device Controls */}
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-sm text-slate-400">Preview as:</span>
-          <button
-            type="button"
-            onClick={() => setDevice("desktop")}
-            className={clsx(
-              "px-3 py-1 rounded text-sm font-medium transition",
-              device === "desktop"
-                ? "bg-blue-600 text-white"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-            )}
-          >
-            Desktop
-          </button>
-          <button
-            type="button"
-            onClick={() => setDevice("tablet")}
-            className={clsx(
-              "px-3 py-1 rounded text-sm font-medium transition",
-              device === "tablet"
-                ? "bg-blue-600 text-white"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-            )}
-          >
-            Tablet
-          </button>
-          <button
-            type="button"
-            onClick={() => setDevice("mobile")}
-            className={clsx(
-              "px-3 py-1 rounded text-sm font-medium transition",
-              device === "mobile"
-                ? "bg-blue-600 text-white"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-            )}
-          >
-            Mobile
-          </button>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-slate-300" htmlFor="category">
+            Category
+          </label>
+          <input
+            id="category"
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            className={inputClassName}
+            placeholder="Portfolio"
+          />
         </div>
-
-        <div className="flex justify-center bg-slate-900 py-6 rounded-lg">
-          <div
-            className={clsx(
-              "border border-slate-700 rounded-lg overflow-hidden shadow-lg transition-all duration-300",
-              {
-                "w-full": device === "desktop",
-                "w-[768px]": device === "tablet",
-                "w-[375px]": device === "mobile",
-              }
-            )}
-          >
-            <iframe
-              title="Template Preview"
-              srcDoc={renderedPreview}
-              className="w-full h-[600px] border-none bg-white"
-              sandbox="allow-same-origin allow-scripts"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300" htmlFor="previewUrl">
+            Preview URL
+          </label>
+          <input
+            id="previewUrl"
+            name="previewUrl"
+            value={formData.previewUrl}
+            onChange={handleChange}
+            className={inputClassName}
+            placeholder="https://.../preview.png"
+          />
         </div>
-
-        <p className="text-xs text-slate-400 mt-3 text-center">
-          Responsive preview — switch between devices above.
-        </p>
       </div>
 
-      {/* Submit */}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isSubmitting
-          ? "Saving..."
-          : mode === "create"
-          ? "Create Template"
-          : "Save Changes"}
-      </button>
+      <div>
+        <label className="block text-sm font-medium text-slate-300" htmlFor="description">
+          Description
+        </label>
+        <textarea
+          id="description"
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          className={`${inputClassName} min-h-[100px]`}
+          placeholder="Short description of the template"
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-slate-300" htmlFor="htmlUrl">
+            HTML URL
+          </label>
+          <input
+            id="htmlUrl"
+            name="htmlUrl"
+            value={formData.htmlUrl}
+            onChange={handleChange}
+            className={inputClassName}
+            placeholder="https://.../template.html"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300" htmlFor="cssUrl">
+            CSS URL
+          </label>
+          <input
+            id="cssUrl"
+            name="cssUrl"
+            value={formData.cssUrl}
+            onChange={handleChange}
+            className={inputClassName}
+            placeholder="https://.../style.css"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-300" htmlFor="metaUrl">
+          Meta JSON URL
+        </label>
+        <input
+          id="metaUrl"
+          name="metaUrl"
+          value={formData.metaUrl}
+          onChange={handleChange}
+          className={inputClassName}
+          placeholder="https://.../meta.json"
+        />
+      </div>
+
+      {error ? <p className="text-sm text-red-400">{error}</p> : null}
+
+      <div className="flex items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => router.push("/admin/templates")}
+          className="rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:opacity-70"
+        >
+          {isSubmitting ? "Saving..." : "Save Template"}
+        </button>
+      </div>
     </form>
   );
 }

@@ -4,9 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prevalidate:templates": "node scripts/create-ts-node-shim.cjs",
-    "validate:templates": "ts-node scripts/validateTemplates.ts",
-    "prebuild": "npm run validate:templates",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."

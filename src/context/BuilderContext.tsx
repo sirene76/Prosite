@@ -507,13 +507,13 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         id: "__fallback__",
         name: "No templates available",
         description: "Add template folders under /templates to get started.",
-        previewImage: "",
+        previewUrl: "",
         previewVideo: undefined,
-        path: "",
         sections: [],
         colors: [],
         fonts: [],
         modules: [],
+        meta: {},
       },
     [templates]
   );

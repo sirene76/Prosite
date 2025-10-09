@@ -29,22 +29,8 @@ export function renderTemplate({
   if (!html) return "";
 
   // --- Inject absolute asset paths dynamically ---
-  const templateMatch = html.match(/data-template-id="([\w-]+)"/);
-  const templateId = templateMatch ? templateMatch[1] : detectTemplateFromHTML(html);
-
   let processedHtml = html;
-  let inlineCss = css ?? "";
-
-  if (templateId) {
-    if (!inlineCss) {
-      inlineCss = resolveTemplateCss(templateId);
-    }
-
-    processedHtml = processedHtml
-      .replace(/<link[^>]*href=["'](?:\.\/)?style\.css["'][^>]*>/gi, "")
-      .replace(/(src|href)=["'](?:\.\/)?assets\//gi, `$1="/templates/${templateId}/assets/`)
-      .replace(/url\((['"]?)\.\/assets\//gi, `url($1/templates/${templateId}/assets/`);
-  }
+  const inlineCss = css ?? "";
 
   if (inlineCss.trim()) {
     const colorTokens: Record<string, string | undefined> = {
@@ -67,7 +53,7 @@ export function renderTemplate({
     processedHtml = injectThemeTokens({
       html: processedHtml,
       css: inlineCss,
-      templateId,
+      templateId: undefined,
       colors: colorTokens,
       fonts: themeTokens?.fonts,
     });
@@ -114,27 +100,12 @@ export function renderTemplate({
   return `${colorVars}${rendered}`;
 }
 
-const cssCache = new Map<string, string>();
-
-function resolveTemplateCss(templateId: string) {
-  if (cssCache.has(templateId)) {
-    return cssCache.get(templateId) ?? "";
-  }
-
-  const css = readCssFromDisk(templateId);
-  cssCache.set(templateId, css);
-  return css;
-}
-
-function injectInlineCss(html: string, css: string, templateId: string | null) {
+function injectInlineCss(html: string, css: string) {
   if (!css.trim()) {
     return html;
   }
 
-  const normalizedCss = templateId
-    ? css.replace(/url\((['"]?)\.\/assets\//gi, `url($1/templates/${templateId}/assets/`)
-    : css;
-  const styleTag = `<style>${normalizedCss}</style>`;
+  const styleTag = `<style>${css}</style>`;
 
   if (/<head[^>]*>/i.test(html)) {
     return html.replace(/<head([^>]*)>/i, `<head$1>${styleTag}`);
@@ -385,13 +356,11 @@ type ThemeTokenMap = Record<string, string | undefined> | undefined;
 export function injectThemeTokens({
   html,
   css,
-  templateId,
   colors,
   fonts,
 }: {
   html: string;
   css?: string;
-  templateId?: string | null;
   colors?: ThemeTokenMap;
   fonts?: ThemeTokenMap;
 }) {
@@ -422,59 +391,7 @@ export function injectThemeTokens({
     themedCss = themedCss.replace(pattern, replacement);
   });
 
-  return injectInlineCss(html, themedCss, templateId ?? null);
-}
-
-type DynamicRequire = ((path: string) => unknown) | null | undefined;
-let cachedRequire: DynamicRequire;
-
-function getDynamicRequire(): Exclude<DynamicRequire, undefined> {
-  if (typeof cachedRequire !== "undefined") {
-    return cachedRequire;
-  }
-
-  if (typeof window !== "undefined") {
-    cachedRequire = null;
-    return cachedRequire;
-  }
-
-  try {
-    const fn = Function("return typeof require !== 'undefined' ? require : null");
-    cachedRequire = fn();
-  } catch {
-    cachedRequire = null;
-  }
-
-  return cachedRequire;
-}
-
-function readCssFromDisk(templateId: string) {
-  const dynamicRequire = getDynamicRequire();
-  if (!dynamicRequire) {
-    return "";
-  }
-
-  try {
-    const fs = dynamicRequire("node:fs") as typeof import("node:fs");
-    const path = dynamicRequire("node:path") as typeof import("node:path");
-    const cssPath = path.join(process.cwd(), "templates", templateId, "style.css");
-    if (fs.existsSync(cssPath)) {
-      return fs.readFileSync(cssPath, "utf8");
-    }
-  } catch (error) {
-    console.error(`Unable to inline CSS for template '${templateId}'`, error);
-  }
-
-  return "";
-}
-
-// Template ID detection fallback
-function detectTemplateFromHTML(html: string): string | null {
-  if (html.includes("Agency") || html.includes("agency")) return "agency-starter";
-  if (html.includes("Restaurant") || html.includes("burger")) return "restaurant-classic";
-  if (html.includes("Portfolio") || html.includes("portfolio")) return "portfolio-creative";
-  if (html.includes("SaaS") || html.includes("saas")) return "saas-starter";
-  return null;
+  return injectInlineCss(html, themedCss);
 }
 
 function buildThemeVariables(

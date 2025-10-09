@@ -19,12 +19,13 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
           <h1 className="text-4xl font-bold mb-4">{template.name}</h1>
           <p className="text-slate-400 mb-8">{template.description}</p>
 
-          {template.previewImage ? (
+          {template.previewUrl ? (
             <div className="relative w-full h-[420px] mb-10 rounded-xl overflow-hidden border border-slate-700">
               <Image
-                src={template.previewImage}
+                src={template.previewUrl}
                 alt={`${template.name} preview`}
                 fill
+                sizes="(min-width: 1024px) 896px, 100vw"
                 className="object-cover"
               />
             </div>
@@ -32,7 +33,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
 
           <div className="flex justify-center gap-4">
             <Link
-              href={`/builder/new?template=${template.slug ?? template.id}`}
+              href={`/builder/new?template=${template._id}`}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-md text-white font-medium"
             >
               Use this Template

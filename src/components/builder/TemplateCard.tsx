@@ -10,7 +10,7 @@ export type TemplateCardTemplate = {
   name: string;
   description: string;
   preview?: string;
-  previewImage?: string;
+  previewUrl?: string;
   previewVideo?: string;
   video?: string;
 };
@@ -25,7 +25,7 @@ export function TemplateCard({ template, className, onPreview }: TemplateCardPro
   const [isHovering, setIsHovering] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const previewSrc = template.preview ?? template.previewImage;
+  const previewSrc = template.preview ?? template.previewUrl;
   const videoSrc = template.video ?? template.previewVideo;
 
   useEffect(() => {
