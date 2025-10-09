@@ -34,7 +34,7 @@ export default function ImageDropInput({
   className,
   mode = "single",
 }: ImageDropInputProps) {
-  const { startUpload, isUploading } = useUploadThing("templateAssets");
+  const { startUpload, isUploading } = useUploadThing("templateFiles");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const inputId = useId();
 

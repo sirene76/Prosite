@@ -1,66 +1,65 @@
 "use client";
-import { useMemo, useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-export default function TemplateLivePreview({ html, css, meta }: any) {
-  const [activeTheme, setActiveTheme] = useState(meta?.themes?.[0] || null);
+import { useEffect, useMemo, useState } from "react";
+
+import type { TemplateMeta, TemplateTheme } from "@/hooks/useTemplatePreview";
+
+type TemplateLivePreviewProps = {
+  html: string;
+  css: string;
+  meta: TemplateMeta | null;
+  loading: boolean;
+};
+
+export default function TemplateLivePreview({ html, css, meta, loading }: TemplateLivePreviewProps) {
+  const themes = useMemo<TemplateTheme[]>(() => (Array.isArray(meta?.themes) ? meta.themes : []), [meta]);
+  const [activeTheme, setActiveTheme] = useState<TemplateTheme | null>(themes[0] || null);
+
+  useEffect(() => {
+    setActiveTheme(themes[0] || null);
+  }, [themes]);
 
   const doc = useMemo(() => {
-    const theme = activeTheme?.colors || {};
-    const styleVars = Object.entries(theme)
+    const colors = activeTheme?.colors || {};
+    const vars = Object.entries(colors)
       .map(([k, v]) => `--${k}: ${v};`)
       .join(" ");
-
     return `
       <html>
-        <head>
-          <style>:root { ${styleVars} } ${css}</style>
-        </head>
+        <head><style>:root { ${vars} } ${css}</style></head>
         <body>${html}</body>
-      </html>
-    `;
+      </html>`;
   }, [html, css, activeTheme]);
 
-  if (!html) return null;
+  if (loading) {
+    return <div className="p-6 text-gray-400">Loading preview...</div>;
+  }
+
+  if (!html) {
+    return <div className="p-6 text-gray-500">Upload HTML & CSS to see live preview.</div>;
+  }
 
   return (
-    <div className="mt-8 border rounded-lg overflow-hidden shadow-lg">
-      <div className="flex items-center justify-between bg-slate-900 px-4 py-2">
-        <span className="text-slate-100 text-sm font-medium">Live Preview</span>
-        {meta?.themes?.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Theme:</span>
-            <Select
-              value={activeTheme?.name}
-              onValueChange={(val) =>
-                setActiveTheme(meta.themes.find((t: any) => t.name === val))
-              }
-            >
-              <SelectTrigger className="h-8 w-36 bg-slate-800 text-slate-100 border-slate-700">
-                <SelectValue placeholder="Select Theme" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 text-slate-100 border border-slate-700">
-                {meta.themes.map((t: any) => (
-                  <SelectItem key={t.name} value={t.name}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="mt-6 border rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between bg-gray-900 px-4 py-2">
+        <span className="text-gray-200 text-sm font-medium">Live Preview</span>
+        {themes.length > 0 && (
+          <select
+            value={activeTheme?.name}
+            onChange={(event) =>
+              setActiveTheme(themes.find((theme) => theme.name === event.target.value) || null)
+            }
+            className="bg-gray-800 text-gray-100 border border-gray-700 rounded px-2 py-1 text-sm"
+          >
+            {themes.map((theme) => (
+              <option key={theme.name} value={theme.name}>
+                {theme.name}
+              </option>
+            ))}
+          </select>
         )}
       </div>
-      <iframe
-        srcDoc={doc}
-        className="w-full h-[600px] border-t bg-white transition-colors duration-300"
-        title="Template Preview"
-      />
+      <iframe srcDoc={doc} className="w-full h-[600px] bg-white border-t shadow-inner" title="Template Preview" />
     </div>
   );
 }

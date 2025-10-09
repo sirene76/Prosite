@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -31,22 +31,31 @@ type FormState = {
 };
 
 type UploadKey = "htmlUrl" | "cssUrl" | "metaUrl" | "previewUrl";
+type UploadVariant = "preview" | "html" | "css" | "meta";
 
-const uploadFieldOrder: Array<{ key: UploadKey; label: string; helper: string }> = [
+const uploadFieldOrder: Array<{
+  key: Extract<UploadKey, "htmlUrl" | "cssUrl" | "metaUrl">;
+  label: string;
+  helper: string;
+  variant: Extract<UploadVariant, "html" | "css" | "meta">;
+}> = [
   {
     key: "htmlUrl",
     label: "HTML File",
     helper: "Upload the compiled HTML file for this template.",
+    variant: "html",
   },
   {
     key: "cssUrl",
     label: "CSS File",
     helper: "Upload the styles that accompany the template.",
+    variant: "css",
   },
   {
     key: "metaUrl",
     label: "meta.json File",
     helper: "Provide the template metadata JSON file.",
+    variant: "meta",
   },
 ];
 
@@ -80,11 +89,44 @@ export default function NewTemplatePage() {
     meta: "",
   });
   const [loading, setLoading] = useState(false);
-  const { ready: previewReady, html, css, meta } = useTemplatePreview(
+  const [uploadFeedback, setUploadFeedback] = useState<
+    | { type: "success" | "error"; message: string }
+    | null
+  >(null);
+  const { html, css, meta, loading: previewLoading } = useTemplatePreview(
     form.htmlUrl,
     form.cssUrl,
     form.metaUrl,
   );
+
+  useEffect(() => {
+    if (form.htmlUrl && form.cssUrl) {
+      console.log("✅ Code files ready, refreshing preview...");
+    }
+  }, [form.htmlUrl, form.cssUrl]);
+
+  function handleUploadComplete(type: UploadVariant, res: Array<{ url?: string }>) {
+    const url = res?.[0]?.url;
+    if (!url) {
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, [`${type}Url`]: url } as FormState));
+
+    const typeLabelMap: Record<UploadVariant, string> = {
+      preview: "Preview asset",
+      html: "HTML file",
+      css: "CSS file",
+      meta: "Metadata file",
+    };
+
+    setUploadFeedback({ type: "success", message: `${typeLabelMap[type]} uploaded successfully.` });
+  }
+
+  function handleUploadError(error: Error) {
+    console.error("Upload failed", error);
+    setUploadFeedback({ type: "error", message: `Upload failed: ${error.message}` });
+  }
 
   const isPreviewVideo = useMemo(() => {
     if (!form.previewUrl) return false;
@@ -223,19 +265,26 @@ export default function NewTemplatePage() {
               <CardDescription>Upload preview media and the core files associated with this template.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-10 pt-6 lg:grid-cols-2">
+              {uploadFeedback && (
+                <div
+                  className={`lg:col-span-2 rounded-lg border px-4 py-3 text-sm ${
+                    uploadFeedback.type === "success"
+                      ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                      : "border-rose-400/40 bg-rose-500/10 text-rose-200"
+                  }`}
+                >
+                  {uploadFeedback.message}
+                </div>
+              )}
               <div>
                 <p className="text-sm font-semibold text-slate-200">Preview Image / Video</p>
                 <p className="text-xs text-slate-400">
                   Drag and drop an image or video or click inside the dropzone to choose a file.
                 </p>
                 <UploadDropzone
-                  endpoint="templateAssets"
-                  onClientUploadComplete={(res) => {
-                    const url = res?.[0]?.url;
-                    if (!url) return;
-                    setForm((f) => ({ ...f, previewUrl: url }));
-                  }}
-                  onUploadError={(err) => alert(`Upload failed: ${err.message}`)}
+                  endpoint="templateFiles"
+                  onClientUploadComplete={(res) => handleUploadComplete("preview", res)}
+                  onUploadError={handleUploadError}
                   className={`${uploadDropzoneClassName} mt-4 cursor-pointer hover:border-pink-400`}
                 />
                 {form.previewUrl ? (
@@ -263,13 +312,9 @@ export default function NewTemplatePage() {
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
                       <span>Uploaded: {getUploadedFileName(form.previewUrl)}</span>
                       <UploadButton
-                        endpoint="templateAssets"
-                        onClientUploadComplete={(res) => {
-                          const url = res?.[0]?.url;
-                          if (!url) return;
-                          setForm((f) => ({ ...f, previewUrl: url }));
-                        }}
-                        onUploadError={(err) => alert(`Upload failed: ${err.message}`)}
+                        endpoint="templateFiles"
+                        onClientUploadComplete={(res) => handleUploadComplete("preview", res)}
+                        onUploadError={handleUploadError}
                         appearance={{
                           container: "",
                           button:
@@ -288,31 +333,23 @@ export default function NewTemplatePage() {
                 )}
               </div>
               <div className="space-y-6">
-                {uploadFieldOrder.map(({ key, label, helper }) => (
+                {uploadFieldOrder.map(({ key, label, helper, variant }) => (
                   <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
                     <p className="text-sm font-semibold text-slate-200">{label}</p>
                     <p className="text-xs text-slate-400">{helper}</p>
                     <UploadDropzone
-                      endpoint="templateAssets"
-                      onClientUploadComplete={(res) => {
-                        const url = res?.[0]?.url;
-                        if (!url) return;
-                        setForm((f) => ({ ...f, [key]: url }));
-                      }}
-                      onUploadError={(err) => alert(`Upload failed: ${err.message}`)}
+                      endpoint="templateFiles"
+                      onClientUploadComplete={(res) => handleUploadComplete(variant, res)}
+                      onUploadError={handleUploadError}
                       className={`${uploadDropzoneClassName} mt-4 cursor-pointer hover:border-pink-400`}
                     />
                     {form[key] ? (
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
                         <span>Uploaded: {getUploadedFileName(form[key])}</span>
                         <UploadButton
-                          endpoint="templateAssets"
-                          onClientUploadComplete={(res) => {
-                            const url = res?.[0]?.url;
-                            if (!url) return;
-                            setForm((f) => ({ ...f, [key]: url }));
-                          }}
-                          onUploadError={(err) => alert(`Upload failed: ${err.message}`)}
+                          endpoint="templateFiles"
+                          onClientUploadComplete={(res) => handleUploadComplete(variant, res)}
+                          onUploadError={handleUploadError}
                           appearance={{
                             container: "",
                             button:
@@ -337,13 +374,7 @@ export default function NewTemplatePage() {
               <CardTitle>Template Live Preview</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              {previewReady && html ? (
-                <TemplateLivePreview html={html} css={css} meta={meta} />
-              ) : (
-                <p className="text-slate-500 dark:text-slate-400">
-                  Upload HTML, CSS, and meta.json to see the live preview.
-                </p>
-              )}
+              <TemplateLivePreview html={html} css={css} meta={meta} loading={previewLoading} />
             </CardContent>
           </Card>
 
