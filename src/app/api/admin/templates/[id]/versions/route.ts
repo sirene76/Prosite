@@ -3,6 +3,7 @@ import { Template } from "@/models/template";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { generatePreviewToken } from "@/lib/utils";
 
 type VersionPayload = {
   number?: unknown;
@@ -49,11 +50,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const template = await Template.findById(params.id);
     if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    template.versions.push(version);
-    template.currentVersion = version.number;
+    const token = generatePreviewToken();
+    const draftVersion = { ...version, status: "draft", previewToken: token };
+
+    template.versions.push(draftVersion);
     await template.save();
 
-    return NextResponse.json(template);
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const previewUrl = `${appUrl}/preview/${template._id}?version=${draftVersion.number}&token=${token}`;
+
+    return NextResponse.json({ success: true, previewUrl });
   } catch (error) {
     if (error instanceof Error && error.message === "Version number is required") {
       return NextResponse.json({ error: error.message }, { status: 400 });
