@@ -33,6 +33,9 @@ type VersionInput = {
   metaUrl?: unknown;
   previewUrl?: unknown;
   previewVideo?: unknown;
+  inlineHtml?: unknown;
+  inlineCss?: unknown;
+  inlineMeta?: unknown;
 };
 
 function sanitiseVersion(version: VersionInput) {
@@ -54,6 +57,18 @@ function sanitiseVersion(version: VersionInput) {
     previewVideo:
       typeof version.previewVideo === "string" && version.previewVideo.trim()
         ? version.previewVideo.trim()
+        : undefined,
+    inlineHtml:
+      typeof version.inlineHtml === "string" && version.inlineHtml.trim().length > 0
+        ? version.inlineHtml
+        : undefined,
+    inlineCss:
+      typeof version.inlineCss === "string" && version.inlineCss.trim().length > 0
+        ? version.inlineCss
+        : undefined,
+    inlineMeta:
+      typeof version.inlineMeta === "string" && version.inlineMeta.trim().length > 0
+        ? version.inlineMeta
         : undefined,
   };
 }
