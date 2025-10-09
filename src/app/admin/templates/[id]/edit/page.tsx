@@ -18,11 +18,10 @@ type TemplateResponse = {
   name: string;
   slug: string;
   category?: string;
+  subcategory?: string;
   description?: string;
-  previewUrl?: string;
-  htmlUrl?: string;
-  cssUrl?: string;
-  metaUrl?: string;
+  tags?: string[];
+  currentVersion?: string;
 };
 
 async function getTemplate(id: string): Promise<TemplateResponse | null> {

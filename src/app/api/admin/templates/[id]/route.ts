@@ -5,6 +5,106 @@ import { Template } from "@/models/template";
 
 import { createSlug } from "../utils";
 
+type UpdatePayload = {
+  name?: unknown;
+  slug?: unknown;
+  category?: unknown;
+  subcategory?: unknown;
+  description?: unknown;
+  tags?: unknown;
+  currentVersion?: unknown;
+  published?: unknown;
+  featured?: unknown;
+};
+
+function normaliseTags(value: unknown) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    return value
+      .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+  return undefined;
+}
+
+function buildUpdates(body: UpdatePayload): Record<string, unknown> | { error: string; status: number } {
+  const updates: Record<string, unknown> = {};
+
+  if (typeof body.name === "string") {
+    const trimmedName = body.name.trim();
+    if (!trimmedName) {
+      return { error: "Name is required", status: 400 };
+    }
+
+    updates.name = trimmedName;
+
+    if (!body.slug) {
+      const generatedSlug = createSlug(trimmedName);
+      if (!generatedSlug) {
+        return {
+          error: "Name must include at least one alphanumeric character",
+          status: 400,
+        };
+      }
+      updates.slug = generatedSlug;
+    }
+  }
+
+  if (typeof body.slug === "string" && body.slug.trim()) {
+    const slug = createSlug(body.slug);
+    if (!slug) {
+      return {
+        error: "Slug must include at least one alphanumeric character",
+        status: 400,
+      };
+    }
+    updates.slug = slug;
+  }
+
+  if (body.category !== undefined) {
+    updates.category =
+      typeof body.category === "string" && body.category.trim()
+        ? body.category.trim()
+        : undefined;
+  }
+
+  if (body.subcategory !== undefined) {
+    updates.subcategory =
+      typeof body.subcategory === "string" && body.subcategory.trim()
+        ? body.subcategory.trim()
+        : undefined;
+  }
+
+  if (body.description !== undefined) {
+    updates.description = typeof body.description === "string" ? body.description : "";
+  }
+
+  const tags = normaliseTags(body.tags);
+  if (tags !== undefined) {
+    updates.tags = tags;
+  }
+
+  if (typeof body.currentVersion === "string" && body.currentVersion.trim()) {
+    updates.currentVersion = body.currentVersion.trim();
+  }
+
+  if (typeof body.published === "boolean") {
+    updates.published = body.published;
+  }
+
+  if (typeof body.featured === "boolean") {
+    updates.featured = body.featured;
+  }
+
+  return updates;
+}
+
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   await connectDB();
 
@@ -29,66 +129,42 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   await connectDB();
 
   try {
-    const body = await request.json();
-    const updates: Record<string, unknown> = {};
+    const body = (await request.json()) as UpdatePayload;
+    const updates = buildUpdates(body);
 
-    if (typeof body.name === "string") {
-      const trimmedName = body.name.trim();
-      if (!trimmedName) {
-        return NextResponse.json({ error: "Name is required" }, { status: 400 });
-      }
-
-      updates.name = trimmedName;
-
-      if (!body.slug) {
-        const generatedSlug = createSlug(trimmedName);
-        if (!generatedSlug) {
-          return NextResponse.json(
-            { error: "Name must include at least one alphanumeric character" },
-            { status: 400 }
-          );
-        }
-        updates.slug = generatedSlug;
-      }
+    if ("error" in updates) {
+      return NextResponse.json({ error: updates.error }, { status: updates.status });
     }
 
-    if (typeof body.slug === "string" && body.slug.trim()) {
-      const slug = createSlug(body.slug);
-      if (!slug) {
-        return NextResponse.json(
-          { error: "Slug must include at least one alphanumeric character" },
-          { status: 400 }
-        );
-      }
-      updates.slug = slug;
+    const updated = await Template.findByIdAndUpdate(params.id, updates, { new: true });
+    if (!updated) {
+      return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    if (body.category !== undefined) {
-      updates.category = typeof body.category === "string" && body.category.trim() ? body.category.trim() : undefined;
+    return NextResponse.json(updated);
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000) {
+      return NextResponse.json({ error: "A template with this name already exists" }, { status: 409 });
     }
 
-    if (body.description !== undefined) {
-      updates.description = typeof body.description === "string" ? body.description : "";
+    if (isCastError(error)) {
+      return NextResponse.json({ error: "Invalid template id" }, { status: 400 });
     }
 
-    if (body.previewUrl !== undefined) {
-      updates.previewUrl =
-        typeof body.previewUrl === "string" && body.previewUrl.trim() ? body.previewUrl.trim() : undefined;
-    }
+    console.error(`Failed to update template ${params.id}`, error);
+    return NextResponse.json({ error: "Failed to update template" }, { status: 500 });
+  }
+}
 
-    if (body.htmlUrl !== undefined) {
-      updates.htmlUrl =
-        typeof body.htmlUrl === "string" && body.htmlUrl.trim() ? body.htmlUrl.trim() : undefined;
-    }
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  await connectDB();
 
-    if (body.cssUrl !== undefined) {
-      updates.cssUrl =
-        typeof body.cssUrl === "string" && body.cssUrl.trim() ? body.cssUrl.trim() : undefined;
-    }
+  try {
+    const body = (await request.json()) as UpdatePayload;
+    const updates = buildUpdates(body);
 
-    if (body.metaUrl !== undefined) {
-      updates.metaUrl =
-        typeof body.metaUrl === "string" && body.metaUrl.trim() ? body.metaUrl.trim() : undefined;
+    if ("error" in updates) {
+      return NextResponse.json({ error: updates.error }, { status: updates.status });
     }
 
     const updated = await Template.findByIdAndUpdate(params.id, updates, { new: true });

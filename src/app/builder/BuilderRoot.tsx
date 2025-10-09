@@ -21,6 +21,12 @@ export default async function BuilderRoot({ children }: BuilderRootProps) {
       if (assets?.template) {
         return assets.template;
       }
+      const activeVersion =
+        template.versions?.find((version) => version.number === template.currentVersion) ??
+        template.versions?.[template.versions.length - 1];
+      if (!activeVersion) {
+        throw new Error(`Template ${template.id} has no versions available.`);
+      }
       return {
         ...template,
         sections: [],
@@ -30,6 +36,12 @@ export default async function BuilderRoot({ children }: BuilderRootProps) {
         meta: {},
         html: "",
         css: "",
+        htmlUrl: activeVersion.htmlUrl ?? undefined,
+        cssUrl: activeVersion.cssUrl ?? undefined,
+        metaUrl: activeVersion.metaUrl ?? undefined,
+        previewUrl: activeVersion.previewUrl ?? undefined,
+        previewVideo: activeVersion.previewVideo ?? undefined,
+        activeVersion,
       } satisfies TemplateDefinition;
     })
   );
