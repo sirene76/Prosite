@@ -1,14 +1,10 @@
-import path from "path";
-
 import { NextResponse } from "next/server";
 
 import { renderTemplate } from "@/lib/renderTemplate";
 import {
-  getTemplateAssetFiles,
   getTemplateAssets,
-  getTemplateById,
   type TemplateColorDefinition,
-  type TemplateRegistryEntry,
+  type TemplateDefinition,
 } from "@/lib/templates";
 
 type ThemePayload = {
@@ -32,16 +28,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing template identifier" }, { status: 400 });
     }
 
-    const template = await getTemplateById(templateId);
-    if (!template) {
+    const assets = await getTemplateAssets(templateId);
+    if (!assets) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    const [{ html, css }, assetFiles] = await Promise.all([
-      getTemplateAssets(template.id),
-      getTemplateAssetFiles(template.id),
-    ]);
-
+    const { template, html, css } = assets;
     const colorTokens = buildThemeColorTokens(template, body.theme, body.themeDefaults);
     const fontTokens = buildThemeFontTokens(template, body.theme, body.themeDefaults);
 
@@ -68,10 +60,6 @@ export async function POST(request: Request) {
     const files = [
       { name: "index.html", content: Buffer.from(finalHtml, "utf-8") },
       { name: "style.css", content: Buffer.from(themedCss, "utf-8") },
-      ...assetFiles.map((file) => ({
-        name: path.posix.join("assets", file.relativePath),
-        content: file.content,
-      })),
     ];
 
     const archive = createZipArchive(files);
@@ -80,7 +68,7 @@ export async function POST(request: Request) {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename=\"${template.id}.zip\"`,
+        "Content-Disposition": `attachment; filename=\"${template.slug ?? template.id}.zip\"`,
         "Cache-Control": "no-store",
       },
     });
@@ -92,7 +80,7 @@ export async function POST(request: Request) {
 
 function applyTheme(
   css: string,
-  template: TemplateRegistryEntry,
+  template: TemplateDefinition,
   theme: ThemePayload,
   themeDefaults: ThemePayload
 ) {
@@ -114,7 +102,7 @@ function applyTheme(
 }
 
 function buildThemeColorTokens(
-  template: TemplateRegistryEntry,
+  template: TemplateDefinition,
   theme?: ThemePayload,
   themeDefaults?: ThemePayload
 ) {
@@ -135,7 +123,7 @@ function buildThemeColorTokens(
 }
 
 function buildThemeFontTokens(
-  template: TemplateRegistryEntry,
+  template: TemplateDefinition,
   theme?: ThemePayload,
   themeDefaults?: ThemePayload
 ) {
@@ -243,7 +231,7 @@ function createZipArchive(files: Array<{ name: string; content: Buffer }>) {
   });
 
   const centralDirectory = Buffer.concat(centralParts);
-  const localLength = localParts.reduce((sum, part) => sum + part.length, 0);
+  const localDirectory = Buffer.concat(localParts);
 
   const endRecord = Buffer.alloc(22);
   let pointer = 0;
@@ -253,54 +241,51 @@ function createZipArchive(files: Array<{ name: string; content: Buffer }>) {
   pointer += 2;
   endRecord.writeUInt16LE(0, pointer);
   pointer += 2;
-  endRecord.writeUInt16LE(centralParts.length, pointer);
+  endRecord.writeUInt16LE(files.length, pointer);
   pointer += 2;
-  endRecord.writeUInt16LE(centralParts.length, pointer);
+  endRecord.writeUInt16LE(files.length, pointer);
   pointer += 2;
   endRecord.writeUInt32LE(centralDirectory.length, pointer);
   pointer += 4;
-  endRecord.writeUInt32LE(localLength, pointer);
+  endRecord.writeUInt32LE(localDirectory.length, pointer);
   pointer += 4;
   endRecord.writeUInt16LE(0, pointer);
 
-  return Buffer.concat([...localParts, centralDirectory, endRecord]);
+  return Buffer.concat([localDirectory, centralDirectory, endRecord]);
 }
 
 function crc32(buffer: Buffer) {
-  let crc = 0xffffffff;
-  for (let i = 0; i < buffer.length; i += 1) {
-    const byte = buffer[i];
-    crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ byte) & 0xff];
+  let crc = ~0;
+  for (let offset = 0; offset < buffer.length; offset += 1) {
+    crc = (crc >>> 8) ^ table[(crc ^ buffer[offset]) & 0xff];
   }
-  return (crc ^ 0xffffffff) >>> 0;
+  return ~crc;
+}
+
+const table = (() => {
+  const result = new Uint32Array(256);
+  for (let i = 0; i < 256; i += 1) {
+    let c = i;
+    for (let k = 0; k < 8; k += 1) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    result[i] = c >>> 0;
+  }
+  return result;
+})();
+
+function getDosTime(date = new Date()) {
+  return (
+    (date.getHours() << 11) |
+    (date.getMinutes() << 5) |
+    Math.floor(date.getSeconds() / 2)
+  );
 }
 
 function getDosDate(date = new Date()) {
-  const year = Math.max(1980, date.getFullYear());
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  return ((year - 1980) << 9) | (month << 5) | day;
+  return (
+    ((date.getFullYear() - 1980) << 9) |
+    ((date.getMonth() + 1) << 5) |
+    date.getDate()
+  );
 }
-
-function getDosTime(date = new Date()) {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const seconds = Math.floor(date.getSeconds() / 2);
-  return (hours << 11) | (minutes << 5) | seconds;
-}
-
-const CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
-  for (let index = 0; index < 256; index += 1) {
-    let value = index;
-    for (let bit = 0; bit < 8; bit += 1) {
-      if ((value & 1) === 1) {
-        value = 0xedb88320 ^ (value >>> 1);
-      } else {
-        value >>>= 1;
-      }
-    }
-    table[index] = value >>> 0;
-  }
-  return table;
-})();

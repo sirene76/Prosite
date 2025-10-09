@@ -1,11 +1,11 @@
-import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import type { Types } from "mongoose";
+import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import { Website } from "@/models/website";
-import { getTemplateAssets, getTemplateById } from "@/lib/templates";
+import { getTemplateAssets } from "@/lib/templates";
 import type { WebsiteModel } from "@/models/website";
 import type { DashboardWebsite } from "@/types/website";
 
@@ -21,6 +21,9 @@ export async function GET(request: Request) {
   if (templateId) {
     try {
       const assets = await getTemplateAssets(templateId);
+      if (!assets) {
+        return NextResponse.json({ error: "Unable to load template" }, { status: 404 });
+      }
       return NextResponse.json(assets);
     } catch (error) {
       console.error(error);
@@ -37,15 +40,13 @@ export async function GET(request: Request) {
   await connectDB();
 
   // ✅ Explicit array typing for lean()
-const websites = (await Website.find({ user: session.user.email })
-  .sort({ createdAt: -1 })
-  .lean()) as unknown as (WebsiteModel & {
-  _id: Types.ObjectId | string;
-  createdAt?: Date;
-  updatedAt?: Date;
-})[];
-
-
+  const websites = (await Website.find({ user: session.user.email })
+    .sort({ createdAt: -1 })
+    .lean()) as unknown as (WebsiteModel & {
+    _id: Types.ObjectId | string;
+    createdAt?: Date;
+    updatedAt?: Date;
+  })[];
 
   // ✅ Explicit map parameter typing
   const sanitizedWebsites: DashboardWebsite[] = websites.map(
@@ -85,37 +86,27 @@ export async function POST(request: Request) {
   }
 
   // Fetch the selected template (can be static or dynamic)
-  const template = await getTemplateById(templateId.trim());
-  if (!template) {
+  const assets = await getTemplateAssets(templateId.trim());
+  if (!assets) {
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
   try {
-    // Parse meta JSON if it's stored as a string
-    let parsedMeta: Record<string, unknown> = {};
-    if (typeof template.meta === "string") {
-      try {
-        parsedMeta = JSON.parse(template.meta) as Record<string, unknown>;
-      } catch {
-        parsedMeta = {};
-      }
-    } else if (template.meta && typeof template.meta === "object") {
-      parsedMeta = (template.meta as Record<string, unknown>) ?? {};
-    }
+    const { template, html, css, meta } = assets;
 
-    const metaTheme = isRecord(parsedMeta.theme) ? parsedMeta.theme : {};
-    const metaContent = isRecord(parsedMeta.content) ? parsedMeta.content : {};
+    const metaRecord = isRecord(meta) ? meta : {};
+    const metaTheme = isRecord(metaRecord.theme) ? metaRecord.theme : {};
+    const metaContent = isRecord(metaRecord.content) ? metaRecord.content : {};
 
-    // Create the website with template data prefilled
     const website = await Website.create({
       name: template.name,
-      templateId: template.id,
+      templateId: template._id,
       user: session.user.email,
       status: "draft",
       plan: "free",
-      html: template.html ?? "",
-      css: template.css ?? "",
-      meta: parsedMeta,
+      html,
+      css,
+      meta: metaRecord,
       theme: metaTheme,
       content: metaContent,
       pages: ["Home"],

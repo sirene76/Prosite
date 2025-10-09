@@ -22,7 +22,7 @@ type TemplateListItem = {
   slug: string;
   category?: string;
   description?: string;
-  previewImage?: string | string[] | null;
+  previewUrl?: string | string[] | null;
   createdAt: string;
 };
 
@@ -90,12 +90,12 @@ export default async function AdminTemplatesPage() {
             </div>
           ) : (
             templates.map((template) => {
-              const imageSrc = Array.isArray(template.previewImage)
-                ? template.previewImage.find(
+              const imageSrc = Array.isArray(template.previewUrl)
+                ? template.previewUrl.find(
                     (value): value is string => typeof value === "string" && value.trim().length > 0
                   ) ?? ""
-                : typeof template.previewImage === "string"
-                  ? template.previewImage
+                : typeof template.previewUrl === "string"
+                  ? template.previewUrl
                   : "";
 
               return (

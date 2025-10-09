@@ -42,7 +42,7 @@ async function loadWebsite(websiteId: string) {
     name: website.name ?? "Untitled Website",
     templateName: template?.name ?? "Custom",
     themeName: website.theme?.name ?? website.theme?.label ?? "Default",
-    previewImage: website.previewImage || website.thumbnailUrl || template?.previewImage || FALLBACK_IMAGE,
+    previewImage: website.previewImage || website.thumbnailUrl || template?.previewUrl || FALLBACK_IMAGE,
   };
 }
 

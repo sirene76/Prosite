@@ -1,67 +1,32 @@
 import Image from "next/image";
+
 import { getTemplates } from "@/lib/templates";
-import { TemplateSelectButton } from "@/components/home/TemplateSelectButton";
 
 export default async function HomePage() {
   const templates = await getTemplates();
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
-      <section className="text-center">
-        <span className="inline-flex items-center justify-center rounded-full bg-builder-surface px-4 py-1 text-sm font-medium text-slate-300">
-          Prosite Builder
-        </span>
-        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-          Choose a template to jumpstart your next website.
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
-          Every template is handcrafted with flexible sections and theme controls. Pick one to start customizing, then fine-tune colors, fonts, and content in minutes.
-        </p>
-      </section>
-
-      <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-3">
-        {templates.map((template, index) => {
-          const previewImage = template.previewImage || "/placeholder-template.svg";
-
-          return (
-            <article
-              key={template.id}
-              className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 shadow-lg shadow-slate-900/20 backdrop-blur transition hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="relative h-64 w-full overflow-hidden bg-slate-800">
-                <Image
-                  src={previewImage}
-                  alt={`${template.name} preview`}
-                  fill
-                  priority={index < 3}
-                  sizes="(min-width: 1280px) 384px, (min-width: 640px) 50vw, 100vw"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="flex flex-1 flex-col gap-3 p-6">
-                <div>
-                  <h2 className="text-xl font-semibold text-white">{template.name}</h2>
-                  <p className="mt-1 text-sm text-slate-300">{template.description}</p>
-                </div>
-                {template.sections.length > 0 && (
-                  <div className="mt-auto text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Includes: {template.sections.map((section) => section.label).join(", ")}
-                  </div>
-                )}
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-[0.3em] text-slate-500">Template</span>
-                  <TemplateSelectButton
-                    templateId={template.id}
-                    className="inline-flex items-center justify-center rounded-full bg-builder-accent px-4 py-2 text-sm font-semibold text-slate-900 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-80"
-                  >
-                    Select
-                  </TemplateSelectButton>
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+    <main className="grid grid-cols-3 gap-6 p-8">
+      {templates.map((tpl) => (
+        <div key={tpl._id} className="border rounded-lg overflow-hidden">
+          <div className="w-full h-48 relative">
+            <Image
+              src={tpl.previewUrl ?? "/placeholder-template.svg"}
+              alt={tpl.name}
+              fill
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="p-4">
+            <h2 className="font-semibold text-lg">{tpl.name}</h2>
+            <p className="text-sm text-gray-600">{tpl.description}</p>
+            <a href={`/templates/${tpl._id}`} className="btn-primary mt-2 inline-block">
+              Select
+            </a>
+          </div>
+        </div>
+      ))}
     </main>
   );
 }

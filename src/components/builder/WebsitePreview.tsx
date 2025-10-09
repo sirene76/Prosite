@@ -67,24 +67,29 @@ export function WebsitePreview() {
       setAssets(null);
       try {
         const response = await fetch(
-          `/api/templates/${encodeURIComponent(selectedTemplate.id)}?format=json`
+          `/api/websites?templateId=${encodeURIComponent(selectedTemplate.id)}`
         );
         if (!response.ok) {
           throw new Error("Unable to load template");
         }
-        const data = (await response.json()) as TemplatePayload;
+        const data = (await response.json()) as {
+          html?: string;
+          css?: string;
+        };
         if (isMounted) {
-          const placeholders = extractPlaceholders(data.html);
+          const html = data.html ?? "";
+          const css = data.css ?? "";
+          const placeholders = extractPlaceholders(html);
           const colorDefaults = extractColorDefaults(
-            data.css,
+            css,
             selectedTemplate.colors.map((color) => color.id)
           );
-          const fontDefaults = extractFontDefaults(data.css, selectedTemplate.fonts);
+          const fontDefaults = extractFontDefaults(css, selectedTemplate.fonts);
 
           registerContentPlaceholders(placeholders);
           registerThemeDefaults({ colors: colorDefaults, fonts: fontDefaults });
 
-          setAssets(data);
+          setAssets({ html, css });
         }
       } catch (error) {
         console.error(error);
@@ -144,7 +149,6 @@ export function WebsitePreview() {
     const themedDocument = injectThemeTokens({
       html: rendered,
       css: assets.css,
-      templateId: selectedTemplate.id,
       colors: colorPalette,
       fonts: fontTokens,
     });
@@ -156,7 +160,6 @@ export function WebsitePreview() {
     selectedTemplate.colors,
     selectedTemplate.fonts,
     selectedTemplate.modules,
-    selectedTemplate.id,
     theme.colors,
     theme.fonts,
     themeDefaults.colors,

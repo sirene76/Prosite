@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 
-import { createSlug, parseMeta } from "../utils";
+import { createSlug } from "../utils";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   await connectDB();
@@ -71,28 +71,24 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       updates.description = typeof body.description === "string" ? body.description : "";
     }
 
-    if (body.previewImage !== undefined) {
-      updates.previewImage =
-        typeof body.previewImage === "string" && body.previewImage.trim() ? body.previewImage.trim() : undefined;
+    if (body.previewUrl !== undefined) {
+      updates.previewUrl =
+        typeof body.previewUrl === "string" && body.previewUrl.trim() ? body.previewUrl.trim() : undefined;
     }
 
-    if (body.html !== undefined) {
-      updates.html = typeof body.html === "string" ? body.html : "";
+    if (body.htmlUrl !== undefined) {
+      updates.htmlUrl =
+        typeof body.htmlUrl === "string" && body.htmlUrl.trim() ? body.htmlUrl.trim() : undefined;
     }
 
-    if (body.css !== undefined) {
-      updates.css = typeof body.css === "string" ? body.css : "";
+    if (body.cssUrl !== undefined) {
+      updates.cssUrl =
+        typeof body.cssUrl === "string" && body.cssUrl.trim() ? body.cssUrl.trim() : undefined;
     }
 
-    if (body.meta !== undefined) {
-      try {
-        updates.meta = parseMeta(body.meta);
-      } catch (error) {
-        return NextResponse.json(
-          { error: error instanceof Error ? error.message : "Invalid meta" },
-          { status: 400 }
-        );
-      }
+    if (body.metaUrl !== undefined) {
+      updates.metaUrl =
+        typeof body.metaUrl === "string" && body.metaUrl.trim() ? body.metaUrl.trim() : undefined;
     }
 
     const updated = await Template.findByIdAndUpdate(params.id, updates, { new: true });

@@ -11,7 +11,7 @@ export type TemplateGalleryModalTemplate = {
   id: string;
   name: string;
   description: string;
-  previewImage: string;
+  previewUrl: string;
   previewVideo?: string;
 };
 
@@ -161,13 +161,13 @@ export function TemplateGalleryModal({
                   src={template.previewVideo}
                   muted
                   playsInline
-                  poster={template.previewImage}
+                  poster={template.previewUrl}
                   className="h-full w-full object-cover"
                   controls={false}
                 />
               ) : (
                 <Image
-                  src={template.previewImage}
+                  src={template.previewUrl}
                   alt={template.name}
                   fill
                   sizes="(min-width: 1024px) 896px, 100vw"
