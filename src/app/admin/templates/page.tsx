@@ -22,7 +22,7 @@ type TemplateListItem = {
   slug: string;
   category?: string;
   description?: string;
-  previewImage?: string;
+  previewImage?: string | string[] | null;
   createdAt: string;
 };
 
@@ -89,58 +89,74 @@ export default async function AdminTemplatesPage() {
               No templates found yet. Create your first template to get started.
             </div>
           ) : (
-            templates.map((template) => (
-              <div
-                key={template._id}
-                className="flex flex-col justify-between rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-lg shadow-black/10"
-              >
-                <div className="space-y-4">
-                  {template.previewImage ? (
-                    <Image
-                      src={template.previewImage}
-                      alt={template.name}
-                      width={400}
-                      height={300}
-                      className="h-[200px] w-full rounded-md object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-[200px] w-full items-center justify-center rounded-md bg-slate-800 text-slate-500">
-                      No Preview
-                    </div>
-                  )}
+            templates.map((template) => {
+              const imageSrc = Array.isArray(template.previewImage)
+                ? template.previewImage.find(
+                    (value): value is string => typeof value === "string" && value.trim().length > 0
+                  ) ?? ""
+                : typeof template.previewImage === "string"
+                  ? template.previewImage
+                  : "";
 
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-semibold text-slate-100">{template.name}</h3>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">/{template.slug}</p>
-                    {template.category ? (
-                      <p className="text-sm text-slate-400">{template.category}</p>
-                    ) : null}
-                  </div>
-
-                  {template.description ? (
-                    <p className="text-sm text-slate-400">{template.description}</p>
-                  ) : null}
-                </div>
-
-                <div className="mt-6 flex items-center justify-between text-sm">
+              return (
+                <article
+                  key={template._id}
+                  className="flex flex-col justify-between rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-lg shadow-black/10"
+                >
                   <Link
-                    href={`/admin/templates/${template._id}/edit`}
-                    className="font-medium text-blue-400 transition hover:text-blue-300"
+                    href={`/templates/${template._id}`}
+                    className="group block rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                    aria-label={`View ${template.name} template preview`}
                   >
-                    Edit
+                    <div className="relative mb-4 h-48 w-full overflow-hidden rounded-md bg-slate-800">
+                      {imageSrc ? (
+                        <Image
+                          src={imageSrc}
+                          alt={`${template.name} preview`}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          priority
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-slate-500">No Preview</div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold text-slate-100 transition-colors group-hover:text-blue-400">
+                        {template.name}
+                      </h3>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">/{template.slug}</p>
+                      {template.category ? (
+                        <p className="text-sm text-slate-400">{template.category}</p>
+                      ) : null}
+                      {template.description ? (
+                        <p className="text-sm text-slate-400">{template.description}</p>
+                      ) : null}
+                    </div>
                   </Link>
-                  <form action={deleteTemplate}>
-                    <input type="hidden" name="templateId" value={template._id} />
-                    <button
-                      type="submit"
-                      className="font-medium text-red-400 transition hover:text-red-300"
+
+                  <div className="mt-6 flex items-center justify-between text-sm">
+                    <Link
+                      href={`/admin/templates/${template._id}/edit`}
+                      className="font-medium text-blue-400 transition hover:text-blue-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                     >
-                      Delete
-                    </button>
-                  </form>
-                </div>
-              </div>
-            ))
+                      Edit
+                    </Link>
+                    <form action={deleteTemplate}>
+                      <input type="hidden" name="templateId" value={template._id} />
+                      <button
+                        type="submit"
+                        className="font-medium text-red-400 transition hover:text-red-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              );
+            })
           )}
         </div>
       )}
