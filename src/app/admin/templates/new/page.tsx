@@ -31,13 +31,14 @@ type FormState = {
 };
 
 type UploadKey = "htmlUrl" | "cssUrl" | "metaUrl" | "previewUrl";
-type UploadVariant = "preview" | "html" | "css" | "meta";
+type UploadType = "preview" | "html" | "css" | "meta";
+type UploadUrlKey = Extract<UploadKey, `${UploadType}Url`>;
 
 const uploadFieldOrder: Array<{
   key: Extract<UploadKey, "htmlUrl" | "cssUrl" | "metaUrl">;
   label: string;
   helper: string;
-  variant: Extract<UploadVariant, "html" | "css" | "meta">;
+  variant: Extract<UploadType, "html" | "css" | "meta">;
 }> = [
   {
     key: "htmlUrl",
@@ -119,26 +120,19 @@ export default function NewTemplatePage() {
 
   useEffect(() => {
     if (form.htmlUrl && form.cssUrl) {
-      console.log("✅ Code files ready, refreshing preview...");
+      console.log("🔁 Refreshing live preview with new uploads...");
     }
   }, [form.htmlUrl, form.cssUrl]);
 
-  function handleUploadComplete(type: UploadVariant, res: Array<{ url?: string }>) {
+  function handleUploadComplete(type: UploadType, res?: Array<{ url?: string }>) {
     const url = res?.[0]?.url;
-    if (!url) {
-      console.warn("⚠️ Upload did not return a URL", { type, res });
-      return;
-    }
+    if (!url) return console.error(`❌ Missing URL for ${type} upload`, res);
 
-    console.log(`✅ Upload complete for ${type}:`, res);
+    const key = `${type}Url` as UploadUrlKey;
+    setForm((prev) => ({ ...prev, [key]: url }));
+    console.log(`✅ ${type.toUpperCase()} uploaded:`, url);
 
-    setForm((prev) => {
-      const updated = { ...prev, [`${type}Url`]: url } as FormState;
-      console.log("🧾 Updated form state:", updated);
-      return updated;
-    });
-
-    const typeLabelMap: Record<UploadVariant, string> = {
+    const typeLabelMap: Record<UploadType, string> = {
       preview: "Preview asset",
       html: "HTML file",
       css: "CSS file",
