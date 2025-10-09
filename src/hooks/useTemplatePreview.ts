@@ -22,7 +22,7 @@ export function useTemplatePreview(htmlUrl?: string, cssUrl?: string, metaUrl?: 
 
     async function load() {
       if (!htmlUrl || !cssUrl) {
-        console.warn("⚠️ Missing file URLs", { htmlUrl, cssUrl });
+        if (cancelled) return;
         setHtml("");
         setCss("");
         setMeta(null);
@@ -30,7 +30,6 @@ export function useTemplatePreview(htmlUrl?: string, cssUrl?: string, metaUrl?: 
         return;
       }
 
-      console.log("📦 Loading preview files:", { htmlUrl, cssUrl, metaUrl });
       setLoading(true);
 
       try {
@@ -44,20 +43,13 @@ export function useTemplatePreview(htmlUrl?: string, cssUrl?: string, metaUrl?: 
 
         if (cancelled) return;
 
-        console.log("✅ Loaded HTML/CSS/meta:", {
-          html: htmlData.length,
-          css: cssData.length,
-          hasMeta: !!metaData,
-        });
         setHtml(htmlData);
         setCss(cssData);
         setMeta(metaData);
+        console.log("✅ Preview data loaded");
       } catch (error) {
         if (!cancelled) {
           console.error("❌ Preview fetch failed", error);
-          setHtml("");
-          setCss("");
-          setMeta(null);
         }
       } finally {
         if (!cancelled) {
