@@ -11,11 +11,10 @@ type TemplateInput = {
   name?: string;
   slug?: string;
   category?: string;
+  subcategory?: string;
   description?: string;
-  previewUrl?: string;
-  htmlUrl?: string;
-  cssUrl?: string;
-  metaUrl?: string;
+  tags?: string[];
+  currentVersion?: string;
 };
 
 type TemplateFormProps = {
@@ -31,11 +30,10 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
     name: template?.name ?? "",
     slug: template?.slug ?? "",
     category: template?.category ?? "",
+    subcategory: template?.subcategory ?? "",
     description: template?.description ?? "",
-    previewUrl: template?.previewUrl ?? "",
-    htmlUrl: template?.htmlUrl ?? "",
-    cssUrl: template?.cssUrl ?? "",
-    metaUrl: template?.metaUrl ?? "",
+    tags: template?.tags?.join(", ") ?? "",
+    currentVersion: template?.currentVersion ?? "",
   }));
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
@@ -52,11 +50,13 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
       name: formData.name.trim(),
       slug: formData.slug.trim() || formData.name.trim().toLowerCase().replace(/\s+/g, "-"),
       category: formData.category.trim() || undefined,
+      subcategory: formData.subcategory.trim() || undefined,
       description: formData.description.trim() || undefined,
-      previewUrl: formData.previewUrl.trim() || undefined,
-      htmlUrl: formData.htmlUrl.trim() || undefined,
-      cssUrl: formData.cssUrl.trim() || undefined,
-      metaUrl: formData.metaUrl.trim() || undefined,
+      tags: formData.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+      currentVersion: formData.currentVersion.trim() || undefined,
     };
 
     const url = mode === "create" ? "/api/admin/templates" : `/api/admin/templates/${template?._id}`;
@@ -131,16 +131,16 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="previewUrl">
-            Preview URL
+          <label className="block text-sm font-medium text-slate-300" htmlFor="subcategory">
+            Subcategory
           </label>
           <input
-            id="previewUrl"
-            name="previewUrl"
-            value={formData.previewUrl}
+            id="subcategory"
+            name="subcategory"
+            value={formData.subcategory}
             onChange={handleChange}
             className={inputClassName}
-            placeholder="https://.../preview.png"
+            placeholder="Landing Page"
           />
         </div>
       </div>
@@ -161,45 +161,31 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="htmlUrl">
-            HTML URL
+          <label className="block text-sm font-medium text-slate-300" htmlFor="tags">
+            Tags
           </label>
           <input
-            id="htmlUrl"
-            name="htmlUrl"
-            value={formData.htmlUrl}
+            id="tags"
+            name="tags"
+            value={formData.tags}
             onChange={handleChange}
             className={inputClassName}
-            placeholder="https://.../template.html"
+            placeholder="portfolio, minimal, dark"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-300" htmlFor="cssUrl">
-            CSS URL
+          <label className="block text-sm font-medium text-slate-300" htmlFor="currentVersion">
+            Current Version
           </label>
           <input
-            id="cssUrl"
-            name="cssUrl"
-            value={formData.cssUrl}
+            id="currentVersion"
+            name="currentVersion"
+            value={formData.currentVersion}
             onChange={handleChange}
             className={inputClassName}
-            placeholder="https://.../style.css"
+            placeholder="1.0.0"
           />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-300" htmlFor="metaUrl">
-          Meta JSON URL
-        </label>
-        <input
-          id="metaUrl"
-          name="metaUrl"
-          value={formData.metaUrl}
-          onChange={handleChange}
-          className={inputClassName}
-          placeholder="https://.../meta.json"
-        />
       </div>
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}

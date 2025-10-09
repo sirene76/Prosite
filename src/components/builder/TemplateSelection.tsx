@@ -28,7 +28,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
         id: template.id,
         name: template.name,
         description: template.description,
-        previewUrl: template.previewUrl,
+        previewUrl: template.previewUrl ?? "/placeholder-template.svg",
         previewVideo: template.previewVideo,
       })),
     [templates]

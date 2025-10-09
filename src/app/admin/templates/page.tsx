@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 
+import { TemplateAdminActions } from "./_components/TemplateAdminActions";
+
 const fallbackBaseUrl = "http://localhost:3000";
 
 function getBaseUrl(): string {
@@ -16,13 +18,28 @@ function getBaseUrl(): string {
   return fromEnv.startsWith("http") ? fromEnv : `https://${fromEnv}`;
 }
 
+type TemplateVersionSummary = {
+  number: string;
+  previewUrl?: string;
+  htmlUrl?: string;
+  cssUrl?: string;
+  metaUrl?: string;
+  createdAt?: string;
+  changelog?: string;
+};
+
 type TemplateListItem = {
   _id: string;
   name: string;
   slug: string;
   category?: string;
+  subcategory?: string;
   description?: string;
-  previewUrl?: string | string[] | null;
+  tags?: string[];
+  currentVersion?: string;
+  versions?: TemplateVersionSummary[];
+  published: boolean;
+  featured: boolean;
   createdAt: string;
 };
 
@@ -90,13 +107,11 @@ export default async function AdminTemplatesPage() {
             </div>
           ) : (
             templates.map((template) => {
-              const imageSrc = Array.isArray(template.previewUrl)
-                ? template.previewUrl.find(
-                    (value): value is string => typeof value === "string" && value.trim().length > 0
-                  ) ?? ""
-                : typeof template.previewUrl === "string"
-                  ? template.previewUrl
-                  : "";
+              const currentVersion = template.versions?.find(
+                (version) => version.number === template.currentVersion
+              );
+              const imageSrc = currentVersion?.previewUrl ?? "/placeholder-template.svg";
+              const tags = Array.isArray(template.tags) ? template.tags : [];
 
               return (
                 <article
@@ -128,11 +143,40 @@ export default async function AdminTemplatesPage() {
                         {template.name}
                       </h3>
                       <p className="text-xs uppercase tracking-wide text-slate-500">/{template.slug}</p>
-                      {template.category ? (
-                        <p className="text-sm text-slate-400">{template.category}</p>
-                      ) : null}
+                      <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                        {template.category ? <span>{template.category}</span> : null}
+                        {template.subcategory ? <span>• {template.subcategory}</span> : null}
+                        <span>
+                          Version: {template.currentVersion ?? currentVersion?.number ?? "—"}
+                        </span>
+                      </div>
                       {template.description ? (
                         <p className="text-sm text-slate-400">{template.description}</p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                            template.published
+                              ? "bg-emerald-500/10 text-emerald-300"
+                              : "bg-slate-700/50 text-slate-300"
+                          }`}
+                        >
+                          {template.published ? "Published" : "Unpublished"}
+                        </span>
+                        {template.featured ? (
+                          <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300">
+                            Featured
+                          </span>
+                        ) : null}
+                      </div>
+                      {tags.length ? (
+                        <div className="mt-2 flex flex-wrap gap-1 text-xs text-slate-500">
+                          {tags.map((tag) => (
+                            <span key={tag} className="rounded bg-slate-800 px-2 py-0.5">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
                       ) : null}
                     </div>
                   </Link>
@@ -144,16 +188,21 @@ export default async function AdminTemplatesPage() {
                     >
                       Edit
                     </Link>
-                    <form action={deleteTemplate}>
-                      <input type="hidden" name="templateId" value={template._id} />
-                      <button
-                        type="submit"
-                        className="font-medium text-red-400 transition hover:text-red-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
-                      >
-                        Delete
-                      </button>
-                    </form>
+                    <TemplateAdminActions
+                      id={template._id}
+                      published={template.published}
+                      featured={template.featured}
+                    />
                   </div>
+                  <form action={deleteTemplate} className="mt-4 text-right">
+                    <input type="hidden" name="templateId" value={template._id} />
+                    <button
+                      type="submit"
+                      className="text-sm font-medium text-red-400 transition hover:text-red-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                    >
+                      Delete
+                    </button>
+                  </form>
                 </article>
               );
             })
