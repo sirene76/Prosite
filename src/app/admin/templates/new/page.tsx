@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { UploadButton } from "@/utils/uploadthing";
+import { UploadButton } from "@/lib/uploadthing";
 import { useRouter } from "next/navigation";
 
 export default function NewTemplatePage() {
@@ -67,10 +67,10 @@ export default function NewTemplatePage() {
         <input className="input" placeholder="Version (e.g. 1.0.0)" value={form.version} onChange={e=>setForm({...form, version:e.target.value})}/>
         <textarea className="input" placeholder="Description" onChange={e=>setForm({...form, description:e.target.value})}/>
         <div className="grid grid-cols-2 gap-4">
-          <UploadButton endpoint="templateFiles" onClientUploadComplete={res => setForm({...form, htmlUrl: res[0].url})}/>
-          <UploadButton endpoint="templateFiles" onClientUploadComplete={res => setForm({...form, cssUrl: res[0].url})}/>
-          <UploadButton endpoint="templateFiles" onClientUploadComplete={res => setForm({...form, metaUrl: res[0].url})}/>
-          <UploadButton endpoint="templateFiles" onClientUploadComplete={res => setForm({...form, previewUrl: res[0].url})}/>
+          <UploadButton endpoint="templateAssets" onClientUploadComplete={(res) => setForm({ ...form, htmlUrl: res[0].url })} />
+          <UploadButton endpoint="templateAssets" onClientUploadComplete={(res) => setForm({ ...form, cssUrl: res[0].url })} />
+          <UploadButton endpoint="templateAssets" onClientUploadComplete={(res) => setForm({ ...form, metaUrl: res[0].url })} />
+          <UploadButton endpoint="templateAssets" onClientUploadComplete={(res) => setForm({ ...form, previewUrl: res[0].url })} />
         </div>
         <button type="submit" disabled={loading} className="btn-primary">
           {loading ? "Saving..." : "Save Template"}
