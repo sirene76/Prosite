@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-import { UploadButton } from "@/lib/uploadthing";
+import { UploadButton, UploadDropzone } from "@/utils/uploadthing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,12 +32,6 @@ type FormState = {
 
 type UploadKey = "htmlUrl" | "cssUrl" | "metaUrl" | "previewUrl";
 
-type UploadedFile = {
-  url: string;
-  name?: string;
-  key?: string;
-};
-
 const uploadFieldOrder: Array<{ key: UploadKey; label: string; helper: string }> = [
   {
     key: "htmlUrl",
@@ -58,6 +52,14 @@ const uploadFieldOrder: Array<{ key: UploadKey; label: string; helper: string }>
 
 const videoExtensions = [".mp4", ".webm", ".ogg", ".mov"];
 
+const uploadDropzoneClassName =
+  "ut-upload-area flex min-h-[200px] w-full items-center justify-center rounded-lg border border-slate-700 bg-slate-900/40 p-6 text-center text-sm text-slate-300 transition-colors";
+
+function getUploadedFileName(url: string) {
+  const [path] = url.split("?");
+  return path?.split("/").pop() ?? "Uploaded file";
+}
+
 export default function NewTemplatePage() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({
@@ -76,12 +78,6 @@ export default function NewTemplatePage() {
     html: "",
     css: "",
     meta: "",
-  });
-  const [fileNames, setFileNames] = useState<Record<UploadKey, string>>({
-    htmlUrl: "",
-    cssUrl: "",
-    metaUrl: "",
-    previewUrl: "",
   });
   const [loading, setLoading] = useState(false);
   const { ready: previewReady, html, css, meta } = useTemplatePreview(
@@ -144,15 +140,6 @@ export default function NewTemplatePage() {
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function handleUpload(key: UploadKey) {
-    return (files?: UploadedFile[]) => {
-      if (!files?.length) return;
-      const file = files[0];
-      setFileNames((prev) => ({ ...prev, [key]: file.name ?? file.key ?? "Uploaded file" }));
-      setForm((prev) => ({ ...prev, [key]: file.url }));
-    };
   }
 
   return (
@@ -235,87 +222,112 @@ export default function NewTemplatePage() {
               <CardTitle>Template Uploads</CardTitle>
               <CardDescription>Upload preview media and the core files associated with this template.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-8 pt-6">
-              <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-slate-500 dark:text-slate-300">Preview Media</span>
-                    <span className="text-xs text-slate-500/80 dark:text-slate-400/80">
-                      Upload an image or short video to represent the template in the gallery.
-                    </span>
-                  </div>
-                  <div className="rounded-2xl border border-dashed border-slate-400/50 bg-slate-50/40 p-4 shadow-inner dark:border-slate-700/70 dark:bg-slate-900/50">
-                    {form.previewUrl ? (
-                      <div className="relative h-64 w-full overflow-hidden rounded-xl border border-slate-200/60 bg-black/40 dark:border-slate-700/60">
-                        {isPreviewVideo ? (
-                          <video
-                            key={form.previewUrl}
-                            controls
-                            className="h-full w-full object-cover"
-                            src={form.previewUrl}
-                          />
-                        ) : (
+            <CardContent className="grid gap-10 pt-6 lg:grid-cols-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-200">Preview Image / Video</p>
+                <p className="text-xs text-slate-400">
+                  Drag and drop an image or video or click inside the dropzone to choose a file.
+                </p>
+                <UploadDropzone
+                  endpoint="templateAssets"
+                  onClientUploadComplete={(res) => {
+                    const url = res?.[0]?.url;
+                    if (!url) return;
+                    setForm((f) => ({ ...f, previewUrl: url }));
+                  }}
+                  onUploadError={(err) => alert(`Upload failed: ${err.message}`)}
+                  className={`${uploadDropzoneClassName} mt-4 cursor-pointer hover:border-pink-400`}
+                />
+                {form.previewUrl ? (
+                  <>
+                    <div className="mt-4 overflow-hidden rounded-xl border border-slate-800 bg-black/40">
+                      {isPreviewVideo ? (
+                        <video
+                          key={form.previewUrl}
+                          src={form.previewUrl}
+                          controls
+                          className="h-64 w-full rounded-xl object-cover"
+                        />
+                      ) : (
+                        <div className="relative h-64 w-full">
                           <Image
                             alt="Template preview"
                             src={form.previewUrl}
                             fill
                             sizes="(min-width: 1024px) 480px, 100vw"
-                            className="object-cover"
+                            className="rounded-xl object-cover"
                           />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex h-64 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-400/40 bg-white/60 text-center text-slate-500 dark:border-slate-700/70 dark:bg-slate-900/40">
-                        <span className="text-sm font-medium">No preview uploaded yet</span>
-                        <span className="max-w-[220px] text-xs text-slate-500/80 dark:text-slate-400/70">
-                          Drag in a screenshot or video, or use the Upload button below.
-                        </span>
-                      </div>
-                    )}
-                    <div className="mt-4 flex flex-col gap-2 text-sm text-slate-600 dark:text-slate-400">
-                      <UploadButton
-                        endpoint="templateAssets"
-                        appearance={{
-                          container: "w-full",
-                          button:
-                            "w-full justify-center rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400",
-                        }}
-                        onClientUploadComplete={handleUpload("previewUrl")}
-                        onUploadError={(error) => console.error("Preview upload failed", error)}
-                      />
-                      {form.previewUrl && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          Uploaded: {fileNames.previewUrl || "Preview asset"}
-                        </span>
+                        </div>
                       )}
                     </div>
-                  </div>
-                </div>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  {uploadFieldOrder.map(({ key, label, helper }) => (
-                    <div key={key} className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white/60 p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/60">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{helper}</p>
-                      </div>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                      <span>Uploaded: {getUploadedFileName(form.previewUrl)}</span>
                       <UploadButton
                         endpoint="templateAssets"
-                        appearance={{
-                          container: "w-full",
-                          button:
-                            "w-full justify-center rounded-lg border border-indigo-400/80 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100 dark:border-indigo-400/40 dark:bg-slate-900 dark:text-indigo-300 dark:hover:bg-slate-800",
+                        onClientUploadComplete={(res) => {
+                          const url = res?.[0]?.url;
+                          if (!url) return;
+                          setForm((f) => ({ ...f, previewUrl: url }));
                         }}
-                        onClientUploadComplete={handleUpload(key)}
-                        onUploadError={(error) => console.error(`${label} upload failed`, error)}
+                        onUploadError={(err) => alert(`Upload failed: ${err.message}`)}
+                        appearance={{
+                          container: "",
+                          button:
+                            "rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-pink-400 hover:text-white",
+                        }}
+                        content={{
+                          button: ({ ready }) => (ready ? "Replace file" : "Uploading..."),
+                        }}
                       />
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {form[key]
-                          ? `Uploaded: ${fileNames[key] || "File successfully uploaded"}`
-                          : "No file uploaded yet"}
-                      </p>
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  <p className="mt-3 text-xs text-slate-500">
+                    Supports images (JPG, PNG, GIF) and videos (MP4, WEBM, MOV).
+                  </p>
+                )}
+              </div>
+              <div className="space-y-6">
+                {uploadFieldOrder.map(({ key, label, helper }) => (
+                  <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
+                    <p className="text-sm font-semibold text-slate-200">{label}</p>
+                    <p className="text-xs text-slate-400">{helper}</p>
+                    <UploadDropzone
+                      endpoint="templateAssets"
+                      onClientUploadComplete={(res) => {
+                        const url = res?.[0]?.url;
+                        if (!url) return;
+                        setForm((f) => ({ ...f, [key]: url }));
+                      }}
+                      onUploadError={(err) => alert(`Upload failed: ${err.message}`)}
+                      className={`${uploadDropzoneClassName} mt-4 cursor-pointer hover:border-pink-400`}
+                    />
+                    {form[key] ? (
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                        <span>Uploaded: {getUploadedFileName(form[key])}</span>
+                        <UploadButton
+                          endpoint="templateAssets"
+                          onClientUploadComplete={(res) => {
+                            const url = res?.[0]?.url;
+                            if (!url) return;
+                            setForm((f) => ({ ...f, [key]: url }));
+                          }}
+                          onUploadError={(err) => alert(`Upload failed: ${err.message}`)}
+                          appearance={{
+                            container: "",
+                            button:
+                              "rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-pink-400 hover:text-white",
+                          }}
+                          content={{
+                            button: ({ ready }) => (ready ? "Replace file" : "Uploading..."),
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-slate-500">No file uploaded yet.</p>
+                    )}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

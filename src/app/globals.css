@@ -23,3 +23,13 @@ body {
   background: rgba(56, 189, 248, 0.6);
   border-radius: 9999px;
 }
+
+.ut-upload-area {
+  transition: all 0.25s ease;
+}
+
+.ut-upload-area.ut-drag-over,
+.ut-upload-area.ut-uploading {
+  border-color: #f472b6;
+  background-color: rgba(244, 114, 182, 0.1);
+}
