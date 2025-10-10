@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { useBuilderStore } from "@/context/BuilderContext";
 import { useBuilder } from "@/context/BuilderContext";
+import { useBuilderStore } from "@/store/builderStore";
+
 
 interface ThemeOption {
   name: string;
