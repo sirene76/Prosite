@@ -73,6 +73,9 @@ export type TemplateRecord = LeanDocument<TemplateDocument> & {
   htmlUrl?: string;
   cssUrl?: string;
   metaUrl?: string;
+  html?: string;
+  css?: string;
+  meta?: TemplateMeta;
 };
 
 export type TemplateDefinition = TemplateRecord & {
@@ -107,6 +110,30 @@ export async function getTemplates(category?: string): Promise<TemplateRecord[]>
   return templates.map(normaliseId);
 }
 
+function parseMeta(value: unknown): TemplateMeta | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as TemplateMeta;
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch (error) {
+      console.error("⚠️ Failed to parse inline template meta", error);
+    }
+    return undefined;
+  }
+
+  if (typeof value === "object") {
+    return value as TemplateMeta;
+  }
+
+  return undefined;
+}
+
 export async function getTemplateById(id: string): Promise<TemplateRecord | null> {
   await connectDB();
   const template = await Template.findById(id).lean();
@@ -124,6 +151,52 @@ export async function getTemplateById(id: string): Promise<TemplateRecord | null
     record.htmlUrl = version.htmlUrl ?? undefined;
     record.cssUrl = version.cssUrl ?? undefined;
     record.metaUrl = version.metaUrl ?? undefined;
+    if (!record.html && typeof version.inlineHtml === "string" && version.inlineHtml.trim()) {
+      record.html = version.inlineHtml;
+    }
+    if (!record.css && typeof version.inlineCss === "string" && version.inlineCss.trim()) {
+      record.css = version.inlineCss;
+    }
+    if (!record.meta) {
+      record.meta = parseMeta(version.inlineMeta);
+    }
+  }
+
+  if (!record.html && typeof (template as { html?: unknown }).html === "string") {
+    const inlineHtml = (template as { html?: unknown }).html as string;
+    if (inlineHtml.trim()) {
+      record.html = inlineHtml;
+    }
+  }
+
+  if (!record.css && typeof (template as { css?: unknown }).css === "string") {
+    const inlineCss = (template as { css?: unknown }).css as string;
+    if (inlineCss.trim()) {
+      record.css = inlineCss;
+    }
+  }
+
+  if (!record.meta) {
+    record.meta = parseMeta((template as { meta?: unknown }).meta);
+  }
+
+  try {
+    if (!record.html && record.htmlUrl) {
+      record.html = await fetch(record.htmlUrl).then((response) => response.text());
+    }
+    if (!record.css && record.cssUrl) {
+      record.css = await fetch(record.cssUrl).then((response) => response.text());
+    }
+    if (!record.meta && record.metaUrl) {
+      const fetchedMeta = await fetch(record.metaUrl).then((response) => response.json());
+      record.meta = typeof fetchedMeta === "object" && fetchedMeta ? (fetchedMeta as TemplateMeta) : undefined;
+    }
+  } catch (error) {
+    console.error("⚠️ Failed to fetch legacy template files", error);
+  }
+
+  if (!record.meta) {
+    record.meta = {} as TemplateMeta;
   }
 
   return record;
@@ -142,29 +215,23 @@ export async function getTemplateAssets(id: string) {
     throw new Error("Template version not found.");
   }
 
-  const [html, css, meta] = await Promise.all([
-    version.htmlUrl ? fetch(version.htmlUrl).then((r) => r.text()) : Promise.resolve(""),
-    version.cssUrl ? fetch(version.cssUrl).then((r) => r.text()) : Promise.resolve(""),
-    version.metaUrl
-      ? fetch(version.metaUrl)
-          .then((r) => r.json())
-          .catch(() => ({} as TemplateMeta))
-      : Promise.resolve({} as TemplateMeta),
-  ]);
+  const html = typeof template.html === "string" ? template.html : "";
+  const css = typeof template.css === "string" ? template.css : "";
+  const meta = (template.meta ?? {}) as TemplateMeta;
 
-  const sections = Array.isArray((meta as TemplateMeta).sections)
-    ? ((meta as TemplateMeta).sections as TemplateSectionDefinition[])
+  const sections = Array.isArray(meta.sections)
+    ? (meta.sections as TemplateSectionDefinition[])
     : [];
-  const colors = Array.isArray((meta as TemplateMeta).colors)
-    ? ((meta as TemplateMeta).colors as TemplateColorDefinition[])
+  const colors = Array.isArray(meta.colors)
+    ? (meta.colors as TemplateColorDefinition[])
     : [];
-  const fonts = Array.isArray((meta as TemplateMeta).fonts)
-    ? ((meta as TemplateMeta).fonts as string[])
+  const fonts = Array.isArray(meta.fonts)
+    ? (meta.fonts as string[])
     : [];
-  const modules = Array.isArray((meta as TemplateMeta).modules)
-    ? ((meta as TemplateMeta).modules as TemplateModuleDefinition[])
+  const modules = Array.isArray(meta.modules)
+    ? (meta.modules as TemplateModuleDefinition[])
     : [];
-  const builder = (meta as TemplateMeta).builder;
+  const builder = meta.builder;
 
   const definition: TemplateDefinition = {
     ...template,
@@ -172,15 +239,15 @@ export async function getTemplateAssets(id: string) {
     colors,
     fonts,
     modules,
-    meta: (meta as TemplateMeta) ?? {},
+    meta,
     builder,
     html,
     css,
-    htmlUrl: version.htmlUrl ?? undefined,
-    cssUrl: version.cssUrl ?? undefined,
-    metaUrl: version.metaUrl ?? undefined,
-    previewUrl: version.previewUrl ?? undefined,
-    previewVideo: version.previewVideo ?? undefined,
+    htmlUrl: template.htmlUrl ?? version.htmlUrl ?? undefined,
+    cssUrl: template.cssUrl ?? version.cssUrl ?? undefined,
+    metaUrl: template.metaUrl ?? version.metaUrl ?? undefined,
+    previewUrl: template.previewUrl ?? version.previewUrl ?? undefined,
+    previewVideo: template.previewVideo ?? version.previewVideo ?? undefined,
     activeVersion: version,
   };
 
