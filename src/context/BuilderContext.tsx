@@ -603,46 +603,42 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const updateTheme = useCallback(
     (changes: Partial<ThemeState>) => {
-      setTheme((prev) => {
-        const nextColors = changes.colors ? { ...prev.colors, ...changes.colors } : prev.colors;
-        const nextFonts = changes.fonts ? { ...prev.fonts, ...changes.fonts } : prev.fonts;
+      // Defer to avoid setState during render
+      queueMicrotask(() => {
+        setTheme((prev) => {
+          const nextColors = changes.colors ? { ...prev.colors, ...changes.colors } : prev.colors;
+          const nextFonts = changes.fonts ? { ...prev.fonts, ...changes.fonts } : prev.fonts;
 
-        const hasColorChanges = Boolean(changes.colors && Object.keys(changes.colors).length > 0);
-        const hasFontChanges = Boolean(changes.fonts && Object.keys(changes.fonts).length > 0);
-        const hasTokenChanges = hasColorChanges || hasFontChanges;
+          const hasColorChanges = Boolean(changes.colors && Object.keys(changes.colors).length > 0);
+          const hasFontChanges = Boolean(changes.fonts && Object.keys(changes.fonts).length > 0);
+          const hasTokenChanges = hasColorChanges || hasFontChanges;
 
-        const nameProvided = Object.prototype.hasOwnProperty.call(changes, "name");
-        const labelProvided = Object.prototype.hasOwnProperty.call(changes, "label");
+          let nextName = changes.name ?? prev.name;
+          let nextLabel = changes.label ?? prev.label;
 
-        let nextName = nameProvided ? changes.name : prev.name;
-        let nextLabel = labelProvided ? changes.label : prev.label;
+          if (hasTokenChanges && !changes.name && !changes.label) {
+            nextName = "Custom";
+            nextLabel = "Custom";
+          }
 
-        if (!labelProvided && nameProvided) {
-          nextLabel = changes.name;
-        }
+          const next: ThemeState = {
+            colors: nextColors,
+            fonts: nextFonts,
+            name: nextName,
+            label: nextLabel,
+          };
 
-        if (hasTokenChanges && !nameProvided && !labelProvided) {
-          nextName = "Custom";
-          nextLabel = "Custom";
-        }
+          setStoreTheme(nextColors);
 
-        const next: ThemeState = {
-          colors: nextColors,
-          fonts: nextFonts,
-          name: nextName,
-          label: nextLabel,
-        };
+          if (websiteId) {
+            void saveWebsiteChanges(websiteId, { theme: next });
+          }
 
-        setStoreTheme(nextColors);
-
-        if (websiteId) {
-          void saveWebsiteChanges(websiteId, { theme: next });
-        }
-
-        return next;
+          return next;
+        });
       });
     },
-    [saveWebsiteChanges, setStoreTheme, websiteId]
+    [saveWebsiteChanges, setStoreTheme, setTheme, websiteId]
   );
 
   const registerThemeDefaults = useCallback((defaults: Partial<ThemeState>) => {
