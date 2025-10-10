@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { useBuilder, type TemplateContentSection } from "@/context/BuilderContext";
 import type { BuilderPanel, TemplateColorDefinition, TemplateModuleDefinition } from "@/lib/templates";
 import { useTemplateMeta } from "@/hooks/useTemplateMeta";
-import { useBuilderStore } from "@/store/builderStore";
+import { DEFAULT_BUILDER_PAGES, useBuilderStore } from "@/store/builderStore";
 import { DynamicPanelRenderer } from "./panels/DynamicPanels";
 import { PageList } from "./PageList";
 import { ThemePanel, normaliseThemeOptions, type ThemeOption } from "./ThemePanel";
@@ -42,6 +42,7 @@ export function Sidebar() {
   const meta = useTemplateMeta(selectedTemplate);
   const resetValues = useBuilderStore((state) => state.resetValues);
   const setStoreTheme = useBuilderStore((state) => state.setTheme);
+  const setStorePages = useBuilderStore((state) => state.setPages);
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
   const currentStepKey = steps[currentStep] ?? steps[0];
@@ -109,7 +110,8 @@ export function Sidebar() {
         : toSentence(section.id)
     );
     setStorePages(sectionLabels.length > 0 ? sectionLabels : [...DEFAULT_BUILDER_PAGES]);
-  }, [metaPages, selectedTemplate.sections]);
+  }, [metaPages, selectedTemplate.sections, setStorePages]);
+
 
   return (
     <aside
