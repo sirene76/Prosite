@@ -69,9 +69,7 @@ export function WebsitePreview() {
       setIsLoading(true);
       setAssets(null);
       try {
-        const response = await fetch(
-          `/api/websites?templateId=${encodeURIComponent(selectedTemplate.id)}`
-        );
+        const response = await fetch(`/api/templates/${selectedTemplate.id}`);
         if (!response.ok) {
           throw new Error("Unable to load template");
         }
@@ -80,8 +78,8 @@ export function WebsitePreview() {
           css?: string;
         };
         if (isMounted) {
-          const html = data.html ?? "";
-          const css = data.css ?? "";
+          const html = data.html ?? selectedTemplate.html ?? "";
+          const css = data.css ?? selectedTemplate.css ?? "";
           const placeholders = extractPlaceholders(html);
           const colorDefaults = extractColorDefaults(
             css,
@@ -107,7 +105,15 @@ export function WebsitePreview() {
     return () => {
       isMounted = false;
     };
-  }, [registerContentPlaceholders, registerThemeDefaults, selectedTemplate.colors, selectedTemplate.fonts, selectedTemplate.id]);
+  }, [
+    registerContentPlaceholders,
+    registerThemeDefaults,
+    selectedTemplate.colors,
+    selectedTemplate.fonts,
+    selectedTemplate.id,
+    selectedTemplate.html,
+    selectedTemplate.css,
+  ]);
 
   const mergedData = useMemo(() => {
     const baseContent = typeof content === "object" && content !== null ? content : {};
