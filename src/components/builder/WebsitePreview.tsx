@@ -40,6 +40,7 @@ export function WebsitePreview() {
     registerThemeDefaults,
     updatePreviewDocument,
     openPreview,
+    previewDocument,
     isPreviewReady
   } = useBuilder();
   const [assets, setAssets] = useState<TemplatePayload | null>(null);
