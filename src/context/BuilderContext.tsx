@@ -605,6 +605,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
     (changes: Partial<ThemeState>) => {
       // Defer to avoid setState during render
       queueMicrotask(() => {
+
         setTheme((prev) => {
           const nextColors = changes.colors ? { ...prev.colors, ...changes.colors } : prev.colors;
           const nextFonts = changes.fonts ? { ...prev.fonts, ...changes.fonts } : prev.fonts;
