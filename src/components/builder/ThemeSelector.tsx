@@ -56,11 +56,14 @@ export function ThemeSelector({ themes }: ThemeSelectorProps) {
   );
 }
 
-function isSameTheme(a: Record<string, string>, b: Record<string, string>) {
+function isSameTheme(
+  a: Record<string, string> = {},
+  b: Record<string, string> = {}
+) {
   const aEntries = Object.entries(a);
   if (aEntries.length === 0) return false;
   return aEntries.every(([key, val]) => {
-    const current = b[key];
+    const current = b?.[key];
     return current && current.toLowerCase() === val.toLowerCase();
   });
 }
