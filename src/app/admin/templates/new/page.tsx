@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { TemplateMeta } from "@/hooks/useTemplatePreview";
 
 import "ace-builds/src-noconflict/mode-html";
 import "ace-builds/src-noconflict/mode-css";
@@ -67,27 +66,18 @@ export default function NewTemplatePage() {
     | { type: "success" | "error"; message: string }
     | null
   >(null);
-  const [parsedMeta, setParsedMeta] = useState<TemplateMeta | Record<string, unknown> | null>(() => {
-    try {
-      return JSON.parse(defaultMeta);
-    } catch {
-      return null;
-    }
-  });
   const [metaError, setMetaError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       if (!form.meta.trim()) {
-        setParsedMeta({});
         setMetaError(null);
         setUploadFeedback((prev) =>
           prev && prev.type === "error" && prev.message.includes("meta.json") ? null : prev,
         );
         return;
       }
-      const parsed = JSON.parse(form.meta) as TemplateMeta;
-      setParsedMeta(parsed);
+      JSON.parse(form.meta);
       setMetaError(null);
       setUploadFeedback((prev) =>
         prev && prev.type === "error" && prev.message.includes("meta.json") ? null : prev,
@@ -95,7 +85,6 @@ export default function NewTemplatePage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid JSON";
       setMetaError(message);
-      setParsedMeta(null);
     }
   }, [form.meta]);
 
@@ -380,7 +369,7 @@ export default function NewTemplatePage() {
                   : "Start writing HTML to see the live preview."}
               </p>
               {metaError && <p className="text-xs text-rose-300">meta.json error: {metaError}</p>}
-              <TemplateLivePreview html={form.html} css={form.css} meta={parsedMeta ?? undefined} />
+              <TemplateLivePreview html={form.html} css={form.css} meta={safeJsonParse(form.meta)} />
             </CardContent>
           </Card>
           <div className="flex flex-col items-end gap-4 pb-4">
@@ -395,4 +384,16 @@ export default function NewTemplatePage() {
       </div>
     </div>
   );
+}
+
+function safeJsonParse(value: string) {
+  if (!value.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
 }

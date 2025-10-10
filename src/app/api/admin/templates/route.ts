@@ -115,6 +115,21 @@ export async function POST(req: Request) {
 
     const versions = versionInputs.map(sanitiseVersion);
 
+    const rawMeta = (body as { meta?: unknown }).meta;
+    let meta: unknown = {};
+    try {
+      if (rawMeta == null) {
+        meta = {};
+      } else if (typeof rawMeta === "string") {
+        meta = JSON.parse(rawMeta);
+      } else {
+        meta = rawMeta;
+      }
+    } catch (error) {
+      console.error("Failed to parse template meta payload", error);
+      meta = {};
+    }
+
     const defaultVersionNumber = versions[versions.length - 1]?.number ?? "1.0.0";
     const currentVersion =
       typeof body.currentVersion === "string" && body.currentVersion.trim().length > 0
@@ -136,6 +151,7 @@ export async function POST(req: Request) {
       published: typeof body.published === "boolean" ? body.published : false,
       featured: typeof body.featured === "boolean" ? body.featured : false,
       createdBy: session.user.id,
+      meta,
     });
 
     return NextResponse.json(template);

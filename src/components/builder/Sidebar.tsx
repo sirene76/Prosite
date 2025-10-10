@@ -5,10 +5,10 @@ import clsx from "clsx";
 import { useBuilder, type TemplateContentSection } from "@/context/BuilderContext";
 import type { BuilderPanel, TemplateColorDefinition, TemplateModuleDefinition } from "@/lib/templates";
 import { useTemplateMeta } from "@/hooks/useTemplateMeta";
-import { useBuilderStore } from "@/store/builderStore";
+import { DEFAULT_BUILDER_PAGES, useBuilderStore } from "@/store/builderStore";
 import { DynamicPanelRenderer } from "./panels/DynamicPanels";
 import { PageList } from "./PageList";
-import { ThemeSelector } from "./ThemeSelector";
+import { ThemePanel, normaliseThemeOptions, type ThemeOption } from "./ThemePanel";
 import { ContentForm } from "./ContentForm";
 import { ContentEditor } from "./ContentEditor";
 
@@ -42,6 +42,7 @@ export function Sidebar() {
   const meta = useTemplateMeta(selectedTemplate);
   const resetValues = useBuilderStore((state) => state.resetValues);
   const setStoreTheme = useBuilderStore((state) => state.setTheme);
+  const setStorePages = useBuilderStore((state) => state.setPages);
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
   const currentStepKey = steps[currentStep] ?? steps[0];
@@ -54,6 +55,22 @@ export function Sidebar() {
     () => [...baseTabs, ...customPanels.map((panel) => ({ id: panel.id, label: panel.label }))],
     [customPanels]
   );
+
+  const themeOptions = useMemo<ThemeOption[]>(() => {
+    const inlineThemes = normaliseThemeOptions(meta?.themes);
+    if (inlineThemes.length > 0) {
+      return inlineThemes;
+    }
+    return normaliseThemeOptions(selectedTemplate.meta?.themes);
+  }, [meta?.themes, selectedTemplate.meta]);
+
+  const metaPages = useMemo(() => {
+    const inlinePages = normalisePages(meta?.pages);
+    if (inlinePages.length > 0) {
+      return inlinePages;
+    }
+    return normalisePages(selectedTemplate.meta?.pages);
+  }, [meta?.pages, selectedTemplate.meta]);
 
   useEffect(() => {
     if (baseTabs.some((tab) => tab.id === activeTab)) {
@@ -74,37 +91,26 @@ export function Sidebar() {
   }, [resetValues, selectedTemplate.id]);
 
   useEffect(() => {
-    if (!meta?.themes?.length) {
+    if (!themeOptions.length) {
       setStoreTheme({});
       return;
     }
-    setStoreTheme(meta.themes[0]?.colors ?? {});
-  }, [meta?.themes, selectedTemplate.id, setStoreTheme]);
+    setStoreTheme(themeOptions[0]?.colors ?? {});
+  }, [selectedTemplate.id, setStoreTheme, themeOptions]);
 
-  const pagesToRender = useMemo(() => {
-    if (Array.isArray(meta?.pages) && meta.pages.length > 0) {
-      return meta.pages
-        .filter((page: unknown): page is { id: string; label: string; scrollAnchor?: string } => {
-          return (
-            typeof page === "object" &&
-            page !== null &&
-            typeof (page as { id?: unknown }).id === "string" &&
-            typeof (page as { label?: unknown }).label === "string"
-          );
-        })
-        .map((page) => ({
-          id: page.id,
-          label: page.label,
-          scrollAnchor: page.scrollAnchor,
-        }));
+  useEffect(() => {
+    if (metaPages.length > 0) {
+      setStorePages(metaPages.map((page) => page.label));
+      return;
     }
 
-    return (selectedTemplate.sections ?? []).map((section) => ({
-      id: section.id,
-      label: section.label ?? formatStepLabel(section.id),
-      scrollAnchor: `#${section.id}`,
-    }));
-  }, [meta?.pages, selectedTemplate.sections]);
+    const sectionLabels = selectedTemplate.sections.map((section) =>
+      typeof section.label === "string" && section.label.trim().length > 0
+        ? section.label.trim()
+        : toSentence(section.id)
+    );
+    setStorePages(sectionLabels.length > 0 ? sectionLabels : [...DEFAULT_BUILDER_PAGES]);
+  }, [metaPages, selectedTemplate.sections, setStorePages]);
 
   return (
     <aside
@@ -159,12 +165,12 @@ export function Sidebar() {
                       <p className="text-sm font-semibold text-slate-100">{selectedTemplate.name}</p>
                     </div>
                     <div className="overflow-x-auto w-full">
-                      <PageList pages={pagesToRender} />
+                      <PageList pages={metaPages} />
                     </div>
                   </div>
                 ) : null}
 
-                {activeTab === "theme" ? <ThemeSelector themes={meta?.themes} /> : null}
+                {activeTab === "theme" ? <ThemePanel themes={themeOptions} /> : null}
 
                 {activeTab === "content" ? (
                   meta?.fields?.length ? (
@@ -434,4 +440,40 @@ function formatTokenLabel(token: string) {
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^./, (match) => match.toUpperCase());
+}
+
+type MetaPageDefinition = {
+  id: string;
+  label: string;
+  scrollAnchor?: string;
+};
+
+function normalisePages(source: unknown): MetaPageDefinition[] {
+  if (!Array.isArray(source)) {
+    return [];
+  }
+
+  return source
+    .map((page) => {
+      if (
+        page &&
+        typeof page === "object" &&
+        typeof (page as { id?: unknown }).id === "string" &&
+        typeof (page as { label?: unknown }).label === "string"
+      ) {
+        const scrollAnchor =
+          typeof (page as { scrollAnchor?: unknown }).scrollAnchor === "string"
+            ? (page as { scrollAnchor: string }).scrollAnchor
+            : undefined;
+
+        return {
+          id: (page as { id: string }).id,
+          label: (page as { label: string }).label,
+          scrollAnchor,
+        } as MetaPageDefinition;
+      }
+
+      return null;
+    })
+    .filter((page): page is MetaPageDefinition => Boolean(page));
 }
