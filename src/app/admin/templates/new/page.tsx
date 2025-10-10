@@ -271,7 +271,7 @@ export default function NewTemplatePage() {
                   </p>
                 </div>
                 <UploadDropzone
-                  endpoint="templateFiles"
+                  endpoint="templatePreview"
                   onClientUploadComplete={handleUploadComplete}
                   onUploadError={handleUploadError}
                   className={`${uploadDropzoneClassName} cursor-pointer hover:border-pink-400`}
@@ -306,7 +306,7 @@ export default function NewTemplatePage() {
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
                     <span>Uploaded: {getUploadedFileName(form.previewUrl)}</span>
                     <UploadButton
-                      endpoint="templateFiles"
+                      endpoint="templatePreview"
                       onClientUploadComplete={handleUploadComplete}
                       onUploadError={handleUploadError}
                       appearance={{

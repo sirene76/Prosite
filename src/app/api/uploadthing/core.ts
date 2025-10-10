@@ -5,15 +5,9 @@ import { authOptions } from "@/lib/auth";
 const f = createUploadthing({ access: "public" });
 
 export const ourFileRouter = {
-  templateFiles: f({
-    "image/png": { maxFileSize: "4MB" },
-    "image/jpeg": { maxFileSize: "4MB" },
-    "image/gif": { maxFileSize: "4MB" },
-    "video/mp4": { maxFileSize: "50MB" },
-    "video/webm": { maxFileSize: "50MB" },
-    "text/html": { maxFileSize: "2MB" },
-    "text/css": { maxFileSize: "2MB" },
-    "application/json": { maxFileSize: "1MB" },
+  templatePreview: f({
+    image: { maxFileSize: "4MB" },
+    video: { maxFileSize: "50MB" },
   })
     .middleware(async () => {
       const session = await getServerSession(authOptions);

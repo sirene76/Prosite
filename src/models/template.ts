@@ -27,6 +27,9 @@ const TemplateSchema = new mongoose.Schema(
     category: { type: String, index: true },
     subcategory: String,
     tags: [String],
+    html: String,
+    css: String,
+    meta: mongoose.Schema.Types.Mixed,
 
     currentVersion: { type: String, default: "1.0.0" },
     versions: [VersionSchema],
