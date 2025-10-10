@@ -112,6 +112,7 @@ export function Sidebar() {
     setStorePages(sectionLabels.length > 0 ? sectionLabels : [...DEFAULT_BUILDER_PAGES]);
   }, [metaPages, selectedTemplate.sections, setStorePages]);
 
+
   return (
     <aside
       className={clsx(
