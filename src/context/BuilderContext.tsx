@@ -57,6 +57,7 @@ type BuilderContextValue = {
   setDevice: (device: Device) => void;
   previewFrame: HTMLIFrameElement | null;
   registerPreviewFrame: (frame: HTMLIFrameElement | null) => void;
+  previewDocument: string;
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
   selectedTemplate: TemplateDefinition;
@@ -1007,6 +1008,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       setDevice,
       previewFrame,
       registerPreviewFrame,
+      previewDocument,
       isSidebarCollapsed,
       toggleSidebar,
       selectedTemplate,
@@ -1039,6 +1041,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       setDevice,
       previewFrame,
       registerPreviewFrame,
+      previewDocument,
       isSidebarCollapsed,
       toggleSidebar,
       selectedTemplate,
