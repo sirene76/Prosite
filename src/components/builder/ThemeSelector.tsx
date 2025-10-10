@@ -1,38 +1,45 @@
 "use client";
 
 import { useMemo } from "react";
+import { useBuilderStore } from "@/context/BuilderContext";
+import { useBuilder } from "@/context/BuilderContext";
 
-import { useBuilderStore } from "@/store/builderStore";
-
-type ThemeOption = {
+interface ThemeOption {
   name: string;
   colors: Record<string, string>;
-};
+}
 
-type ThemeSelectorProps = {
-  themes?: ThemeOption[];
-};
+interface ThemeSelectorProps {
+  themes: ThemeOption[];
+}
 
 export function ThemeSelector({ themes }: ThemeSelectorProps) {
+  const { updateTheme } = useBuilder(); // ✅ use context updater
   const theme = useBuilderStore((state) => state.theme);
-  const setTheme = useBuilderStore((state) => state.setTheme);
 
   const hasThemes = Array.isArray(themes) && themes.length > 0;
   const activeName = useMemo(() => {
     if (!hasThemes) return undefined;
-    return themes?.find((option) => isSameTheme(option.colors, theme))?.name;
+    return themes.find((option) => isSameTheme(option.colors, theme.colors))?.name;
   }, [hasThemes, theme, themes]);
 
-  if (!hasThemes) return <p className="text-sm text-slate-400">No theme variations</p>;
+  if (!hasThemes)
+    return <p className="text-sm text-slate-400">No theme variations</p>;
 
   return (
     <div className="flex flex-wrap gap-3">
-      {themes!.map((themeOption) => {
+      {themes.map((themeOption) => {
         const isActive = activeName === themeOption.name;
         return (
           <button
             key={themeOption.name}
-            onClick={() => setTheme(themeOption.colors)}
+            onClick={() =>
+              updateTheme({
+                colors: themeOption.colors,
+                name: themeOption.name,
+                label: themeOption.name,
+              })
+            }
             className={`px-3 py-2 rounded-lg border transition text-sm ${
               isActive
                 ? "border-builder-accent/60 bg-builder-accent/10 text-builder-accent"
@@ -48,13 +55,11 @@ export function ThemeSelector({ themes }: ThemeSelectorProps) {
   );
 }
 
-function isSameTheme(a: Record<string, string>, b: Record<string, unknown>) {
+function isSameTheme(a: Record<string, string>, b: Record<string, string>) {
   const aEntries = Object.entries(a);
-  if (aEntries.length === 0) {
-    return false;
-  }
-  return aEntries.every(([key, value]) => {
-    const current = typeof b[key] === "string" ? (b[key] as string) : undefined;
-    return current?.toLowerCase() === value?.toLowerCase();
+  if (aEntries.length === 0) return false;
+  return aEntries.every(([key, val]) => {
+    const current = b[key];
+    return current && current.toLowerCase() === val.toLowerCase();
   });
 }
