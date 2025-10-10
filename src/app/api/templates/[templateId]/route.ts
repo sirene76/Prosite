@@ -11,12 +11,22 @@ export async function GET(
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
+  let meta: unknown = template.meta ?? {};
+  if (typeof template.meta === "string") {
+    try {
+      meta = JSON.parse(template.meta);
+    } catch (error) {
+      console.error(`Failed to parse template ${template._id} meta`, error);
+      meta = {};
+    }
+  }
+
   return NextResponse.json({
     id: template._id,
     name: template.name,
     html: template.html ?? "",
     css: template.css ?? "",
-    meta: template.meta ?? {},
+    meta,
     createdAt:
       template.createdAt instanceof Date
         ? template.createdAt.toISOString()
