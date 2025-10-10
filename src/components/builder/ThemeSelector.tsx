@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useBuilder } from "@/context/BuilderContext";
 import { useBuilderStore } from "@/store/builderStore";
 
+
 interface ThemeOption {
   name: string;
   colors: Record<string, string>;
@@ -20,9 +21,7 @@ export function ThemeSelector({ themes }: ThemeSelectorProps) {
   const hasThemes = Array.isArray(themes) && themes.length > 0;
   const activeName = useMemo(() => {
     if (!hasThemes) return undefined;
-    const currentColors = theme?.colors;
-    if (!currentColors) return undefined;
-    return themes.find((option) => isSameTheme(option.colors, currentColors))?.name;
+    return themes.find((option) => isSameTheme(option.colors, theme.colors))?.name;
   }, [hasThemes, theme, themes]);
 
   if (!hasThemes)
@@ -57,16 +56,11 @@ export function ThemeSelector({ themes }: ThemeSelectorProps) {
   );
 }
 
-function isSameTheme(
-  a: Record<string, string>,
-  b?: Record<string, string>
-) {
-  if (!b) return false;
-  const aEntries = Object.entries(a ?? {});
+function isSameTheme(a: Record<string, string>, b: Record<string, string>) {
+  const aEntries = Object.entries(a);
   if (aEntries.length === 0) return false;
   return aEntries.every(([key, val]) => {
     const current = b[key];
-    if (!current || !val) return false;
-    return current.toLowerCase() === val.toLowerCase();
+    return current && current.toLowerCase() === val.toLowerCase();
   });
 }
