@@ -128,76 +128,78 @@ export function WebsitePreview() {
     [storeTheme]
   );
 
-  const previewDocument = useMemo(() => {
+  useEffect(() => {
     if (!assets) {
-      return "";
+      updatePreviewDocument("");
+      return;
     }
 
-    const colorPalette: Record<string, string> = {};
-    selectedTemplate.colors.forEach((color) => {
-      const key = color.id;
-      const value =
-        storeTheme[key] ?? theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
-      if (value) {
-        colorPalette[key] = value;
-      }
-    });
+    const timeout = setTimeout(() => {
+      const colorPalette: Record<string, string> = {};
+      selectedTemplate.colors.forEach((color) => {
+        const key = color.id;
+        const value =
+          storeTheme[key] ?? theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
+        if (value) {
+          colorPalette[key] = value;
+        }
+      });
 
-    Object.entries(storeTheme).forEach(([key, value]) => {
-      if (typeof value === "string" && value.trim()) {
-        colorPalette[key] = value;
-      }
-    });
+      Object.entries(storeTheme).forEach(([key, value]) => {
+        if (typeof value === "string" && value.trim()) {
+          colorPalette[key] = value;
+        }
+      });
 
-    const fontTokens: Record<string, string> = {};
-    selectedTemplate.fonts.forEach((key) => {
-      const value = theme.fonts[key] ?? themeDefaults.fonts[key] ?? "";
-      if (value) {
-        fontTokens[key] = value;
-      }
-    });
+      const fontTokens: Record<string, string> = {};
+      selectedTemplate.fonts.forEach((key) => {
+        const value = theme.fonts[key] ?? themeDefaults.fonts[key] ?? "";
+        if (value) {
+          fontTokens[key] = value;
+        }
+      });
 
-    const rendered = renderTemplate({
-      html: assets.html,
-      values: mergedData,
-      modules: selectedTemplate.modules,
-      theme: {
-        primary: colorPalette.primary ?? getStoreThemeColor("primary"),
-        secondary: colorPalette.secondary ?? getStoreThemeColor("secondary"),
-        background: colorPalette.background ?? getStoreThemeColor("background"),
-        text: colorPalette.text ?? getStoreThemeColor("text"),
-      },
-      themeTokens: {
+      const rendered = renderTemplate({
+        html: assets.html,
+        values: mergedData,
+        modules: selectedTemplate.modules,
+        theme: {
+          primary: colorPalette.primary ?? getStoreThemeColor("primary"),
+          secondary: colorPalette.secondary ?? getStoreThemeColor("secondary"),
+          background: colorPalette.background ?? getStoreThemeColor("background"),
+          text: colorPalette.text ?? getStoreThemeColor("text"),
+        },
+        themeTokens: {
+          colors: colorPalette,
+          fonts: fontTokens,
+        },
+      });
+
+      const themedDocument = injectThemeTokens({
+        html: rendered,
+        css: assets.css,
         colors: colorPalette,
         fonts: fontTokens,
-      },
-    });
+      });
 
-    const themedDocument = injectThemeTokens({
-      html: rendered,
-      css: assets.css,
-      colors: colorPalette,
-      fonts: fontTokens,
-    });
+      const finalDoc = injectScrollScript(themedDocument);
+      updatePreviewDocument(finalDoc);
+    }, 150);
 
-    return injectScrollScript(themedDocument);
+    return () => clearTimeout(timeout);
   }, [
     assets,
+    content,
+    getStoreThemeColor,
     mergedData,
     selectedTemplate.colors,
     selectedTemplate.fonts,
     selectedTemplate.modules,
     storeTheme,
-    getStoreThemeColor,
-    theme.colors,
-    theme.fonts,
-    themeDefaults.colors,
-    themeDefaults.fonts,
+    theme,
+    themeDefaults,
+    updatePreviewDocument,
   ]);
-
-  useEffect(() => {
-    updatePreviewDocument(previewDocument);
-  }, [previewDocument, updatePreviewDocument]);
 
   const handleZoomIn = useCallback(() => {
     setIsAutoFit(false);
