@@ -601,30 +601,11 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const toggleSidebar = useCallback(() => setIsSidebarCollapsed((prev) => !prev), []);
 
-  const scheduleThemeUpdate = useCallback((cb: () => void) => {
-    if (typeof window === "undefined") {
-      cb();
-      return;
-    }
-
-    const run = () => {
-      if (typeof window.requestAnimationFrame === "function") {
-        window.requestAnimationFrame(cb);
-      } else {
-        window.setTimeout(cb, 0);
-      }
-    };
-
-    if (typeof queueMicrotask === "function") {
-      queueMicrotask(run);
-    } else {
-      window.setTimeout(run, 0);
-    }
-  }, []);
-
   const updateTheme = useCallback(
     (changes: Partial<ThemeState>) => {
-      scheduleThemeUpdate(() => {
+      // Defer to avoid setState during render
+      queueMicrotask(() => {
+
         setTheme((prev) => {
           const nextColors = changes.colors ? { ...prev.colors, ...changes.colors } : prev.colors;
           const nextFonts = changes.fonts ? { ...prev.fonts, ...changes.fonts } : prev.fonts;
@@ -658,7 +639,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         });
       });
     },
-    [saveWebsiteChanges, scheduleThemeUpdate, setStoreTheme, setTheme, websiteId]
+    [saveWebsiteChanges, setStoreTheme, setTheme, websiteId]
   );
 
   const registerThemeDefaults = useCallback((defaults: Partial<ThemeState>) => {
