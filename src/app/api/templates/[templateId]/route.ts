@@ -4,9 +4,10 @@ import { getTemplateById } from "@/lib/templates";
 
 export async function GET(
   req: Request,
-  { params }: { params: { templateId: string } }
+  { params }: { params: Promise<{ templateId: string }> }
 ) {
-  const template = await getTemplateById(params.templateId);
+  const { templateId } = await params;
+  const template = await getTemplateById(templateId);
   if (!template) {
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
