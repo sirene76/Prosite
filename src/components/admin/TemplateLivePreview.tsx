@@ -1,53 +1,57 @@
 "use client";
-
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function TemplateLivePreview({ html, css, meta }: any) {
   const [activeTheme, setActiveTheme] = useState(meta?.themes?.[0] || null);
   const [doc, setDoc] = useState("");
 
-  // 🧩 Helper: Build CSS variable string from theme
-  const buildThemeCSS = (theme: any) => {
-    if (!theme?.colors) return "";
-    return Object.entries(theme.colors)
-      .map(([key, value]) => `--${key}: ${value};`)
-      .join(" ");
-  };
+  // Build CSS variable string from active theme
+  const buildThemeCSS = (theme: any) =>
+    theme?.colors
+      ? Object.entries(theme.colors)
+          .map(([key, val]) => `--${key}: ${val};`)
+          .join(" ")
+      : "";
 
-  // 🧩 Debounced re-render effect for smooth updates
+  // Debounced document re-render
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!html || !css) return;
 
       const themeVars = buildThemeCSS(activeTheme);
 
+      // ✅ Put author CSS first, then theme variables last so they override
       const docHTML = `
         <html>
           <head>
             <meta charset="UTF-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <style>
-              :root { ${themeVars} }
+            <style id="author-css">
               ${css}
+            </style>
+            <style id="theme-vars">
+              :root { ${themeVars} }
             </style>
           </head>
           <body>${html}</body>
         </html>
       `;
-
       setDoc(docHTML);
-    }, 200); // debounce for typing or theme switching
+    }, 200);
     return () => clearTimeout(timeout);
   }, [html, css, activeTheme]);
 
-  // 🧩 Auto-reset active theme when meta changes
+  // Auto-reset active theme when meta changes
   useEffect(() => {
-    if (meta?.themes?.length && !activeTheme) {
-      setActiveTheme(meta.themes[0]);
+    if (!meta?.themes?.length) {
+      setActiveTheme(null);
+      return;
     }
-  }, [meta, activeTheme]);
+    const stillValid =
+      activeTheme && meta.themes.some((t: any) => t.name === activeTheme.name);
+    if (!stillValid) setActiveTheme(meta.themes[0]);
+  }, [meta]);
 
-  // 🧩 Render UI
   if (!html) {
     return (
       <div className="text-gray-400 text-sm p-6 text-center">
@@ -64,7 +68,9 @@ export default function TemplateLivePreview({ html, css, meta }: any) {
           <select
             value={activeTheme?.name}
             onChange={(e) =>
-              setActiveTheme(meta.themes.find((t: any) => t.name === e.target.value))
+              setActiveTheme(
+                meta.themes.find((t: any) => t.name === e.target.value)
+              )
             }
             className="bg-gray-800 text-gray-100 border border-gray-700 rounded px-2 py-1 text-sm focus:outline-none"
           >
@@ -81,7 +87,11 @@ export default function TemplateLivePreview({ html, css, meta }: any) {
         <iframe
           srcDoc={doc}
           className="rounded-md shadow-md bg-white transition-all duration-300"
-          style={{ width: "100%", height: "700px", border: "none" }}
+          style={{
+            width: "100%",
+            height: "700px",
+            border: "none",
+          }}
           title="Template Preview"
         />
       </div>
