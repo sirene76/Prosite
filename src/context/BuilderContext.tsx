@@ -463,6 +463,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   const setStorePages = useBuilderStore((state) => state.setPages);
   const setStoreWebsiteName = useBuilderStore((state) => state.setWebsiteName);
   const setStoreThemeName = useBuilderStore((state) => state.setThemeName);
+  const setStoreTheme = useBuilderStore((state) => state.setTheme);
   const setStoreWebsiteId = useBuilderStore((state) => state.setWebsiteId);
   const [previewFrame, setPreviewFrame] = useState<HTMLIFrameElement | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -632,6 +633,8 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
           label: nextLabel,
         };
 
+        setStoreTheme(nextColors);
+
         if (websiteId) {
           void saveWebsiteChanges(websiteId, { theme: next });
         }
@@ -639,7 +642,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         return next;
       });
     },
-    [saveWebsiteChanges, websiteId]
+    [saveWebsiteChanges, setStoreTheme, websiteId]
   );
 
   const registerThemeDefaults = useCallback((defaults: Partial<ThemeState>) => {
