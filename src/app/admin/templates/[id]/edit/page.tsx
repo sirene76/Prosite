@@ -1,27 +1,26 @@
 import TemplateEditorForm from "@/components/admin/TemplateEditorForm";
 
-type EditTemplatePageProps = {
-  params: { id: string };
-};
+export default async function EditTemplatePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  // ✅ Await params per Next.js 15 requirement
+  const resolvedParams = await params;
+  const templateId = resolvedParams?.id;
 
-const fallbackBaseUrl = "http://localhost:3000";
-
-function getBaseUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL;
-  if (!fromEnv) {
-    return fallbackBaseUrl;
+  if (!templateId) {
+    throw new Error("Missing template ID in route parameters.");
   }
 
-  return fromEnv.startsWith("http") ? fromEnv : `https://${fromEnv}`;
-}
-
-export default async function EditTemplatePage({ params }: EditTemplatePageProps) {
-  const response = await fetch(`${getBaseUrl()}/api/admin/templates/${params.id}`, {
-    cache: "no-store",
-  });
+  // ✅ Fetch template data
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/templates/${templateId}`,
+    { cache: "no-store" }
+  );
 
   if (!response.ok) {
-    throw new Error("Failed to fetch template");
+    throw new Error("Failed to fetch template details.");
   }
 
   const template = await response.json();

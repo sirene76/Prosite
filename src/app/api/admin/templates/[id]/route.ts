@@ -115,11 +115,16 @@ function buildUpdates(body: UpdatePayload): Record<string, unknown> | { error: s
   return updates;
 }
 
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   await connectDB();
 
+  const { id } = await params;
+
   try {
-    const template = await Template.findById(params.id).lean();
+    const template = await Template.findById(id).lean();
     if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
@@ -130,13 +135,18 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: "Invalid template id" }, { status: 400 });
     }
 
-    console.error(`Failed to fetch template ${params.id}`, error);
+    console.error(`Failed to fetch template ${id}`, error);
     return NextResponse.json({ error: "Failed to fetch template" }, { status: 500 });
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   await connectDB();
+
+  const { id } = await params;
 
   try {
     const body = (await request.json()) as UpdatePayload;
@@ -146,7 +156,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: updates.error }, { status: updates.status });
     }
 
-    const updated = await Template.findByIdAndUpdate(params.id, updates, { new: true });
+    const updated = await Template.findByIdAndUpdate(id, updates, { new: true });
     if (!updated) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
@@ -161,13 +171,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Invalid template id" }, { status: 400 });
     }
 
-    console.error(`Failed to update template ${params.id}`, error);
+    console.error(`Failed to update template ${id}`, error);
     return NextResponse.json({ error: "Failed to update template" }, { status: 500 });
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   await connectDB();
+
+  const { id } = await params;
 
   try {
     const body = (await request.json()) as UpdatePayload;
@@ -202,7 +217,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ];
     }
 
-    const updated = await Template.findByIdAndUpdate(params.id, updates, { new: true });
+    const updated = await Template.findByIdAndUpdate(id, updates, { new: true });
     if (!updated) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
@@ -217,23 +232,28 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ error: "Invalid template id" }, { status: 400 });
     }
 
-    console.error(`Failed to update template ${params.id}`, error);
+    console.error(`Failed to update template ${id}`, error);
     return NextResponse.json({ error: "Failed to update template" }, { status: 500 });
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   await connectDB();
 
+  const { id } = await params;
+
   try {
-    await Template.findByIdAndDelete(params.id);
+    await Template.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (isCastError(error)) {
       return NextResponse.json({ error: "Invalid template id" }, { status: 400 });
     }
 
-    console.error(`Failed to delete template ${params.id}`, error);
+    console.error(`Failed to delete template ${id}`, error);
     return NextResponse.json({ error: "Failed to delete template" }, { status: 500 });
   }
 }
