@@ -1,5 +1,8 @@
 "use client";
 
+const safeSchedule = (cb: () => void) =>
+  typeof queueMicrotask === "function" ? queueMicrotask(cb) : Promise.resolve().then(cb);
+
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { useBuilder, type TemplateContentSection } from "@/context/BuilderContext";
@@ -92,10 +95,15 @@ export function Sidebar() {
 
   useEffect(() => {
     if (!themeOptions.length) {
-      setStoreTheme({});
+      // Defer reset to avoid cross-component render update
+      safeSchedule(() => setStoreTheme({}));
       return;
     }
-    setStoreTheme(themeOptions[0]?.colors ?? {});
+
+    // Defer seeding default theme after render commit
+    safeSchedule(() => {
+      setStoreTheme(themeOptions[0]?.colors ?? {});
+    });
   }, [selectedTemplate.id, setStoreTheme, themeOptions]);
 
   useEffect(() => {
