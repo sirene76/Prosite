@@ -5,6 +5,15 @@ import { Template } from "@/models/template";
 
 import { createSlug } from "../utils";
 
+type VersionUpdatePayload = {
+  number?: unknown;
+  changelog?: unknown;
+  previewUrl?: unknown;
+  inlineHtml?: unknown;
+  inlineCss?: unknown;
+  inlineMeta?: unknown;
+};
+
 type UpdatePayload = {
   name?: unknown;
   slug?: unknown;
@@ -15,6 +24,7 @@ type UpdatePayload = {
   currentVersion?: unknown;
   published?: unknown;
   featured?: unknown;
+  versions?: unknown;
 };
 
 function normaliseTags(value: unknown) {
@@ -165,6 +175,31 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     if ("error" in updates) {
       return NextResponse.json({ error: updates.error }, { status: updates.status });
+    }
+
+    if (Array.isArray(body.versions) && body.versions.length > 0) {
+      const [firstVersion] = body.versions as VersionUpdatePayload[];
+      const currentVersion =
+        typeof updates.currentVersion === "string" && updates.currentVersion.trim()
+          ? updates.currentVersion.trim()
+          : typeof body.currentVersion === "string" && body.currentVersion.trim()
+            ? body.currentVersion.trim()
+            : typeof firstVersion?.number === "string" && firstVersion.number.trim()
+              ? firstVersion.number.trim()
+              : "1.0.0";
+
+      updates.currentVersion = currentVersion;
+
+      updates.versions = [
+        {
+          number: currentVersion,
+          changelog: typeof firstVersion?.changelog === "string" ? firstVersion.changelog : "",
+          previewUrl: typeof firstVersion?.previewUrl === "string" ? firstVersion.previewUrl : "",
+          inlineHtml: typeof firstVersion?.inlineHtml === "string" ? firstVersion.inlineHtml : "",
+          inlineCss: typeof firstVersion?.inlineCss === "string" ? firstVersion.inlineCss : "",
+          inlineMeta: typeof firstVersion?.inlineMeta === "string" ? firstVersion.inlineMeta : "",
+        },
+      ];
     }
 
     const updated = await Template.findByIdAndUpdate(params.id, updates, { new: true });
