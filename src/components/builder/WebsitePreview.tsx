@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
+import type { TemplateColorDefinition } from "@/lib/templates";
 import { injectThemeTokens, renderTemplate } from "@/lib/renderTemplate";
 import { useBuilderStore } from "@/store/builderStore";
 
@@ -84,7 +85,9 @@ export function WebsitePreview() {
           const placeholders = extractPlaceholders(html);
           const colorDefaults = extractColorDefaults(
             css,
-            selectedTemplate.colors.map((color) => color.id)
+            selectedTemplate.colors.map(
+              (color: TemplateColorDefinition) => color.id
+            )
           );
           const fontDefaults = extractFontDefaults(css, selectedTemplate.fonts);
 
