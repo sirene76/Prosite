@@ -1,6 +1,8 @@
-import { notFound } from "next/navigation";
+import TemplateEditorForm from "@/components/admin/TemplateEditorForm";
 
-import { TemplateForm } from "../../_components/TemplateForm";
+type EditTemplatePageProps = {
+  params: { id: string };
+};
 
 const fallbackBaseUrl = "http://localhost:3000";
 
@@ -13,49 +15,20 @@ function getBaseUrl(): string {
   return fromEnv.startsWith("http") ? fromEnv : `https://${fromEnv}`;
 }
 
-type TemplateResponse = {
-  _id: string;
-  name: string;
-  slug: string;
-  category?: string;
-  subcategory?: string;
-  description?: string;
-  tags?: string[];
-  currentVersion?: string;
-};
-
-async function getTemplate(id: string): Promise<TemplateResponse | null> {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}/api/admin/templates/${id}`, { cache: "no-store" });
-
-  if (response.status === 404) {
-    return null;
-  }
+export default async function EditTemplatePage({ params }: EditTemplatePageProps) {
+  const response = await fetch(`${getBaseUrl()}/api/admin/templates/${params.id}`, {
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     throw new Error("Failed to fetch template");
   }
 
-  return (await response.json()) as TemplateResponse;
-}
-
-export default async function EditTemplatePage({ params }: { params: { id: string } }) {
-  const template = await getTemplate(params.id);
-
-  if (!template) {
-    notFound();
-  }
+  const template = await response.json();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-white">Edit Template</h2>
-        <p className="text-sm text-slate-400">
-          Update template details, media, and publishing status.
-        </p>
-      </div>
-
-      <TemplateForm mode="edit" template={template} />
+    <div className="p-8">
+      <TemplateEditorForm initialData={template} isEdit />
     </div>
   );
 }

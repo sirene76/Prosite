@@ -1,24 +1,36 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export default function TemplateLivePreview({ html, css, meta }: any) {
-  const [activeTheme, setActiveTheme] = useState(meta?.themes?.[0] || null);
-  const [doc, setDoc] = useState("");
+type TemplateTheme = {
+  name: string;
+  colors?: Record<string, string>;
+};
 
-  // Build CSS variable string from active theme
-  const buildThemeCSS = (theme: any) =>
-    theme?.colors
-      ? Object.entries(theme.colors)
-          .map(([key, val]) => `--${key}: ${val};`)
-          .join(" ")
-      : "";
+type TemplateMeta = {
+  themes?: TemplateTheme[];
+};
+
+type TemplateLivePreviewProps = {
+  html: string;
+  css: string;
+  meta?: TemplateMeta | null;
+};
+
+export default function TemplateLivePreview({ html, css, meta }: TemplateLivePreviewProps) {
+  const [activeTheme, setActiveTheme] = useState<TemplateTheme | null>(() => meta?.themes?.[0] ?? null);
+  const [doc, setDoc] = useState("");
+  const themes = meta?.themes ?? [];
 
   // Debounced document re-render
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!html || !css) return;
 
-      const themeVars = buildThemeCSS(activeTheme);
+      const themeVars = activeTheme?.colors
+        ? Object.entries(activeTheme.colors)
+            .map(([key, value]) => `--${key}: ${value};`)
+            .join(" ")
+        : "";
 
       // ✅ Put author CSS first, then theme variables last so they override
       const docHTML = `
@@ -43,14 +55,14 @@ export default function TemplateLivePreview({ html, css, meta }: any) {
 
   // Auto-reset active theme when meta changes
   useEffect(() => {
-    if (!meta?.themes?.length) {
+    const metaThemes = meta?.themes ?? [];
+    if (!metaThemes.length) {
       setActiveTheme(null);
       return;
     }
-    const stillValid =
-      activeTheme && meta.themes.some((t: any) => t.name === activeTheme.name);
-    if (!stillValid) setActiveTheme(meta.themes[0]);
-  }, [meta]);
+    const stillValid = activeTheme ? metaThemes.some((theme) => theme.name === activeTheme.name) : false;
+    if (!stillValid) setActiveTheme(metaThemes[0]);
+  }, [meta, activeTheme]);
 
   if (!html) {
     return (
@@ -64,23 +76,22 @@ export default function TemplateLivePreview({ html, css, meta }: any) {
     <div className="mt-6 border border-gray-800 rounded-lg overflow-hidden bg-gray-900">
       <div className="flex items-center justify-between bg-gray-950 px-4 py-2 border-b border-gray-800">
         <span className="text-gray-200 text-sm font-medium">Live Preview</span>
-        {meta?.themes?.length > 0 && (
+        {themes.length ? (
           <select
             value={activeTheme?.name}
-            onChange={(e) =>
-              setActiveTheme(
-                meta.themes.find((t: any) => t.name === e.target.value)
-              )
-            }
+            onChange={(event) => {
+              const nextTheme = themes.find((theme) => theme.name === event.target.value) ?? null;
+              setActiveTheme(nextTheme);
+            }}
             className="bg-gray-800 text-gray-100 border border-gray-700 rounded px-2 py-1 text-sm focus:outline-none"
           >
-            {meta.themes.map((t: any) => (
-              <option key={t.name} value={t.name}>
-                {t.name}
+            {themes.map((theme) => (
+              <option key={theme.name} value={theme.name}>
+                {theme.name}
               </option>
             ))}
           </select>
-        )}
+        ) : null}
       </div>
 
       <div className="bg-gray-100 flex justify-center py-6">
