@@ -18,27 +18,6 @@ const AceEditor = dynamic(async () => (await import("react-ace")).default, { ssr
 
 const defaultMeta = '{\n  "themes": [],\n  "fields": []\n}';
 
-function ensureString(value: unknown, fallback = ""): string {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (value && typeof value === "object") {
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return fallback;
-    }
-  }
-
-  return fallback;
-}
-
-function normaliseMeta(value: unknown): string {
-  const metaString = ensureString(value, "").trim();
-  return metaString ? metaString : defaultMeta;
-}
-
 export type TemplateEditorFormProps = {
   initialData?: TemplateEditorData | null;
   isEdit?: boolean;
@@ -63,7 +42,6 @@ type TemplateEditorData = {
   tags?: string[];
   currentVersion?: string;
   previewUrl?: string;
-  meta?: unknown;
   versions?: TemplateEditorVersion[];
 };
 
@@ -90,25 +68,18 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
       ? initialData.versions.find((version) => version.number === initialData.currentVersion) ?? firstVersion
       : firstVersion;
   const [form, setForm] = useState<FormState>({
-    name: ensureString(initialData?.name).trim(),
-    slug: ensureString(initialData?.slug).trim(),
-    description: ensureString(initialData?.description),
-    category: ensureString(initialData?.category).trim(),
-    subcategory: ensureString(initialData?.subcategory).trim(),
-    tags: Array.isArray(initialData?.tags)
-      ? initialData.tags.filter((tag): tag is string => typeof tag === "string").join(", ")
-      : ensureString(initialData?.tags).trim(),
-    version:
-      ensureString(initialData?.currentVersion).trim() ||
-      ensureString(activeVersion?.number).trim() ||
-      "1.0.0",
-    changelog: ensureString(activeVersion?.changelog),
-    previewUrl:
-      ensureString(activeVersion?.previewUrl).trim() ||
-      ensureString(initialData?.previewUrl).trim(),
-    html: ensureString(activeVersion?.inlineHtml),
-    css: ensureString(activeVersion?.inlineCss),
-    meta: normaliseMeta(activeVersion?.inlineMeta ?? initialData?.meta),
+    name: initialData?.name ?? "",
+    slug: initialData?.slug ?? "",
+    description: initialData?.description ?? "",
+    category: initialData?.category ?? "",
+    subcategory: initialData?.subcategory ?? "",
+    tags: (initialData?.tags ?? []).join(", "),
+    version: initialData?.currentVersion ?? "1.0.0",
+    changelog: activeVersion?.changelog ?? "",
+    previewUrl: activeVersion?.previewUrl ?? initialData?.previewUrl ?? "",
+    html: activeVersion?.inlineHtml ?? "",
+    css: activeVersion?.inlineCss ?? "",
+    meta: activeVersion?.inlineMeta ?? defaultMeta,
   });
 
   const [loading, setLoading] = useState(false);
@@ -133,28 +104,27 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
 
     setLoading(true);
 
-    const versionNumber = form.version.trim() || "1.0.0";
     const payload = {
-      name: form.name.trim(),
-      slug: form.slug.trim(),
+      name: form.name,
+      slug: form.slug,
       description: form.description,
-      category: form.category.trim(),
-      subcategory: form.subcategory.trim(),
+      category: form.category,
+      subcategory: form.subcategory,
       tags: form.tags
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean),
       versions: [
         {
-          number: versionNumber,
+          number: form.version,
           changelog: form.changelog,
-          previewUrl: form.previewUrl.trim(),
+          previewUrl: form.previewUrl,
           inlineHtml: form.html,
           inlineCss: form.css,
           inlineMeta: form.meta,
         },
       ],
-      currentVersion: versionNumber,
+      currentVersion: form.version,
       published: true,
     };
 
@@ -186,13 +156,13 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
           <div className="grid gap-4 md:grid-cols-2">
             <input
               value={form.name}
-              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              onChange={(event) => setForm({ ...form, name: event.target.value })}
               placeholder="Template Name"
               className="w-full rounded bg-gray-900 p-2 text-white"
             />
             <input
               value={form.slug}
-              onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
+              onChange={(event) => setForm({ ...form, slug: event.target.value })}
               placeholder="Slug"
               className="w-full rounded bg-gray-900 p-2 text-white"
             />
@@ -201,13 +171,13 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
           <div className="grid gap-4 md:grid-cols-2">
             <input
               value={form.category}
-              onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+              onChange={(event) => setForm({ ...form, category: event.target.value })}
               placeholder="Category"
               className="w-full rounded bg-gray-900 p-2 text-white"
             />
             <input
               value={form.subcategory}
-              onChange={(event) => setForm((prev) => ({ ...prev, subcategory: event.target.value }))}
+              onChange={(event) => setForm({ ...form, subcategory: event.target.value })}
               placeholder="Subcategory"
               className="w-full rounded bg-gray-900 p-2 text-white"
             />
@@ -215,28 +185,28 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
 
           <input
             value={form.tags}
-            onChange={(event) => setForm((prev) => ({ ...prev, tags: event.target.value }))}
+            onChange={(event) => setForm({ ...form, tags: event.target.value })}
             placeholder="Tags (comma separated)"
             className="w-full rounded bg-gray-900 p-2 text-white"
           />
 
           <textarea
             value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            onChange={(event) => setForm({ ...form, description: event.target.value })}
             placeholder="Description"
             className="h-24 w-full rounded bg-gray-900 p-2 text-white"
           />
 
           <input
             value={form.version}
-            onChange={(event) => setForm((prev) => ({ ...prev, version: event.target.value }))}
+            onChange={(event) => setForm({ ...form, version: event.target.value })}
             placeholder="Version"
             className="w-full rounded bg-gray-900 p-2 text-white"
           />
 
           <textarea
             value={form.changelog}
-            onChange={(event) => setForm((prev) => ({ ...prev, changelog: event.target.value }))}
+            onChange={(event) => setForm({ ...form, changelog: event.target.value })}
             placeholder="Changelog"
             className="h-24 w-full rounded bg-gray-900 p-2 text-white"
           />
@@ -244,7 +214,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
           <input
             type="text"
             value={form.previewUrl}
-            onChange={(event) => setForm((prev) => ({ ...prev, previewUrl: event.target.value }))}
+            onChange={(event) => setForm({ ...form, previewUrl: event.target.value })}
             placeholder="Preview image/video URL"
             className="w-full rounded bg-gray-900 p-2 text-white"
           />
@@ -257,7 +227,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
               width="100%"
               height="250px"
               value={form.html}
-              onChange={(value) => setForm((prev) => ({ ...prev, html: value }))}
+              onChange={(value) => setForm({ ...form, html: value })}
               setOptions={{ useWorker: false }}
             />
           </div>
@@ -270,7 +240,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
               width="100%"
               height="250px"
               value={form.css}
-              onChange={(value) => setForm((prev) => ({ ...prev, css: value }))}
+              onChange={(value) => setForm({ ...form, css: value })}
               setOptions={{ useWorker: false }}
             />
           </div>
@@ -283,7 +253,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
               width="100%"
               height="250px"
               value={form.meta}
-              onChange={(value) => setForm((prev) => ({ ...prev, meta: value }))}
+              onChange={(value) => setForm({ ...form, meta: value })}
               setOptions={{ useWorker: false }}
             />
             {metaError && <p className="mt-1 text-xs text-red-400">Invalid JSON: {metaError}</p>}
