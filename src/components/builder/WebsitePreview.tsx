@@ -121,14 +121,6 @@ export function WebsitePreview() {
     return { ...baseContent, ...storeValues } as Record<string, unknown>;
   }, [content, storeValues]);
 
-  const getStoreThemeColor = useCallback(
-    (key: string) => {
-      const value = storeTheme[key];
-      return typeof value === "string" && value.trim() ? value : undefined;
-    },
-    [storeTheme]
-  );
-
   useEffect(() => {
     if (!assets) {
       updatePreviewDocument("");
@@ -136,54 +128,36 @@ export function WebsitePreview() {
     }
 
     const timeout = setTimeout(() => {
-      const colorPalette: Record<string, string> = {};
-      selectedTemplate.colors.forEach((color) => {
-        const key = color.id;
-        const value =
-          storeTheme[key] ?? theme.colors[key] ?? themeDefaults.colors[key] ?? color.default;
-        if (value) {
-          colorPalette[key] = value;
-        }
-      });
+      const storeFonts =
+        (storeTheme as unknown as { fonts?: Record<string, string> }).fonts ?? {};
 
-      Object.entries(storeTheme).forEach(([key, value]) => {
-        if (typeof value === "string" && value.trim()) {
-          colorPalette[key] = value;
-        }
-      });
+      const mergedColors = {
+        ...themeDefaults.colors,
+        ...storeTheme,
+        ...theme.colors,
+      };
 
-      const fontTokens: Record<string, string> = {};
-      selectedTemplate.fonts.forEach((key) => {
-        const value = theme.fonts[key] ?? themeDefaults.fonts[key] ?? "";
-        if (value) {
-          fontTokens[key] = value;
-        }
-      });
+      const mergedFonts = {
+        ...themeDefaults.fonts,
+        ...storeFonts,
+        ...theme.fonts,
+      };
 
       const rendered = renderTemplate({
         html: assets.html,
         values: mergedData,
         modules: selectedTemplate.modules,
-        theme: {
-          primary: colorPalette.primary ?? getStoreThemeColor("primary"),
-          secondary: colorPalette.secondary ?? getStoreThemeColor("secondary"),
-          background: colorPalette.background ?? getStoreThemeColor("background"),
-          text: colorPalette.text ?? getStoreThemeColor("text"),
-        },
-        themeTokens: {
-          colors: colorPalette,
-          fonts: fontTokens,
-        },
       });
 
       const themedDocument = injectThemeTokens({
         html: rendered,
         css: assets.css,
-        colors: colorPalette,
-        fonts: fontTokens,
+        colors: mergedColors,
+        fonts: mergedFonts,
       });
 
       const finalDoc = injectScrollScript(themedDocument);
+      console.log("🎨 Applying theme to preview", mergedColors);
       updatePreviewDocument(finalDoc);
     }, 150);
 
@@ -191,14 +165,13 @@ export function WebsitePreview() {
   }, [
     assets,
     mergedData,
-    selectedTemplate.colors,
-    selectedTemplate.fonts,
+    selectedTemplate.id,
     selectedTemplate.modules,
-    storeTheme, // ✅ re-render when sidebar theme changes
-    theme, // ✅ re-render when context theme changes
-    themeDefaults, // ✅ re-render when defaults change
-    content, // ✅ content changes
-    getStoreThemeColor,
+    theme.colors,
+    theme.fonts,
+    themeDefaults.colors,
+    themeDefaults.fonts,
+    storeTheme,
     updatePreviewDocument,
   ]);
 
