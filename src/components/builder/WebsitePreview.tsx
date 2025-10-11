@@ -190,15 +190,15 @@ export function WebsitePreview() {
     return () => clearTimeout(timeout);
   }, [
     assets,
-    content,
-    getStoreThemeColor,
     mergedData,
     selectedTemplate.colors,
     selectedTemplate.fonts,
     selectedTemplate.modules,
-    storeTheme,
-    theme,
-    themeDefaults,
+    storeTheme, // ✅ re-render when sidebar theme changes
+    theme, // ✅ re-render when context theme changes
+    themeDefaults, // ✅ re-render when defaults change
+    content, // ✅ content changes
+    getStoreThemeColor,
     updatePreviewDocument,
   ]);
 

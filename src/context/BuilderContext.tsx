@@ -603,12 +603,14 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const updateTheme = useCallback(
     (changes: Partial<ThemeState>) => {
-      console.groupCollapsed("🎨 updateTheme (safe deferred)");
-      console.log("Incoming changes:", changes);
-      console.groupEnd();
+      const schedule =
+        typeof queueMicrotask === "function"
+          ? queueMicrotask
+          : (cb: () => void) => {
+              Promise.resolve().then(cb);
+            };
 
-      // ✅ defer to after current render
-      queueMicrotask(() => {
+      schedule(() => {
         startTransition(() => {
           setTheme((prev) => {
             const nextColors = changes.colors
@@ -619,8 +621,8 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
               : prev.fonts;
 
             const hasTokenChanges =
-              Boolean(changes.colors && Object.keys(changes.colors).length > 0) ||
-              Boolean(changes.fonts && Object.keys(changes.fonts).length > 0);
+              Boolean(changes.colors && Object.keys(changes.colors).length) ||
+              Boolean(changes.fonts && Object.keys(changes.fonts).length);
 
             let nextName = changes.name ?? prev.name;
             let nextLabel = changes.label ?? prev.label;
@@ -638,10 +640,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
             };
 
             if (websiteId) {
-              // persist asynchronously, never blocking render
-              Promise.resolve().then(() =>
-                saveWebsiteChanges(websiteId, { theme: next })
-              );
+              Promise.resolve().then(() => saveWebsiteChanges(websiteId, { theme: next }));
             }
 
             return next;
@@ -649,7 +648,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         });
       });
     },
-    [setTheme, websiteId]
+    [saveWebsiteChanges, setTheme, websiteId]
   );
 
   const registerThemeDefaults = useCallback((defaults: Partial<ThemeState>) => {
