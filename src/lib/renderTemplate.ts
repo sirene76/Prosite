@@ -1,6 +1,8 @@
 import type { ThemeState } from "@/context/BuilderContext";
 import type { TemplateModuleDefinition } from "@/lib/templates";
 
+export { injectThemeTokens } from "./injectThemeTokens";
+
 export type RenderTemplateOptions = {
   html: string;
   values: Record<string, unknown>;
@@ -23,42 +25,11 @@ export function renderTemplate({
   values,
   modules = [],
   theme,
-  css,
   themeTokens,
 }: RenderTemplateOptions) {
   if (!html) return "";
 
   // --- Inject absolute asset paths dynamically ---
-  let processedHtml = html;
-  const inlineCss = css ?? "";
-
-  if (inlineCss.trim()) {
-    const colorTokens: Record<string, string | undefined> = {
-      ...(themeTokens?.colors ?? {}),
-    };
-
-    if (theme?.primary && !colorTokens.primary) {
-      colorTokens.primary = theme.primary;
-    }
-    if (theme?.secondary && !colorTokens.secondary) {
-      colorTokens.secondary = theme.secondary;
-    }
-    if (theme?.background && !colorTokens.background) {
-      colorTokens.background = theme.background;
-    }
-    if (theme?.text && !colorTokens.text) {
-      colorTokens.text = theme.text;
-    }
-
-    processedHtml = injectThemeTokens({
-      html: processedHtml,
-      css: inlineCss,
-      templateId: undefined,
-      colors: colorTokens,
-      fonts: themeTokens?.fonts,
-    });
-  }
-
   const moduleMap = new Map<string, string>();
   modules.forEach((module) => {
     const key = `modules.${module.id}`;
@@ -84,7 +55,7 @@ export function renderTemplate({
     contentForRendering.modules = modulesContent;
   }
 
-  const rendered = renderWithContent(processedHtml, contentForRendering, {
+  const rendered = renderWithContent(html, contentForRendering, {
     moduleMap,
   });
 
@@ -98,20 +69,6 @@ export function renderTemplate({
   }
 
   return `${colorVars}${rendered}`;
-}
-
-function injectInlineCss(html: string, css: string) {
-  if (!css.trim()) {
-    return html;
-  }
-
-  const styleTag = `<style>${css}</style>`;
-
-  if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head([^>]*)>/i, `<head$1>${styleTag}`);
-  }
-
-  return `${styleTag}${html}`;
 }
 
 export function applyThemeTokens(html: string, css: string, theme: ThemeState) {
@@ -349,49 +306,6 @@ export function composePreviewDocument(
       <body>${htmlWithContent}</body>
     </html>
   `;
-}
-
-type ThemeTokenMap = Record<string, string | undefined> | undefined;
-
-export function injectThemeTokens({
-  html,
-  css,
-  colors,
-  fonts,
-}: {
-  html: string;
-  css?: string;
-  colors?: ThemeTokenMap;
-  fonts?: ThemeTokenMap;
-}) {
-  if (!css || !css.trim()) {
-    return html;
-  }
-
-  const replacements: Array<[RegExp, string]> = [];
-
-  Object.entries(colors ?? {}).forEach(([key, value]) => {
-    const token = typeof value === "string" ? value.trim() : "";
-    if (!token) {
-      return;
-    }
-    replacements.push([new RegExp(`{{\\s*${escapeRegExp(key)}\\s*}}`, "gi"), token]);
-  });
-
-  Object.entries(fonts ?? {}).forEach(([key, value]) => {
-    const token = typeof value === "string" ? value.trim() : "";
-    if (!token) {
-      return;
-    }
-    replacements.push([new RegExp(`{{\\s*font\\.${escapeRegExp(key)}\\s*}}`, "gi"), token]);
-  });
-
-  let themedCss = css;
-  replacements.forEach(([pattern, replacement]) => {
-    themedCss = themedCss.replace(pattern, replacement);
-  });
-
-  return injectInlineCss(html, themedCss);
 }
 
 function buildThemeVariables(
