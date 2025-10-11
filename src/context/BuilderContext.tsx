@@ -603,41 +603,43 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const updateTheme = useCallback(
     (changes: Partial<ThemeState>) => {
-      // Defer to avoid setState during render
-      queueMicrotask(() => {
+      console.groupCollapsed("🎨 updateTheme called");
+      console.log("Incoming changes:", changes);
+      console.trace("Stack trace for updateTheme");
+      console.groupEnd();
 
+      // Schedule setTheme safely after render commit
+      setTimeout(() => {
+        console.log("🕒 Applying theme changes after render...");
         setTheme((prev) => {
-          const nextColors = changes.colors ? { ...prev.colors, ...changes.colors } : prev.colors;
-          const nextFonts = changes.fonts ? { ...prev.fonts, ...changes.fonts } : prev.fonts;
+          const nextColors = changes.colors
+            ? { ...prev.colors, ...changes.colors }
+            : prev.colors;
+          const nextFonts = changes.fonts
+            ? { ...prev.fonts, ...changes.fonts }
+            : prev.fonts;
 
-          const hasColorChanges = Boolean(changes.colors && Object.keys(changes.colors).length > 0);
-          const hasFontChanges = Boolean(changes.fonts && Object.keys(changes.fonts).length > 0);
-          const hasTokenChanges = hasColorChanges || hasFontChanges;
-
-          let nextName = changes.name ?? prev.name;
-          let nextLabel = changes.label ?? prev.label;
-
-          if (hasTokenChanges && !changes.name && !changes.label) {
-            nextName = "Custom";
-            nextLabel = "Custom";
-          }
+          const hasChanges =
+            Object.keys(changes.colors ?? {}).length > 0 ||
+            Object.keys(changes.fonts ?? {}).length > 0;
 
           const next: ThemeState = {
             colors: nextColors,
             fonts: nextFonts,
-            name: nextName,
-            label: nextLabel,
+            name: changes.name ?? prev.name,
+            label: changes.label ?? prev.label,
           };
 
-          setStoreTheme(nextColors);
-
-          if (websiteId) {
+          console.log("✅ Theme updated:", next);
+          if (websiteId && hasChanges) {
             void saveWebsiteChanges(websiteId, { theme: next });
           }
 
+          setStoreTheme(nextColors);
+
           return next;
         });
-      });
+      }, 0);
     },
     [saveWebsiteChanges, setStoreTheme, setTheme, websiteId]
   );
@@ -1068,6 +1070,12 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
       saveWebsiteChanges,
     ]
   );
+
+  console.groupCollapsed("🧩 BuilderProvider Render");
+  console.log("Phase: render start");
+  console.log("Current websiteId:", websiteId);
+  console.log("Theme state on render:", theme);
+  console.groupEnd();
 
   return <BuilderContext.Provider value={value}>{children}</BuilderContext.Provider>;
 }

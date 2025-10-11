@@ -51,6 +51,8 @@ export const useBuilderStore = create<BuilderStoreState>((set) => ({
     set({ device });
   },
   setTheme: (colors) => {
+    console.log("🧱 setTheme called during:", performance.now());
+    console.trace("setTheme stack trace");
     set({ theme: colors ?? {} });
   },
   updateValue: (key, value) => {
