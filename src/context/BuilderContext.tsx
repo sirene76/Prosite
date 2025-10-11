@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -463,7 +464,6 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   const setStorePages = useBuilderStore((state) => state.setPages);
   const setStoreWebsiteName = useBuilderStore((state) => state.setWebsiteName);
   const setStoreThemeName = useBuilderStore((state) => state.setThemeName);
-  const setStoreTheme = useBuilderStore((state) => state.setTheme);
   const setStoreWebsiteId = useBuilderStore((state) => state.setWebsiteId);
   const [previewFrame, setPreviewFrame] = useState<HTMLIFrameElement | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -603,45 +603,53 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
   const updateTheme = useCallback(
     (changes: Partial<ThemeState>) => {
-      console.groupCollapsed("🎨 updateTheme called");
+      console.groupCollapsed("🎨 updateTheme (safe deferred)");
       console.log("Incoming changes:", changes);
-      console.trace("Stack trace for updateTheme");
       console.groupEnd();
 
-      // Schedule setTheme safely after render commit
-      setTimeout(() => {
-        console.log("🕒 Applying theme changes after render...");
-        setTheme((prev) => {
-          const nextColors = changes.colors
-            ? { ...prev.colors, ...changes.colors }
-            : prev.colors;
-          const nextFonts = changes.fonts
-            ? { ...prev.fonts, ...changes.fonts }
-            : prev.fonts;
+      // ✅ defer to after current render
+      queueMicrotask(() => {
+        startTransition(() => {
+          setTheme((prev) => {
+            const nextColors = changes.colors
+              ? { ...prev.colors, ...changes.colors }
+              : prev.colors;
+            const nextFonts = changes.fonts
+              ? { ...prev.fonts, ...changes.fonts }
+              : prev.fonts;
 
-          const hasChanges =
-            Object.keys(changes.colors ?? {}).length > 0 ||
-            Object.keys(changes.fonts ?? {}).length > 0;
+            const hasTokenChanges =
+              Boolean(changes.colors && Object.keys(changes.colors).length > 0) ||
+              Boolean(changes.fonts && Object.keys(changes.fonts).length > 0);
 
-          const next: ThemeState = {
-            colors: nextColors,
-            fonts: nextFonts,
-            name: changes.name ?? prev.name,
-            label: changes.label ?? prev.label,
-          };
+            let nextName = changes.name ?? prev.name;
+            let nextLabel = changes.label ?? prev.label;
 
-          console.log("✅ Theme updated:", next);
-          if (websiteId && hasChanges) {
-            void saveWebsiteChanges(websiteId, { theme: next });
-          }
+            if (hasTokenChanges && !changes.name && !changes.label) {
+              nextName = "Custom";
+              nextLabel = "Custom";
+            }
 
-          setStoreTheme(nextColors);
+            const next: ThemeState = {
+              colors: nextColors,
+              fonts: nextFonts,
+              name: nextName,
+              label: nextLabel,
+            };
 
-          return next;
+            if (websiteId) {
+              // persist asynchronously, never blocking render
+              Promise.resolve().then(() =>
+                saveWebsiteChanges(websiteId, { theme: next })
+              );
+            }
+
+            return next;
+          });
         });
-      }, 0);
+      });
     },
-    [saveWebsiteChanges, setStoreTheme, setTheme, websiteId]
+    [setTheme, websiteId]
   );
 
   const registerThemeDefaults = useCallback((defaults: Partial<ThemeState>) => {
