@@ -16,13 +16,13 @@ interface ThemeSelectorProps {
 
 export function ThemeSelector({ themes }: ThemeSelectorProps) {
   const { updateTheme } = useBuilder(); // ✅ use context updater
-  const theme = useBuilderStore((state) => state.theme);
+  const themeColors = useBuilderStore((state) => state.theme);
 
   const hasThemes = Array.isArray(themes) && themes.length > 0;
   const activeName = useMemo(() => {
     if (!hasThemes) return undefined;
-    return themes.find((option) => isSameTheme(option.colors, theme.colors))?.name;
-  }, [hasThemes, theme, themes]);
+    return themes.find((option) => isSameTheme(option.colors, themeColors))?.name;
+  }, [hasThemes, themeColors, themes]);
 
   if (!hasThemes)
     return <p className="text-sm text-slate-400">No theme variations</p>;
@@ -56,14 +56,13 @@ export function ThemeSelector({ themes }: ThemeSelectorProps) {
   );
 }
 
-function isSameTheme(
-  a: Record<string, string> = {},
-  b: Record<string, string> = {}
-) {
+function isSameTheme(a: Record<string, string> = {}, b: Record<string, string> = {}) {
   const aEntries = Object.entries(a);
   if (aEntries.length === 0) return false;
   return aEntries.every(([key, val]) => {
     const current = b?.[key];
-    return current && current.toLowerCase() === val.toLowerCase();
+    const normalisedCurrent = typeof current === "string" ? current.toLowerCase() : current;
+    const normalisedVal = typeof val === "string" ? val.toLowerCase() : val;
+    return normalisedCurrent === normalisedVal;
   });
 }

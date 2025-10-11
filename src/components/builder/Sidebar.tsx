@@ -1,9 +1,6 @@
 "use client";
 
-const safeSchedule = (cb: () => void) =>
-  typeof queueMicrotask === "function" ? queueMicrotask(cb) : Promise.resolve().then(cb);
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useBuilder, type TemplateContentSection } from "@/context/BuilderContext";
 import type { BuilderPanel, TemplateColorDefinition, TemplateModuleDefinition } from "@/lib/templates";
@@ -14,6 +11,21 @@ import { PageList } from "./PageList";
 import { ThemePanel, normaliseThemeOptions, type ThemeOption } from "./ThemePanel";
 import { ContentForm } from "./ContentForm";
 import { ContentEditor } from "./ContentEditor";
+
+const safeSchedule = (cb: () => void) =>
+  typeof queueMicrotask === "function" ? queueMicrotask(cb) : Promise.resolve().then(cb);
+
+function shallowEqualColors(a: Record<string, string> = {}, b: Record<string, string> = {}) {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    const av = a[key]?.toLowerCase?.() ?? a[key];
+    const bv = b[key]?.toLowerCase?.() ?? b[key];
+    if (av !== bv) return false;
+  }
+  return true;
+}
 
 const baseTabs = [
   { id: "pages", label: "Pages" },
@@ -44,9 +56,11 @@ export function Sidebar() {
   } = useBuilder();
   const meta = useTemplateMeta(selectedTemplate);
   const resetValues = useBuilderStore((state) => state.resetValues);
+  const storeTheme = useBuilderStore((state) => state.theme);
   const setStoreTheme = useBuilderStore((state) => state.setTheme);
   const setStorePages = useBuilderStore((state) => state.setPages);
   const [activeTab, setActiveTab] = useState<TabId>("pages");
+  const seededForTemplateRef = useRef<string | null>(null);
 
   const currentStepKey = steps[currentStep] ?? steps[0];
 
@@ -94,17 +108,30 @@ export function Sidebar() {
   }, [resetValues, selectedTemplate.id]);
 
   useEffect(() => {
-    if (!themeOptions.length) {
-      // Defer reset to avoid cross-component render update
-      safeSchedule(() => setStoreTheme({}));
+    const templateId = String(selectedTemplate.id ?? "");
+    const hasOptions = Array.isArray(themeOptions) && themeOptions.length > 0;
+
+    if (!hasOptions) {
+      if (seededForTemplateRef.current !== templateId) {
+        seededForTemplateRef.current = templateId;
+        safeSchedule(() => setStoreTheme({}));
+      }
       return;
     }
 
-    // Defer seeding default theme after render commit
-    safeSchedule(() => {
-      setStoreTheme(themeOptions[0]?.colors ?? {});
-    });
-  }, [selectedTemplate.id, setStoreTheme, themeOptions]);
+    const firstColors = themeOptions[0]?.colors ?? {};
+    const alreadySeeded = seededForTemplateRef.current === templateId;
+
+    if (!alreadySeeded || !shallowEqualColors(storeTheme, firstColors)) {
+      seededForTemplateRef.current = templateId;
+      safeSchedule(() => {
+        const current = useBuilderStore.getState().theme;
+        if (!shallowEqualColors(current, firstColors)) {
+          setStoreTheme(firstColors);
+        }
+      });
+    }
+  }, [selectedTemplate.id, setStoreTheme, storeTheme, themeOptions]);
 
   useEffect(() => {
     if (metaPages.length > 0) {
