@@ -110,3 +110,19 @@ body {
 .theme-button:hover {
   transform: scale(1.02);
 }
+
+/* Smooth hover transitions for preview videos */
+video::-webkit-media-controls {
+  display: none !important;
+}
+
+.group:hover video {
+  filter: brightness(1.1);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+}
