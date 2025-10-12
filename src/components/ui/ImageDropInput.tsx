@@ -11,7 +11,7 @@ import {
   type KeyboardEvent,
 } from "react";
 
-import { useUploadThing } from "@/lib/uploadthing";
+import { useUploadThing } from "@/utils/uploadthing";
 
 type ImageDropInputProps = {
   label?: string;
@@ -34,7 +34,7 @@ export default function ImageDropInput({
   className,
   mode = "single",
 }: ImageDropInputProps) {
-  const { startUpload, isUploading } = useUploadThing("templatePreview");
+  const { startUpload, isUploading } = useUploadThing("templateImage");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const inputId = useId();
 
@@ -197,7 +197,7 @@ export default function ImageDropInput({
         ) : (
           <div className="space-y-1">
             <p className="text-sm">Drag & drop an image or click to upload</p>
-            <p className="text-xs text-slate-500">PNG, JPG, or GIF up to 10MB</p>
+            <p className="text-xs text-slate-500">PNG, JPG, or GIF up to 4MB</p>
           </div>
         )}
 

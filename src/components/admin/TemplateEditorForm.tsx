@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import ImageDropInput from "@/components/ui/ImageDropInput";
 
 import TemplateLivePreview from "./TemplateLivePreview";
 
@@ -37,6 +38,7 @@ type TemplateEditorData = {
   name?: string;
   slug?: string;
   description?: string;
+  thumbnail?: string;
   category?: string;
   subcategory?: string;
   tags?: string[];
@@ -49,6 +51,7 @@ type FormState = {
   name: string;
   slug: string;
   description: string;
+  thumbnail: string;
   category: string;
   subcategory: string;
   tags: string;
@@ -71,6 +74,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
     name: initialData?.name ?? "",
     slug: initialData?.slug ?? "",
     description: initialData?.description ?? "",
+    thumbnail: initialData?.thumbnail ?? "",
     category: initialData?.category ?? "",
     subcategory: initialData?.subcategory ?? "",
     tags: (initialData?.tags ?? []).join(", "),
@@ -108,6 +112,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
       name: form.name,
       slug: form.slug,
       description: form.description,
+      thumbnail: form.thumbnail,
       category: form.category,
       subcategory: form.subcategory,
       tags: form.tags
@@ -197,6 +202,15 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
             className="h-24 w-full rounded bg-gray-900 p-2 text-white"
           />
 
+          <ImageDropInput
+            label="Thumbnail"
+            value={form.thumbnail}
+            onChange={(url) => setForm({ ...form, thumbnail: url })}
+            onClear={() => setForm({ ...form, thumbnail: "" })}
+            description="Upload an image shown in the catalog (PNG, JPG, GIF up to 4MB)."
+            disabled={loading}
+          />
+
           <input
             value={form.version}
             onChange={(event) => setForm({ ...form, version: event.target.value })}
@@ -215,7 +229,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
             type="text"
             value={form.previewUrl}
             onChange={(event) => setForm({ ...form, previewUrl: event.target.value })}
-            placeholder="Preview image/video URL"
+            placeholder="Preview image URL"
             className="w-full rounded bg-gray-900 p-2 text-white"
           />
 

@@ -1,91 +1,53 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { useForm } from "react-hook-form";
+
+import { UploadButton } from "@/utils/uploadthing";
 
 const inputClassName =
   "w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
 
-type TemplateInput = {
-  _id?: string;
-  name?: string;
+export type TemplateFormValues = {
+  name: string;
   slug?: string;
   category?: string;
   subcategory?: string;
   description?: string;
-  tags?: string[];
+  tags?: string;
   currentVersion?: string;
+  thumbnail?: string;
 };
 
-type TemplateFormProps = {
-  template?: TemplateInput;
-  mode: "create" | "edit";
+export type TemplateFormProps = {
+  initialData?: Partial<TemplateFormValues> | null;
+  onSubmit: (values: TemplateFormValues) => void | Promise<void>;
 };
 
-export function TemplateForm({ template, mode }: TemplateFormProps) {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState(() => ({
-    name: template?.name ?? "",
-    slug: template?.slug ?? "",
-    category: template?.category ?? "",
-    subcategory: template?.subcategory ?? "",
-    description: template?.description ?? "",
-    tags: template?.tags?.join(", ") ?? "",
-    currentVersion: template?.currentVersion ?? "",
-  }));
+export function TemplateForm({ initialData, onSubmit }: TemplateFormProps) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<TemplateFormValues>({
+    defaultValues: {
+      name: initialData?.name ?? "",
+      slug: initialData?.slug ?? "",
+      category: initialData?.category ?? "",
+      subcategory: initialData?.subcategory ?? "",
+      description: initialData?.description ?? "",
+      tags: initialData?.tags ?? "",
+      currentVersion: initialData?.currentVersion ?? "",
+      thumbnail: initialData?.thumbnail ?? "",
+    },
+  });
 
-  function handleChange(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  }
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
-
-    const payload = {
-      name: formData.name.trim(),
-      slug: formData.slug.trim() || formData.name.trim().toLowerCase().replace(/\s+/g, "-"),
-      category: formData.category.trim() || undefined,
-      subcategory: formData.subcategory.trim() || undefined,
-      description: formData.description.trim() || undefined,
-      tags: formData.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-      currentVersion: formData.currentVersion.trim() || undefined,
-    };
-
-    const url = mode === "create" ? "/api/admin/templates" : `/api/admin/templates/${template?._id}`;
-    const method = mode === "create" ? "POST" : "PUT";
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? "Failed to save template");
-      }
-
-      router.push("/admin/templates");
-      router.refresh();
-    } catch (submitError) {
-      console.error("Failed to save template", submitError);
-      setError(submitError instanceof Error ? submitError.message : "Failed to save template. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  const thumbnail = watch("thumbnail");
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="block text-sm font-medium text-slate-300" htmlFor="name">
@@ -93,26 +55,16 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
           </label>
           <input
             id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
+            {...register("name", { required: true })}
             className={inputClassName}
             placeholder="Modern Portfolio"
-            required
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300" htmlFor="slug">
             Slug
           </label>
-          <input
-            id="slug"
-            name="slug"
-            value={formData.slug}
-            onChange={handleChange}
-            className={inputClassName}
-            placeholder="modern-portfolio"
-          />
+          <input id="slug" {...register("slug")} className={inputClassName} placeholder="modern-portfolio" />
         </div>
       </div>
 
@@ -121,27 +73,13 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
           <label className="block text-sm font-medium text-slate-300" htmlFor="category">
             Category
           </label>
-          <input
-            id="category"
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            className={inputClassName}
-            placeholder="Portfolio"
-          />
+          <input id="category" {...register("category")} className={inputClassName} placeholder="Portfolio" />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300" htmlFor="subcategory">
             Subcategory
           </label>
-          <input
-            id="subcategory"
-            name="subcategory"
-            value={formData.subcategory}
-            onChange={handleChange}
-            className={inputClassName}
-            placeholder="Landing Page"
-          />
+          <input id="subcategory" {...register("subcategory")} className={inputClassName} placeholder="Landing Page" />
         </div>
       </div>
 
@@ -151,9 +89,7 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
         </label>
         <textarea
           id="description"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
+          {...register("description")}
           className={`${inputClassName} min-h-[100px]`}
           placeholder="Short description of the template"
         />
@@ -164,14 +100,7 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
           <label className="block text-sm font-medium text-slate-300" htmlFor="tags">
             Tags
           </label>
-          <input
-            id="tags"
-            name="tags"
-            value={formData.tags}
-            onChange={handleChange}
-            className={inputClassName}
-            placeholder="portfolio, minimal, dark"
-          />
+          <input id="tags" {...register("tags")} className={inputClassName} placeholder="portfolio, minimal, dark" />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300" htmlFor="currentVersion">
@@ -179,25 +108,42 @@ export function TemplateForm({ template, mode }: TemplateFormProps) {
           </label>
           <input
             id="currentVersion"
-            name="currentVersion"
-            value={formData.currentVersion}
-            onChange={handleChange}
+            {...register("currentVersion")}
             className={inputClassName}
             placeholder="1.0.0"
           />
         </div>
       </div>
 
-      {error ? <p className="text-sm text-red-400">{error}</p> : null}
+      <div>
+        <label className="block font-medium text-sm mb-1">Thumbnail</label>
+        {thumbnail ? (
+          <Image
+            src={thumbnail}
+            alt="Template thumbnail"
+            width={320}
+            height={200}
+            className="rounded-lg object-cover border mb-2"
+          />
+        ) : (
+          <div className="border rounded-lg h-40 flex items-center justify-center text-gray-400 mb-2">
+            No thumbnail uploaded
+          </div>
+        )}
+
+        <UploadButton
+          endpoint="templateImage"
+          onClientUploadComplete={(res) => {
+            const url = res?.[0]?.url;
+            if (url) {
+              setValue("thumbnail", url, { shouldDirty: true });
+            }
+          }}
+          onUploadError={(err) => console.error("Upload failed:", err)}
+        />
+      </div>
 
       <div className="flex items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => router.push("/admin/templates")}
-          className="rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
-        >
-          Cancel
-        </button>
         <button
           type="submit"
           disabled={isSubmitting}

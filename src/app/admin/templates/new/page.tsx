@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { UploadButton, UploadDropzone } from "@/utils/uploadthing";
 import TemplateLivePreview from "@/components/admin/TemplateLivePreview";
@@ -23,6 +23,7 @@ type FormState = {
   name: string;
   slug: string;
   description: string;
+  thumbnail: string;
   category: string;
   subcategory: string;
   tags: string;
@@ -34,7 +35,6 @@ type FormState = {
   meta: string;
 };
 
-const videoExtensions = [".mp4", ".webm", ".ogg", ".mov"];
 const defaultMeta = '{\n  "themes": [],\n  "fields": []\n}';
 
 const uploadDropzoneClassName =
@@ -51,6 +51,7 @@ export default function NewTemplatePage() {
     name: "",
     slug: "",
     description: "",
+    thumbnail: "",
     category: "",
     subcategory: "",
     tags: "",
@@ -88,7 +89,7 @@ export default function NewTemplatePage() {
     }
   }, [form.meta]);
 
-  function handleUploadComplete(res?: Array<{ url?: string }>) {
+  function handlePreviewUploadComplete(res?: Array<{ url?: string }>) {
     const url = res?.[0]?.url;
     if (!url) return console.error("❌ Missing URL for preview upload", res);
 
@@ -96,15 +97,24 @@ export default function NewTemplatePage() {
     setUploadFeedback({ type: "success", message: "Preview asset uploaded successfully." });
   }
 
-  function handleUploadError(error: Error) {
+  function handlePreviewUploadError(error: Error) {
     console.error("❌ Upload failed:", error);
     setUploadFeedback({ type: "error", message: `Upload failed: ${error.message}` });
   }
 
-  const isPreviewVideo = useMemo(() => {
-    if (!form.previewUrl) return false;
-    return videoExtensions.some((ext) => form.previewUrl.toLowerCase().endsWith(ext));
-  }, [form.previewUrl]);
+  function handleThumbnailUploadComplete(res?: Array<{ url?: string }>) {
+    const url = res?.[0]?.url;
+    if (!url) {
+      console.error("❌ Missing URL for thumbnail upload", res);
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, thumbnail: url }));
+  }
+
+  function handleThumbnailUploadError(error: Error) {
+    console.error("❌ Thumbnail upload failed:", error);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,6 +135,7 @@ export default function NewTemplatePage() {
         name: form.name,
         slug: form.slug,
         description: form.description,
+        thumbnail: form.thumbnail,
         category: form.category,
         subcategory: form.subcategory,
         tags,
@@ -211,6 +222,48 @@ export default function NewTemplatePage() {
 
           <Card>
             <CardHeader className="border-none pb-0">
+              <CardTitle>Template Thumbnail</CardTitle>
+              <CardDescription>This image is shown across the admin list and landing page.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              {form.thumbnail ? (
+                <div className="flex flex-col gap-3">
+                  <div className="overflow-hidden rounded-xl border border-slate-800 bg-black/40">
+                    <div className="relative h-40 w-full">
+                      <Image
+                        src={form.thumbnail}
+                        alt="Template thumbnail"
+                        fill
+                        sizes="(min-width: 1024px) 320px, 100vw"
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, thumbnail: "" }))}
+                    className="self-start rounded-md border border-slate-700 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-pink-400 hover:text-white"
+                  >
+                    Remove thumbnail
+                  </button>
+                </div>
+              ) : (
+                <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-800 text-sm text-slate-500">
+                  No thumbnail uploaded yet.
+                </div>
+              )}
+
+              <UploadButton
+                endpoint="templateImage"
+                onClientUploadComplete={handleThumbnailUploadComplete}
+                onUploadError={handleThumbnailUploadError}
+              />
+              <p className="text-xs text-slate-500">PNG, JPG, or GIF up to 4MB.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="border-none pb-0">
               <CardTitle>Version Info</CardTitle>
               <CardDescription>Track how this release differs from previous versions.</CardDescription>
             </CardHeader>
@@ -238,7 +291,7 @@ export default function NewTemplatePage() {
           <Card>
             <CardHeader className="border-none pb-0">
               <CardTitle>Template Preview Asset</CardTitle>
-              <CardDescription>Upload the image or video shown in the template catalog.</CardDescription>
+              <CardDescription>Upload the image shown in the template catalog.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-8 pt-6 lg:grid-cols-2">
               {uploadFeedback && (
@@ -252,39 +305,33 @@ export default function NewTemplatePage() {
                   {uploadFeedback.message}
                 </div>
               )}
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-200">Preview Image / Video</p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-200">Preview Image</p>
                   <p className="text-xs text-slate-400">
                     Drag and drop a file or click inside the dropzone to choose one.
                   </p>
                 </div>
                 <UploadDropzone
-                  endpoint="templatePreview"
-                  onClientUploadComplete={handleUploadComplete}
-                  onUploadError={handleUploadError}
+                  endpoint="templateImage"
+                  onClientUploadComplete={handlePreviewUploadComplete}
+                  onUploadError={handlePreviewUploadError}
                   className={`${uploadDropzoneClassName} cursor-pointer hover:border-pink-400`}
                 />
-                <p className="text-xs text-slate-500">
-                  Supports images (JPG, PNG, GIF) and videos (MP4, WEBM, MOV).
-                </p>
+                <p className="text-xs text-slate-500">Supports images (JPG, PNG, GIF) up to 4MB.</p>
               </div>
               <div>
                 {form.previewUrl ? (
                   <div className="overflow-hidden rounded-xl border border-slate-800 bg-black/40">
-                    {isPreviewVideo ? (
-                      <video key={form.previewUrl} src={form.previewUrl} controls className="h-64 w-full object-cover" />
-                    ) : (
-                      <div className="relative h-64 w-full">
-                        <Image
-                          alt="Template preview"
-                          src={form.previewUrl}
-                          fill
-                          sizes="(min-width: 1024px) 480px, 100vw"
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
+                    <div className="relative h-64 w-full">
+                      <Image
+                        alt="Template preview"
+                        src={form.previewUrl}
+                        fill
+                        sizes="(min-width: 1024px) 480px, 100vw"
+                        className="object-cover"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="flex h-64 w-full items-center justify-center rounded-xl border border-dashed border-slate-800 text-xs text-slate-500">
@@ -295,9 +342,9 @@ export default function NewTemplatePage() {
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
                     <span>Uploaded: {getUploadedFileName(form.previewUrl)}</span>
                     <UploadButton
-                      endpoint="templatePreview"
-                      onClientUploadComplete={handleUploadComplete}
-                      onUploadError={handleUploadError}
+                      endpoint="templateImage"
+                      onClientUploadComplete={handlePreviewUploadComplete}
+                      onUploadError={handlePreviewUploadError}
                       appearance={{
                         container: "",
                         button:

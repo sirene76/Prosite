@@ -68,6 +68,7 @@ export type TemplateMeta = {
 export type TemplateRecord = LeanDocument<TemplateDocument> & {
   _id: string;
   id: string;
+  thumbnail?: string;
   previewUrl?: string;
   previewVideo?: string;
   htmlUrl?: string;

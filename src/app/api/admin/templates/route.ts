@@ -115,6 +115,11 @@ export async function POST(req: Request) {
 
     const versions = versionInputs.map(sanitiseVersion);
 
+    const thumbnail =
+      typeof body.thumbnail === "string" && body.thumbnail.trim().length > 0
+        ? body.thumbnail.trim()
+        : undefined;
+
     const rawMeta = (body as { meta?: unknown }).meta;
     let meta: unknown = {};
     try {
@@ -146,6 +151,7 @@ export async function POST(req: Request) {
           ? body.subcategory.trim()
           : undefined,
       tags: sanitiseTags(body.tags),
+      thumbnail,
       versions,
       currentVersion,
       published: typeof body.published === "boolean" ? body.published : false,
