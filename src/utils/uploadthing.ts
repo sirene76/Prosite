@@ -1,5 +1,7 @@
-import { generateReactHelpers } from "@uploadthing/react/hooks";
+import { UploadButton, UploadDropzone, generateReactHelpers } from "@uploadthing/react";
 import type { OurFileRouter } from "@/app/api/uploadthing/route";
 
-export const { UploadButton, UploadDropzone, useUploadThing } =
-  generateReactHelpers<OurFileRouter>();
+export const { useUploadThing, uploadFiles } = generateReactHelpers<OurFileRouter>();
+
+// Re-export the UI components so all imports come from one place
+export { UploadButton, UploadDropzone };
