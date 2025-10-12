@@ -3,9 +3,17 @@ import { createRouteHandler, createUploadthing, type FileRouter } from "uploadth
 const f = createUploadthing();
 
 export const ourFileRouter = {
-  templateImage: f({ image: { maxFileSize: "4MB" } })
+  // For template thumbnail or image fields
+  templateImage: f({ image: { maxFileSize: "8MB" } })
     .onUploadComplete(({ file }) => {
-      console.log("✅ Uploaded:", file.url);
+      console.log("✅ Uploaded image:", file.url);
+      return { url: file.url };
+    }),
+
+  // For template preview or video fields
+  templateVideo: f({ video: { maxFileSize: "50MB" } })
+    .onUploadComplete(({ file }) => {
+      console.log("✅ Uploaded video:", file.url);
       return { url: file.url };
     }),
 } satisfies FileRouter;

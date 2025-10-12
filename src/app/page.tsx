@@ -43,7 +43,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           return (
             <div key={tpl._id} className="border rounded-lg overflow-hidden">
               <div className="w-full h-48">
-                {tpl.thumbnail ? (
+                {tpl.previewVideo ? (
+                  <video
+                    src={tpl.previewVideo}
+                    muted
+                    autoPlay
+                    loop
+                    playsInline
+                    className="h-full w-full object-cover"
+                  />
+                ) : tpl.thumbnail ? (
                   <img
                     src={tpl.thumbnail}
                     alt={tpl.name}

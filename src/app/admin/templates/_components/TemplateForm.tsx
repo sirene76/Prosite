@@ -17,6 +17,7 @@ export type TemplateFormValues = {
   tags?: string;
   currentVersion?: string;
   thumbnail?: string;
+  previewVideo?: string;
 };
 
 export type TemplateFormProps = {
@@ -41,10 +42,12 @@ export function TemplateForm({ initialData, onSubmit }: TemplateFormProps) {
       tags: initialData?.tags ?? "",
       currentVersion: initialData?.currentVersion ?? "",
       thumbnail: initialData?.thumbnail ?? "",
+      previewVideo: initialData?.previewVideo ?? "",
     },
   });
 
   const thumbnail = watch("thumbnail");
+  const previewVideo = watch("previewVideo");
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -141,6 +144,44 @@ export function TemplateForm({ initialData, onSubmit }: TemplateFormProps) {
           }}
           onUploadError={(err) => console.error("Upload failed:", err)}
         />
+      </div>
+
+      <div>
+        <label className="block font-medium text-sm mb-1">Preview Video</label>
+        {previewVideo ? (
+          <div className="rounded-lg border mb-2 overflow-hidden">
+            <video src={previewVideo} controls className="h-40 w-full object-cover" />
+          </div>
+        ) : (
+          <div className="border rounded-lg h-40 flex items-center justify-center text-gray-400 mb-2">
+            No preview video uploaded
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <UploadButton
+            endpoint="templateVideo"
+            onClientUploadComplete={(res) => {
+              const url = res?.[0]?.url;
+              if (url) {
+                setValue("previewVideo", url, { shouldDirty: true });
+              }
+            }}
+            onUploadError={(err) => console.error("Video upload failed:", err)}
+          />
+
+          {previewVideo ? (
+            <button
+              type="button"
+              onClick={() => setValue("previewVideo", "", { shouldDirty: true })}
+              className="rounded-md border border-slate-700 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-pink-400 hover:text-white"
+            >
+              Remove video
+            </button>
+          ) : null}
+        </div>
+
+        <p className="text-xs text-slate-500 mt-2">MP4, WebM up to 50MB.</p>
       </div>
 
       <div className="flex items-center justify-end gap-3">

@@ -9,6 +9,7 @@ type VersionUpdatePayload = {
   number?: unknown;
   changelog?: unknown;
   previewUrl?: unknown;
+  previewVideo?: unknown;
   inlineHtml?: unknown;
   inlineCss?: unknown;
   inlineMeta?: unknown;
@@ -25,6 +26,7 @@ type UpdatePayload = {
   published?: unknown;
   featured?: unknown;
   thumbnail?: unknown;
+  previewVideo?: unknown;
   versions?: unknown;
 };
 
@@ -100,6 +102,13 @@ function buildUpdates(body: UpdatePayload): Record<string, unknown> | { error: s
     updates.thumbnail =
       typeof body.thumbnail === "string" && body.thumbnail.trim()
         ? body.thumbnail.trim()
+        : undefined;
+  }
+
+  if (body.previewVideo !== undefined) {
+    updates.previewVideo =
+      typeof body.previewVideo === "string" && body.previewVideo.trim()
+        ? body.previewVideo.trim()
         : undefined;
   }
 
@@ -218,6 +227,8 @@ export async function PATCH(
           number: currentVersion,
           changelog: typeof firstVersion?.changelog === "string" ? firstVersion.changelog : "",
           previewUrl: typeof firstVersion?.previewUrl === "string" ? firstVersion.previewUrl : "",
+          previewVideo:
+            typeof firstVersion?.previewVideo === "string" ? firstVersion.previewVideo : "",
           inlineHtml: typeof firstVersion?.inlineHtml === "string" ? firstVersion.inlineHtml : "",
           inlineCss: typeof firstVersion?.inlineCss === "string" ? firstVersion.inlineCss : "",
           inlineMeta: typeof firstVersion?.inlineMeta === "string" ? firstVersion.inlineMeta : "",

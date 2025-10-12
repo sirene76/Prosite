@@ -24,6 +24,7 @@ type FormState = {
   slug: string;
   description: string;
   thumbnail: string;
+  previewVideo: string;
   category: string;
   subcategory: string;
   tags: string;
@@ -52,6 +53,7 @@ export default function NewTemplatePage() {
     slug: "",
     description: "",
     thumbnail: "",
+    previewVideo: "",
     category: "",
     subcategory: "",
     tags: "",
@@ -136,6 +138,7 @@ export default function NewTemplatePage() {
         slug: form.slug,
         description: form.description,
         thumbnail: form.thumbnail,
+        previewVideo: form.previewVideo,
         category: form.category,
         subcategory: form.subcategory,
         tags,
@@ -144,6 +147,7 @@ export default function NewTemplatePage() {
             number: versionNumber,
             changelog: form.changelog,
             previewUrl: form.previewUrl,
+            previewVideo: form.previewVideo,
             inlineHtml: form.html,
             inlineCss: form.css,
             inlineMeta: form.meta,
@@ -356,13 +360,61 @@ export default function NewTemplatePage() {
                     />
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardHeader className="border-none pb-0">
-              <CardTitle>Template Code</CardTitle>
+      <Card>
+        <CardHeader className="border-none pb-0">
+          <CardTitle>Template Preview Video</CardTitle>
+          <CardDescription>
+            Upload an optional video file to demonstrate your template (e.g., hero animation or walkthrough).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          {form.previewVideo ? (
+            <div className="rounded-xl border border-slate-800 overflow-hidden">
+              <video
+                key={form.previewVideo}
+                src={form.previewVideo}
+                controls
+                className="w-full h-56 object-cover"
+              />
+            </div>
+          ) : (
+            <div className="flex h-56 items-center justify-center rounded-xl border border-dashed border-slate-800 text-sm text-slate-500">
+              No preview video uploaded yet.
+            </div>
+          )}
+
+          <UploadButton
+            endpoint="templateVideo"
+            onClientUploadComplete={(res) => {
+              const url = res?.[0]?.url;
+              if (url) {
+                setForm((prev) => ({ ...prev, previewVideo: url }));
+              }
+            }}
+            onUploadError={(err) => console.error("❌ Video upload failed:", err)}
+          />
+
+          {form.previewVideo ? (
+            <button
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, previewVideo: "" }))}
+              className="rounded-md border border-slate-700 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-pink-400 hover:text-white"
+            >
+              Remove video
+            </button>
+          ) : null}
+
+          <p className="text-xs text-slate-500">MP4, WebM up to 50MB.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-none pb-0">
+          <CardTitle>Template Code</CardTitle>
               <CardDescription>Author HTML, CSS, and metadata directly with live preview updates.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8 pt-6">
