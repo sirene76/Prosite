@@ -10,6 +10,7 @@ type BuilderStoreState = {
   websiteId: string | null;
   websiteName: string;
   themeName: string;
+  selectedTheme: string | null;
   pages: string[];
   device: BuilderDevice;
   theme: Record<string, string>;
@@ -17,6 +18,7 @@ type BuilderStoreState = {
   setWebsiteId: (websiteId: string | null | undefined) => void;
   setWebsiteName: (websiteName: string | null | undefined) => void;
   setThemeName: (themeName: string | null | undefined) => void;
+  setSelectedTheme: (themeName: string) => void;
   setPages: (pages: string[] | null | undefined) => void;
   setDevice: (device: BuilderDevice) => void;
   setTheme: (colors: Record<string, string> | null | undefined) => void;
@@ -28,6 +30,7 @@ export const useBuilderStore = create<BuilderStoreState>((set) => ({
   websiteId: null,
   websiteName: "Untitled Website",
   themeName: "Default",
+  selectedTheme: null,
   pages: [...DEFAULT_PAGE_NAMES],
   device: "desktop",
   theme: {},
@@ -42,6 +45,9 @@ export const useBuilderStore = create<BuilderStoreState>((set) => ({
   setThemeName: (themeName) => {
     const resolved = typeof themeName === "string" ? themeName.trim() : "";
     set({ themeName: resolved.length > 0 ? resolved : "Default" });
+  },
+  setSelectedTheme: (themeName) => {
+    set({ selectedTheme: themeName });
   },
   setPages: (pages) => {
     const nextPages = Array.isArray(pages) && pages.length > 0 ? pages : [...DEFAULT_PAGE_NAMES];

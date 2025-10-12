@@ -1,24 +1,85 @@
 "use client";
 
-import { ThemeSelector } from "./ThemeSelector";
+import { useEffect } from "react";
 
-export type ThemeOption = {
+import { useBuilder } from "@/context/BuilderContext";
+import { useBuilderStore } from "@/store/builderStore";
+
+export type Theme = {
   name: string;
   colors: Record<string, string>;
+  fonts?: Record<string, string>;
 };
 
-type ThemePanelProps = {
-  themes?: unknown;
-};
+export type ThemeOption = Theme;
 
-export function ThemePanel({ themes }: ThemePanelProps) {
-  const resolvedThemes = normaliseThemeOptions(themes);
+export function ThemePanel({ themes }: { themes: Theme[] }) {
+  const selectedTheme = useBuilderStore((state) => state.selectedTheme);
+  const setSelectedTheme = useBuilderStore((state) => state.setSelectedTheme);
+  const { updateTheme } = useBuilder();
 
-  if (resolvedThemes.length === 0) {
+  function applyTheme(theme: Theme) {
+    const iframe = document.querySelector("iframe");
+    const root = iframe?.contentDocument?.documentElement;
+    if (!root) return;
+
+    const colors = theme.colors || {};
+    Object.entries(colors).forEach(([key, value]) => {
+      root.style.setProperty(`--${key}`, value);
+    });
+
+    const fonts = theme.fonts || {};
+    if (fonts.body) root.style.setProperty("--font-body", fonts.body);
+    if (fonts.heading) root.style.setProperty("--font-heading", fonts.heading);
+  }
+
+  function handleThemeClick(theme: Theme) {
+    setSelectedTheme(theme.name);
+    updateTheme({
+      colors: theme.colors,
+      name: theme.name,
+      label: theme.name,
+    });
+    applyTheme(theme);
+  }
+
+  useEffect(() => {
+    if (!themes?.length) {
+      return;
+    }
+
+    const activeTheme = themes.find((theme) => theme.name === selectedTheme);
+    if (activeTheme) {
+      applyTheme(activeTheme);
+      return;
+    }
+
+    setSelectedTheme(themes[0].name);
+    applyTheme(themes[0]);
+  }, [themes, selectedTheme, setSelectedTheme]);
+
+  if (!themes?.length) {
     return <p className="text-gray-400 text-sm">No themes defined for this template.</p>;
   }
 
-  return <ThemeSelector themes={resolvedThemes} />;
+  return (
+    <div className="space-y-3">
+      {themes.map((theme) => (
+        <button
+          key={theme.name}
+          onClick={() => handleThemeClick(theme)}
+          className={`w-full rounded-md px-4 py-2 text-sm font-medium transition theme-button ${
+            selectedTheme === theme.name
+              ? "bg-blue-600 text-white border border-blue-500 shadow-lg shadow-blue-500/30"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
+          }`}
+          type="button"
+        >
+          {theme.name}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export function normaliseThemeOptions(source: unknown): ThemeOption[] {
@@ -42,9 +103,20 @@ export function normaliseThemeOptions(source: unknown): ThemeOption[] {
           }
         });
 
+        const fonts: Record<string, string> = {};
+        const sourceFonts = (theme as { fonts?: Record<string, unknown> }).fonts;
+        if (sourceFonts && typeof sourceFonts === "object") {
+          Object.entries(sourceFonts).forEach(([key, value]) => {
+            if (typeof value === "string" && value.trim()) {
+              fonts[key] = value;
+            }
+          });
+        }
+
         return {
           name: (theme as { name: string }).name,
           colors,
+          fonts,
         } as ThemeOption;
       }
 

@@ -102,3 +102,11 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.theme-button {
+  transition: all 0.25s ease;
+}
+
+.theme-button:hover {
+  transform: scale(1.02);
+}
