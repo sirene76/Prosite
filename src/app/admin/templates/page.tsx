@@ -125,23 +125,25 @@ export default async function AdminTemplatesPage() {
                     className="group block rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                     aria-label={`View ${template.name} template preview`}
                   >
-                    <div className="relative mb-4 h-48 w-full overflow-hidden rounded-md bg-slate-800">
+                    <div className="relative mb-4 h-48 w-full overflow-hidden rounded-md bg-slate-800 group">
                       {template.previewVideo ? (
                         <video
-                          key={template.previewVideo}
                           src={template.previewVideo}
                           muted
-                          autoPlay
                           loop
                           playsInline
-                          poster={template.thumbnail}
-                          className="h-full w-full object-cover"
+                          preload="metadata"
+                          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                         />
-                      ) : template.thumbnail ? (
+                      ) : null}
+
+                      {template.thumbnail ? (
                         <img
                           src={template.thumbnail}
                           alt={template.name}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+                            template.previewVideo ? "opacity-100 group-hover:opacity-0" : ""
+                          }`}
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-sm text-slate-500">
