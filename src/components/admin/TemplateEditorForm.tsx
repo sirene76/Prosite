@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ImageDropInput from "@/components/ui/ImageDropInput";
+import { UploadButton } from "@/utils/uploadthing";
 
 import TemplateLivePreview from "./TemplateLivePreview";
 
@@ -28,6 +29,7 @@ type TemplateEditorVersion = {
   number?: string;
   changelog?: string;
   previewUrl?: string;
+  previewVideo?: string;
   inlineHtml?: string;
   inlineCss?: string;
   inlineMeta?: string;
@@ -44,6 +46,7 @@ type TemplateEditorData = {
   tags?: string[];
   currentVersion?: string;
   previewUrl?: string;
+  previewVideo?: string;
   versions?: TemplateEditorVersion[];
 };
 
@@ -52,6 +55,7 @@ type FormState = {
   slug: string;
   description: string;
   thumbnail: string;
+  previewVideo: string;
   category: string;
   subcategory: string;
   tags: string;
@@ -75,6 +79,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
     slug: initialData?.slug ?? "",
     description: initialData?.description ?? "",
     thumbnail: initialData?.thumbnail ?? "",
+    previewVideo: activeVersion?.previewVideo ?? initialData?.previewVideo ?? "",
     category: initialData?.category ?? "",
     subcategory: initialData?.subcategory ?? "",
     tags: (initialData?.tags ?? []).join(", "),
@@ -113,6 +118,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
       slug: form.slug,
       description: form.description,
       thumbnail: form.thumbnail,
+      previewVideo: form.previewVideo,
       category: form.category,
       subcategory: form.subcategory,
       tags: form.tags
@@ -124,6 +130,7 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
           number: form.version,
           changelog: form.changelog,
           previewUrl: form.previewUrl,
+          previewVideo: form.previewVideo,
           inlineHtml: form.html,
           inlineCss: form.css,
           inlineMeta: form.meta,
@@ -210,6 +217,51 @@ export default function TemplateEditorForm({ initialData, isEdit = false }: Temp
             description="Upload an image shown in the catalog (PNG, JPG, GIF up to 4MB)."
             disabled={loading}
           />
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-200">Preview Video</p>
+            {form.previewVideo ? (
+              <div className="overflow-hidden rounded border border-slate-800">
+                <video
+                  key={form.previewVideo}
+                  src={form.previewVideo}
+                  controls
+                  className="h-40 w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex h-40 items-center justify-center rounded border border-dashed border-slate-800 text-sm text-gray-400">
+                No preview video uploaded
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              <UploadButton
+                endpoint="templateVideo"
+                onClientUploadComplete={(res) => {
+                  const url = res?.[0]?.url;
+                  if (url) {
+                    setForm((prev) => ({ ...prev, previewVideo: url }));
+                  }
+                }}
+                onUploadError={(err) => console.error("❌ Video upload failed:", err)}
+              />
+
+              {form.previewVideo ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-slate-700 text-slate-200 hover:border-pink-400 hover:text-white"
+                  onClick={() => setForm((prev) => ({ ...prev, previewVideo: "" }))}
+                  disabled={loading}
+                >
+                  Remove video
+                </Button>
+              ) : null}
+            </div>
+
+            <p className="text-xs text-slate-500">MP4, WebM up to 50MB.</p>
+          </div>
 
           <input
             value={form.version}
