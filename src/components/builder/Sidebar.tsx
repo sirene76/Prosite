@@ -59,6 +59,8 @@ export function Sidebar() {
   const storeTheme = useBuilderStore((state) => state.theme);
   const setStoreTheme = useBuilderStore((state) => state.setTheme);
   const setStorePages = useBuilderStore((state) => state.setPages);
+  const selectedThemeName = useBuilderStore((state) => state.selectedTheme);
+  const setSelectedThemeName = useBuilderStore((state) => state.setSelectedTheme);
   const [activeTab, setActiveTab] = useState<TabId>("pages");
   const seededForTemplateRef = useRef<string | null>(null);
 
@@ -80,6 +82,17 @@ export function Sidebar() {
     }
     return normaliseThemeOptions(selectedTemplate.meta?.themes);
   }, [meta?.themes, selectedTemplate.meta]);
+
+  useEffect(() => {
+    if (!themeOptions.length) {
+      return;
+    }
+
+    const hasActiveTheme = themeOptions.some((theme) => theme.name === selectedThemeName);
+    if (!hasActiveTheme) {
+      setSelectedThemeName(themeOptions[0].name);
+    }
+  }, [themeOptions, selectedThemeName, setSelectedThemeName]);
 
   const metaPages = useMemo(() => {
     const inlinePages = normalisePages(meta?.pages);
