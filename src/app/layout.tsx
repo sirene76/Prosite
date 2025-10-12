@@ -6,7 +6,7 @@ import { extractRouterConfig } from "uploadthing/server";
 
 import Navbar from "@/components/Navbar";
 import SessionWrapper from "@/components/SessionWrapper";
-import { ourFileRouter } from "@/app/api/uploadthing/core";
+import { ourFileRouter } from "@/app/api/uploadthing/route";
 
 export const metadata: Metadata = {
   title: "Prosite Builder",

@@ -24,6 +24,7 @@ const TemplateSchema = new mongoose.Schema(
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     description: String,
+    thumbnail: { type: String, required: false },
     category: { type: String, index: true },
     subcategory: String,
     tags: [String],

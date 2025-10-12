@@ -1,4 +1,4 @@
-import Image from "next/image";
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 
 import { getTemplates } from "@/lib/templates";
@@ -40,19 +40,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <div className="grid grid-cols-3 gap-6">
         {templates.map((tpl) => {
-          const version = tpl.versions?.find((v) => v.number === tpl.currentVersion);
-          const previewUrl = version?.previewUrl || "/placeholder-template.svg";
-
           return (
             <div key={tpl._id} className="border rounded-lg overflow-hidden">
-              <div className="w-full h-48 relative">
-                <Image
-                  src={previewUrl}
-                  alt={tpl.name}
-                  fill
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                  className="object-cover"
-                />
+              <div className="w-full h-48">
+                {tpl.thumbnail ? (
+                  <img
+                    src={tpl.thumbnail}
+                    alt={tpl.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="bg-gray-100 w-full h-full flex items-center justify-center text-gray-400">
+                    No Preview
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <h2 className="font-semibold text-lg">{tpl.name}</h2>

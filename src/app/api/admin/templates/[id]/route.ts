@@ -24,6 +24,7 @@ type UpdatePayload = {
   currentVersion?: unknown;
   published?: unknown;
   featured?: unknown;
+  thumbnail?: unknown;
   versions?: unknown;
 };
 
@@ -93,6 +94,13 @@ function buildUpdates(body: UpdatePayload): Record<string, unknown> | { error: s
 
   if (body.description !== undefined) {
     updates.description = typeof body.description === "string" ? body.description : "";
+  }
+
+  if (body.thumbnail !== undefined) {
+    updates.thumbnail =
+      typeof body.thumbnail === "string" && body.thumbnail.trim()
+        ? body.thumbnail.trim()
+        : undefined;
   }
 
   const tags = normaliseTags(body.tags);

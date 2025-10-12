@@ -1,4 +1,4 @@
-import Image from "next/image";
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 
@@ -36,6 +36,7 @@ type TemplateListItem = {
   subcategory?: string;
   description?: string;
   tags?: string[];
+  thumbnail?: string;
   currentVersion?: string;
   versions?: TemplateVersionSummary[];
   published: boolean;
@@ -110,7 +111,6 @@ export default async function AdminTemplatesPage() {
               const currentVersion = template.versions?.find(
                 (version) => version.number === template.currentVersion
               );
-              const imageSrc = currentVersion?.previewUrl ?? "/placeholder-template.svg";
               const tags = Array.isArray(template.tags) ? template.tags : [];
 
               return (
@@ -124,17 +124,16 @@ export default async function AdminTemplatesPage() {
                     aria-label={`View ${template.name} template preview`}
                   >
                     <div className="relative mb-4 h-48 w-full overflow-hidden rounded-md bg-slate-800">
-                      {imageSrc ? (
-                        <Image
-                          src={imageSrc}
-                          alt={`${template.name} preview`}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          priority
+                      {template.thumbnail ? (
+                        <img
+                          src={template.thumbnail}
+                          alt={template.name}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-slate-500">No Preview</div>
+                        <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                          No Preview
+                        </div>
                       )}
                     </div>
 
