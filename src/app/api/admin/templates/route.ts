@@ -120,6 +120,11 @@ export async function POST(req: Request) {
         ? body.thumbnail.trim()
         : undefined;
 
+    const previewVideo =
+      typeof body.previewVideo === "string" && body.previewVideo.trim().length > 0
+        ? body.previewVideo.trim()
+        : undefined;
+
     const rawMeta = (body as { meta?: unknown }).meta;
     let meta: unknown = {};
     try {
@@ -152,6 +157,7 @@ export async function POST(req: Request) {
           : undefined,
       tags: sanitiseTags(body.tags),
       thumbnail,
+      previewVideo,
       versions,
       currentVersion,
       published: typeof body.published === "boolean" ? body.published : false,

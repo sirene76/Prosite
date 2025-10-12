@@ -21,6 +21,7 @@ function getBaseUrl(): string {
 type TemplateVersionSummary = {
   number: string;
   previewUrl?: string;
+  previewVideo?: string;
   htmlUrl?: string;
   cssUrl?: string;
   metaUrl?: string;
@@ -37,6 +38,7 @@ type TemplateListItem = {
   description?: string;
   tags?: string[];
   thumbnail?: string;
+  previewVideo?: string;
   currentVersion?: string;
   versions?: TemplateVersionSummary[];
   published: boolean;
@@ -124,7 +126,18 @@ export default async function AdminTemplatesPage() {
                     aria-label={`View ${template.name} template preview`}
                   >
                     <div className="relative mb-4 h-48 w-full overflow-hidden rounded-md bg-slate-800">
-                      {template.thumbnail ? (
+                      {template.previewVideo ? (
+                        <video
+                          key={template.previewVideo}
+                          src={template.previewVideo}
+                          muted
+                          autoPlay
+                          loop
+                          playsInline
+                          poster={template.thumbnail}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : template.thumbnail ? (
                         <img
                           src={template.thumbnail}
                           alt={template.name}
