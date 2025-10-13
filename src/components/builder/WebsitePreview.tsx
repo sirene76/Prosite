@@ -152,9 +152,15 @@ export function WebsitePreview() {
         ...theme.fonts,
       };
 
+      // ✅ Merge defaults from meta.json so placeholders like {{ hero.image }} always have values
+      const mergedWithDefaults = {
+        ...getFieldDefaults(selectedTemplate.meta),
+        ...templateValues,
+      };
+
       const rendered = renderTemplate({
         html: assets.html,
-        values: templateValues,
+        values: mergedWithDefaults,
         modules: selectedTemplate.modules,
       });
 
@@ -538,4 +544,22 @@ function normaliseTemplateValues(values: Record<string, unknown>): Record<string
     acc[key] = String(value);
     return acc;
   }, {});
+}
+
+/**
+ * Extract default field values from meta.json so they render even
+ * before the user edits any content in the builder.
+ */
+function getFieldDefaults(meta: any): Record<string, string> {
+  if (!meta || !Array.isArray(meta.fields)) return {};
+
+  const defaults: Record<string, string> = {};
+
+  for (const field of meta.fields) {
+    if (typeof field.id === "string") {
+      defaults[field.id] = String(field.default ?? "");
+    }
+  }
+
+  return defaults;
 }
