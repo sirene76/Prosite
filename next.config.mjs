@@ -14,6 +14,8 @@ const nextConfig = {
       { protocol: "https", hostname: "plus.unsplash.com" },
       // Pinterest CDN
       { protocol: "https", hostname: "i.pinimg.com" },
+      { protocol: "https", hostname: "cdn.pixabay.com" },
+
     ],
   },
   webpack: (config) => {
