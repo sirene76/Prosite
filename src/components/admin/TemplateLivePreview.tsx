@@ -1,13 +1,23 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import type { TemplateModuleDefinition } from "@/lib/templates";
+import { renderTemplate } from "@/lib/renderTemplate";
 
 type TemplateTheme = {
   name: string;
   colors?: Record<string, string>;
 };
 
+type TemplateField = {
+  id?: string;
+  default?: unknown;
+};
+
 type TemplateMeta = {
   themes?: TemplateTheme[];
+  fields?: TemplateField[];
+  modules?: TemplateModuleDefinition[];
 };
 
 type TemplateLivePreviewProps = {
@@ -20,12 +30,15 @@ export default function TemplateLivePreview({ html, css, meta }: TemplateLivePre
   const [activeTheme, setActiveTheme] = useState<TemplateTheme | null>(() => meta?.themes?.[0] ?? null);
   const [doc, setDoc] = useState("");
   const themes = meta?.themes ?? [];
+  const fields = useMemo(() => getTemplateFields(meta), [meta]);
+  const modules = useMemo(() => getTemplateModules(meta), [meta]);
 
   // Debounced document re-render
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!html || !css) return;
 
+      const renderedHtml = renderWithDefaults({ html, fields, modules });
       const themeVars = activeTheme?.colors
         ? Object.entries(activeTheme.colors)
             .map(([key, value]) => `--${key}: ${value};`)
@@ -45,13 +58,13 @@ export default function TemplateLivePreview({ html, css, meta }: TemplateLivePre
               :root { ${themeVars} }
             </style>
           </head>
-          <body>${html}</body>
+          <body>${renderedHtml}</body>
         </html>
       `;
       setDoc(docHTML);
     }, 200);
     return () => clearTimeout(timeout);
-  }, [html, css, activeTheme]);
+  }, [html, css, activeTheme, fields, modules]);
 
   // Auto-reset active theme when meta changes
   useEffect(() => {
@@ -108,4 +121,70 @@ export default function TemplateLivePreview({ html, css, meta }: TemplateLivePre
       </div>
     </div>
   );
+}
+
+function getTemplateFields(meta: TemplateMeta | null | undefined): TemplateField[] {
+  if (!meta?.fields || !Array.isArray(meta.fields)) {
+    return [];
+  }
+
+  return meta.fields.filter((field): field is TemplateField => !!field && typeof field === "object");
+}
+
+function getTemplateModules(meta: TemplateMeta | null | undefined): TemplateModuleDefinition[] {
+  if (!meta?.modules || !Array.isArray(meta.modules)) {
+    return [];
+  }
+
+  return meta.modules.filter((module): module is TemplateModuleDefinition => !!module && typeof module === "object");
+}
+
+function renderWithDefaults({
+  html,
+  fields,
+  modules,
+}: {
+  html: string;
+  fields: TemplateField[];
+  modules: TemplateModuleDefinition[];
+}) {
+  if (!html) {
+    return "";
+  }
+
+  const defaults = fields.reduce<Record<string, string>>((acc, field) => {
+    if (typeof field.id !== "string" || !field.id.trim()) {
+      return acc;
+    }
+
+    const key = field.id.trim();
+    const defaultValue = field.default;
+
+    if (typeof defaultValue === "string") {
+      acc[key] = defaultValue;
+      return acc;
+    }
+
+    if (Array.isArray(defaultValue)) {
+      const flattened = defaultValue
+        .map((value) => (typeof value === "string" ? value.trim() : ""))
+        .filter((value) => value.length > 0);
+      acc[key] = flattened.join("\n");
+      return acc;
+    }
+
+    if (defaultValue == null) {
+      acc[key] = "";
+      return acc;
+    }
+
+    acc[key] = String(defaultValue);
+    return acc;
+  }, {});
+
+  return renderTemplate({
+    html,
+    values: defaults,
+    modules,
+  });
 }
