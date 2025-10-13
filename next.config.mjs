@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   images: {
     remotePatterns: [
+      { protocol: "https", hostname: "**.ufs.sh" },
       // UploadThing
       { protocol: "https", hostname: "utfs.io" },
       // Unsplash
@@ -15,6 +16,7 @@ const nextConfig = {
       // Pinterest CDN
       { protocol: "https", hostname: "i.pinimg.com" },
       { protocol: "https", hostname: "cdn.pixabay.com" },
+
 
     ],
   },
