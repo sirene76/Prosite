@@ -46,7 +46,7 @@ export default function TemplateLivePreview({ html, css, meta }: TemplateLivePre
         : "";
 
       // ✅ Put author CSS first, then theme variables last so they override
-      const docHTML = `
+      const docHTML = injectTemplatePreviewScript(`
         <html>
           <head>
             <meta charset="UTF-8" />
@@ -60,7 +60,7 @@ export default function TemplateLivePreview({ html, css, meta }: TemplateLivePre
           </head>
           <body>${renderedHtml}</body>
         </html>
-      `;
+      `);
       setDoc(docHTML);
     }, 200);
     return () => clearTimeout(timeout);
@@ -187,4 +187,18 @@ function renderWithDefaults({
     values: defaults,
     modules,
   });
+}
+
+function injectTemplatePreviewScript(html: string) {
+  if (!html) {
+    return html;
+  }
+
+  const script = `\n<script>\n(function(){\n  const isInTemplatePreview = window.self !== window.top && window.location.pathname.includes("admin");\n  if(isInTemplatePreview){\n    const style=document.createElement("style");\n    style.textContent=[\n      ".page{display:block!important;opacity:1!important;visibility:visible!important;}",\n      ".features,.services-grid,.team-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))!important;gap:20px!important;}",\n      "#footer{position:static!important;margin-top:60px!important;}",\n      "html,body{min-height:2500px!important;overflow-y:auto!important;}"\n    ].join("");\n    document.head.appendChild(style);\n\n    const previewData={\n      \"site.title\":\"Glossy Touch - Modern Glass Design Experience\",\n      \"hero.title\":\"Welcome to the Future\",\n      \"hero.description\":\"Experience cutting-edge glass morphism design that brings depth and elegance to modern web interfaces.\",\n      \"hero.button\":\"Learn More\",\n      \"about.title\":\"About Our Vision\",\n      \"about.text1\":\"We believe in creating digital experiences that feel natural and intuitive.\",\n      \"about.text2\":\"Founded in 2024, our team of designers and developers are passionate about pushing design boundaries.\",\n      \"about.text3\":\"Every project is crafted with attention to detail and care.\",\n      \"services.title\":\"Our Services\",\n      \"services.subtitle\":\"Comprehensive design and development solutions tailored to your needs\",\n      \"contact.form_title\":\"Get In Touch\",\n      \"contact.info_title\":\"Contact Information\"\n    };\n    document.body.innerHTML=document.body.innerHTML.replace(/{{(.*?)}}/g,function(_,key){return previewData[key.trim()]||\"\";});\n  }\n})();\n</script>\n`;
+
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${script}</body>`);
+  }
+
+  return `${html}${script}`;
 }
