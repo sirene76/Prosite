@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { ensureImageReferrerPolicy } from "@/lib/ensureImageReferrerPolicy";
 import { renderTemplate } from "@/lib/renderTemplate";
 import {
   getTemplateAssets,
@@ -34,27 +35,16 @@ export async function POST(request: Request) {
     }
 
     const { template, html, css } = assets;
-    const colorTokens = buildThemeColorTokens(template, body.theme, body.themeDefaults);
-    const fontTokens = buildThemeFontTokens(template, body.theme, body.themeDefaults);
 
     const rendered = renderTemplate({
       html,
       values: body.content ?? {},
       modules: template.modules,
-      theme: {
-        primary: colorTokens.primary,
-        secondary: colorTokens.secondary,
-        background: colorTokens.background,
-        text: colorTokens.text,
-      },
-      css,
-      themeTokens: {
-        colors: colorTokens,
-        fonts: fontTokens,
-      },
     });
 
-    const finalHtml = wrapWithDocument(rendered);
+    const htmlWithReferrerPolicy = ensureImageReferrerPolicy(rendered);
+
+    const finalHtml = wrapWithDocument(htmlWithReferrerPolicy);
     const themedCss = applyTheme(css, template, body.theme ?? {}, body.themeDefaults ?? {});
 
     const files = [

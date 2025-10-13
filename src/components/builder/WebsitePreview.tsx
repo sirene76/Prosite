@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
 import type { TemplateColorDefinition } from "@/lib/templates";
-import { injectThemeTokens, renderTemplate } from "@/lib/renderTemplate";
+import { ensureImageReferrerPolicy } from "@/lib/ensureImageReferrerPolicy";
+import { injectThemeTokens } from "@/lib/injectThemeTokens";
+import { renderTemplate } from "@/lib/renderTemplate";
 import { useBuilderStore } from "@/store/builderStore";
 
 const DEVICE_WIDTHS = {
@@ -124,6 +126,10 @@ export function WebsitePreview() {
     return { ...baseContent, ...storeValues } as Record<string, unknown>;
   }, [content, storeValues]);
 
+  const templateValues = useMemo(() => {
+    return normaliseTemplateValues(mergedData);
+  }, [mergedData]);
+
   useEffect(() => {
     if (!assets) {
       updatePreviewDocument("");
@@ -148,12 +154,14 @@ export function WebsitePreview() {
 
       const rendered = renderTemplate({
         html: assets.html,
-        values: mergedData,
+        values: templateValues,
         modules: selectedTemplate.modules,
       });
 
+      const htmlWithReferrerPolicy = ensureImageReferrerPolicy(rendered);
+
       const themedDocument = injectThemeTokens({
-        html: rendered,
+        html: htmlWithReferrerPolicy,
         css: assets.css,
         colors: mergedColors,
         fonts: mergedFonts,
@@ -167,7 +175,7 @@ export function WebsitePreview() {
     return () => clearTimeout(timeout);
   }, [
     assets,
-    mergedData,
+    templateValues,
     selectedTemplate.id,
     selectedTemplate.modules,
     theme.colors,
@@ -501,4 +509,33 @@ function extractFontDefaults(css: string, keys: string[]) {
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normaliseTemplateValues(values: Record<string, unknown>): Record<string, string> {
+  return Object.entries(values).reduce<Record<string, string>>((acc, [key, value]) => {
+    if (typeof value === "string") {
+      acc[key] = value;
+      return acc;
+    }
+
+    if (Array.isArray(value)) {
+      const flattened = value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter((item) => item.length > 0);
+      if (flattened.length > 0) {
+        acc[key] = flattened.join("\n");
+        return acc;
+      }
+      acc[key] = "";
+      return acc;
+    }
+
+    if (value == null) {
+      acc[key] = "";
+      return acc;
+    }
+
+    acc[key] = String(value);
+    return acc;
+  }, {});
 }

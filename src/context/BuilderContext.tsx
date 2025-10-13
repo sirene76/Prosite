@@ -352,11 +352,52 @@ function extractMetaContentSources(meta: unknown): Array<Record<string, unknown>
     result.push(placeholderRecord);
   }
 
+  const fieldDefaults = extractFieldDefaults(base["fields"]);
+  if (Object.keys(fieldDefaults).length > 0) {
+    result.push(fieldDefaults);
+  }
+
   if (!result.length) {
     result.push(base);
   }
 
   return result;
+}
+
+function extractFieldDefaults(fields: unknown): Record<string, unknown> {
+  if (!Array.isArray(fields)) {
+    return {};
+  }
+
+  return fields.reduce<Record<string, unknown>>((acc, field) => {
+    if (!field || typeof field !== "object") {
+      return acc;
+    }
+
+    const id = typeof (field as { id?: unknown }).id === "string" ? (field as { id?: string }).id.trim() : "";
+    if (!id) {
+      return acc;
+    }
+
+    const defaultValue = (field as { default?: unknown }).default;
+    if (typeof defaultValue === "string") {
+      acc[id] = defaultValue;
+      return acc;
+    }
+
+    if (defaultValue == null) {
+      acc[id] = "";
+      return acc;
+    }
+
+    if (Array.isArray(defaultValue)) {
+      acc[id] = defaultValue.filter((item): item is string => typeof item === "string");
+      return acc;
+    }
+
+    acc[id] = defaultValue;
+    return acc;
+  }, {});
 }
 
 function normaliseRecord(value: unknown): Record<string, unknown> | null {
