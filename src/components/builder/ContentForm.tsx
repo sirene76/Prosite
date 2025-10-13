@@ -1,10 +1,12 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { Fragment } from "react";
+import Image from "next/image";
+import { Fragment, useEffect, useState } from "react";
 
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
 import ImageDropInput from "@/components/ui/ImageDropInput";
+import { UploadDropzone } from "@/utils/uploadthing";
 
 const IMAGE_URL_PATTERN = /\.(jpe?g|png|gif|webp|svg)$/i;
 
@@ -57,12 +59,12 @@ function renderField(
   if (resolvedType === "image") {
     const stringValue = toTextValue(value);
     return (
-      <ImageDropInput
+      <ImageField
         label={label}
-        value={stringValue}
-        onChange={(url) => onChange(key, url)}
-        onClear={() => onChange(key, "")}
         description={description}
+        value={stringValue}
+        onUpload={(url) => onChange(key, url)}
+        onClear={() => onChange(key, "")}
       />
     );
   }
@@ -225,4 +227,107 @@ function toGalleryItems(value: unknown): string[] {
   return value
     .map((item) => (typeof item === "string" ? item.trim() : ""))
     .filter((item) => item.length > 0);
+}
+
+type ImageFieldProps = {
+  label?: string;
+  description?: string;
+  value: string;
+  onUpload: (url: string) => void;
+  onClear: () => void;
+};
+
+function ImageField({ label, description, value, onUpload, onClear }: ImageFieldProps) {
+  const trimmedValue = value.trim();
+  const hasImage = trimmedValue.length > 0;
+  const [isReplacing, setIsReplacing] = useState(!hasImage);
+
+  useEffect(() => {
+    if (!hasImage) {
+      setIsReplacing(true);
+    }
+  }, [hasImage]);
+
+  const handleUploadComplete = (uploads?: Array<{ url?: string | null }>) => {
+    const [firstUpload] = uploads ?? [];
+    const uploadedUrl = firstUpload?.url?.trim();
+    if (uploadedUrl) {
+      onUpload(uploadedUrl);
+      setIsReplacing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {label ? (
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
+      ) : null}
+
+      {hasImage && !isReplacing ? (
+        <div className="space-y-3">
+          <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-950/60">
+            <div className="relative h-48 w-full">
+              <Image
+                src={trimmedValue}
+                alt={label ?? "Uploaded image"}
+                fill
+                sizes="(min-width: 1024px) 360px, (min-width: 768px) 50vw, 100vw"
+                className="object-cover"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setIsReplacing(true)}
+              className="rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 transition hover:border-builder-accent/50 hover:text-slate-100"
+            >
+              Replace image
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onClear();
+                setIsReplacing(true);
+              }}
+              className="rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 transition hover:border-rose-500/40 hover:text-rose-200"
+            >
+              Remove image
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <UploadDropzone
+            endpoint="templateImage"
+            onClientUploadComplete={handleUploadComplete}
+            onUploadError={(error) => {
+              console.error("Image upload failed", error);
+            }}
+            className="ut-upload-area flex min-h-[160px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-gray-800 bg-gray-950/60 px-4 py-6 text-center text-sm text-slate-300 transition hover:border-builder-accent/60 hover:text-slate-100"
+            appearance={{
+              uploadIcon: "h-10 w-10 text-slate-500",
+              label: "text-sm font-medium text-slate-200",
+              allowedContent: "text-xs text-slate-500",
+            }}
+          />
+          <p className="text-xs text-slate-500">Drag and drop an image or click to choose one.</p>
+          {hasImage ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setIsReplacing(false)}
+                className="rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 transition hover:border-builder-accent/50 hover:text-slate-100"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {description ? <span className="text-[11px] text-slate-500">{description}</span> : null}
+    </div>
+  );
 }
