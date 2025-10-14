@@ -5,6 +5,8 @@ import AdmZip from "adm-zip";
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 import { generateThumbnail } from "@/lib/generateThumbnail";
+import { renderTemplate } from "@/lib/renderTemplate";
+import type { TemplateModuleDefinition } from "@/lib/templates";
 
 export const runtime = "nodejs";
 
@@ -89,6 +91,37 @@ export async function POST(req: Request) {
     const js = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf8") : "";
     const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
 
+    const values: Record<string, string> = {};
+    if (meta?.fields && typeof meta.fields === "object") {
+      for (const [key, field] of Object.entries(meta.fields)) {
+        if (field && typeof field === "object") {
+          const defaultValue = (field as { default?: unknown }).default;
+          values[key] = defaultValue != null ? String(defaultValue) : "";
+        }
+      }
+    }
+
+    const modules: TemplateModuleDefinition[] = Array.isArray(meta?.modules)
+      ? (meta.modules as TemplateModuleDefinition[])
+          .filter((mod) => mod && typeof mod.id === "string" && mod.id.trim())
+          .map((mod) => ({
+            ...mod,
+            description:
+              mod.description ||
+              `${mod.label || "Module"} content preview for ${meta?.name || "template"}`,
+          }))
+      : [];
+
+    const renderedHtml = renderTemplate({
+      html,
+      values,
+      modules,
+    });
+
+    const previewPath = path.join(extractDir, "preview.html");
+    fs.writeFileSync(previewPath, renderedHtml, "utf-8");
+    console.log("✅ Preview HTML rendered:", previewPath);
+
     const folderName =
       (typeof meta.id === "string" && meta.id.trim()) || extractedFolderName;
     const finalDir = path.join(uploadsDir, folderName);
@@ -133,7 +166,12 @@ export async function POST(req: Request) {
       { new: true, upsert: true }
     );
 
-    return NextResponse.json({ success: true, template: templateDoc });
+    const basePath = `/templates/${folderName}`;
+    const responseTemplate = templateDoc?.toObject
+      ? { ...templateDoc.toObject(), basePath, previewPath: `${basePath}/preview.html` }
+      : { ...templateDoc, basePath, previewPath: `${basePath}/preview.html` };
+
+    return NextResponse.json({ success: true, template: responseTemplate });
   } catch (error: unknown) {
     console.error("UPLOAD ERROR:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
