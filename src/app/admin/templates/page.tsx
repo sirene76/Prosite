@@ -1,4 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
+import Link from "next/link";
+
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 
@@ -10,7 +12,16 @@ export default async function TemplatesPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Templates</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold">Templates</h1>
+
+        <Link
+          href="/admin/templates/new"
+          className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition"
+        >
+          + Add Template
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {templates.map((tpl) => (
