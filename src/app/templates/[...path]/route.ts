@@ -1,8 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { NextRequest, NextResponse } from "next/server";
 
 const TEMPLATE_ROOT = path.join(process.cwd(), "public", "templates");
+
+type RouteParams = { path?: string[] };
+
+type RouteContext = {
+  params?: RouteParams | Promise<RouteParams>;
+};
 
 const MIME_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
@@ -34,18 +40,29 @@ async function readStaticFile(filePath: string) {
   try {
     const file = await fs.readFile(filePath);
     return file;
-  } catch (_error: unknown) {
-    return null;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
   }
 }
 
-async function handleRequest(
-  _req: NextRequest,
-  params: { path?: string[] }
-): Promise<NextResponse> {
-  const segments = params.path ?? [];
+async function resolveParams(context: RouteContext): Promise<RouteParams> {
+  const { params } = context;
 
-  if (!segments.length) {
+  if (params && typeof (params as Promise<RouteParams>).then === "function") {
+    return await (params as Promise<RouteParams>);
+  }
+
+  return (params as RouteParams) ?? {};
+}
+
+async function handleRequest(_req: NextRequest, params: RouteParams) {
+  const segments = (params.path ?? []).map((segment) => decodeURIComponent(segment));
+
+  if (segments.length === 0) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -62,29 +79,24 @@ async function handleRequest(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const headers = new Headers({
-    "Content-Type": getContentType(normalizedPath),
-    "Cache-Control": "public, max-age=0, must-revalidate",
-  });
-
   return new NextResponse(file, {
     status: 200,
-    headers,
+    headers: {
+      "Content-Type": getContentType(normalizedPath),
+      "Cache-Control": "public, max-age=0, must-revalidate",
+    },
   });
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { path?: string[] } }
-) {
+export async function GET(req: NextRequest, context: RouteContext) {
+  const params = await resolveParams(context);
   return handleRequest(req, params);
 }
 
-export async function HEAD(
-  req: NextRequest,
-  { params }: { params: { path?: string[] } }
-) {
+export async function HEAD(req: NextRequest, context: RouteContext) {
+  const params = await resolveParams(context);
   const response = await handleRequest(req, params);
+
   if (!response.ok) {
     return response;
   }
