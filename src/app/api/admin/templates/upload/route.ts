@@ -30,11 +30,21 @@ export async function POST(req: Request) {
     fs.writeFileSync(tempPath, buffer);
 
     // 📦 Extract ZIP
-    const zip = new AdmZip(tempPath);
     const extractedFolderName = path.basename(tempPath, ".zip");
     const extractDir = path.join(uploadsDir, extractedFolderName);
-    zip.extractAllTo(extractDir, true);
-    fs.unlinkSync(tempPath);
+
+    if (fs.existsSync(extractDir)) {
+      fs.rmSync(extractDir, { recursive: true, force: true });
+    }
+
+    try {
+      const zip = new AdmZip(tempPath);
+      zip.extractAllTo(extractDir, true);
+    } finally {
+      if (fs.existsSync(tempPath)) {
+        fs.unlinkSync(tempPath);
+      }
+    }
 
     // 🧾 Read required files
     const indexPath = path.join(extractDir, "index.html");
