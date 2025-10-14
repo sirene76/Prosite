@@ -4,9 +4,7 @@ import path from "path";
 import AdmZip from "adm-zip";
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
-import { generateThumbnail } from "@/lib/generateThumbnail";
 import { renderTemplate } from "@/lib/renderTemplate";
-import type { TemplateModuleDefinition } from "@/lib/templates";
 
 export const runtime = "nodejs";
 
@@ -86,75 +84,65 @@ export async function POST(req: Request) {
 
     const scriptPath = path.join(path.dirname(indexPath), "script.js");
 
+    // Read extracted files
     const html = fs.readFileSync(indexPath, "utf-8");
     const css = fs.readFileSync(stylePath, "utf-8");
     const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
 
+    // Collect default values
     const values: Record<string, string> = {};
-    if (meta?.fields && typeof meta.fields === "object") {
-      for (const [key, field] of Object.entries(meta.fields as Record<string, unknown>)) {
-        if (field && typeof field === "object" && "default" in field) {
-          const defaultValue = (field as { default?: unknown }).default;
-          values[key] = defaultValue != null ? String(defaultValue) : "";
-        } else {
-          values[key] = "";
-        }
+    if (meta.fields) {
+      for (const [key, field] of Object.entries(meta.fields)) {
+        values[key] = (field as any).default || "";
       }
     }
 
-    const modules: TemplateModuleDefinition[] = Array.isArray(meta?.modules)
-      ? (meta.modules as TemplateModuleDefinition[])
-          .filter((mod) => mod && typeof mod.id === "string" && mod.id.trim())
-          .map((mod) => ({
-            ...mod,
-            description: `${mod.label || "Module"} content preview for ${meta?.name || "template"}`,
-          }))
-      : [];
+    // Default module placeholders
+    const modules =
+      meta.modules?.map((mod: any) => ({
+        id: mod.id,
+        label: mod.label,
+        description:
+          mod.label + " content preview for " + (meta.name || "template"),
+      })) || [];
 
-    const renderedHtml = renderTemplate({
-      html,
-      values,
-      modules,
-    });
+    // Render full HTML
+    const renderedHtml = renderTemplate({ html, values, modules });
 
-    const folderName =
-      (typeof meta.id === "string" && meta.id.trim()) || extractedFolderName;
+    // ✅ FIX: Compute basePath robustly (Windows-safe)
+    const [subfolder] = fs.readdirSync(extractDir).filter((n) => !n.startsWith("."));
+    const extractDirName = path.basename(extractDir).replace(/\\/g, "/");
+    const basePath = `/templates/${extractDirName}/${subfolder}/`;
 
-    const visibleEntries = fs
-      .readdirSync(extractDir)
-      .filter((name) => !name.startsWith("."));
-    const subfolder = visibleEntries.find((entry) => {
-      const fullPath = path.join(extractDir, entry);
-      return (
-        fs.statSync(fullPath).isDirectory() &&
-        fs.existsSync(path.join(fullPath, "index.html"))
-      );
-    });
-    const basePath = subfolder
-      ? `/templates/${folderName}/${subfolder}/`
-      : `/templates/${folderName}/`;
-
+    // ✅ Rewrite relative asset URLs to absolute preview URLs
     const fixedHtml = renderedHtml
       .replace(/href="style\.css"/g, `href="${basePath}style.css"`)
       .replace(/src="script\.js"/g, `src="${basePath}script.js"`)
       .replace(/src="images\//g, `src="${basePath}images/`)
       .replace(/src="assets\//g, `src="${basePath}assets/`);
 
+    // Save the final preview
     const previewPath = path.join(extractDir, "preview.html");
     fs.writeFileSync(previewPath, fixedHtml, "utf-8");
     console.log("✅ Preview HTML rendered:", previewPath);
+    console.log("✅ Base path for preview:", basePath);
+
+    // 🧩 Optional: Disable Puppeteer thumbnail generation safely
+    try {
+      if (process.env.ENABLE_THUMBNAILS === "true") {
+        const { generateThumbnail } = await import("@/lib/generateThumbnail");
+        await generateThumbnail({ id: extractDirName, html: renderedHtml, css });
+      } else {
+        console.log("⚙️ Skipping Puppeteer thumbnail (ENABLE_THUMBNAILS not set).");
+      }
+    } catch (err: any) {
+      console.warn("⚠️ Thumbnail generation skipped:", err.message);
+    }
+
+    const folderName =
+      (typeof meta.id === "string" && meta.id.trim()) || extractedFolderName;
 
     let previewUrl: string | undefined;
-    try {
-      previewUrl = await generateThumbnail({
-        id: folderName,
-        html: renderedHtml,
-        css,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn("⚠️ Thumbnail generation skipped:", message);
-    }
 
     const js = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf-8") : "";
 
