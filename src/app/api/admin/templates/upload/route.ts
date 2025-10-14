@@ -55,14 +55,34 @@ export async function POST(req: Request) {
     }
 
     // 🧾 Read required files
-    const indexPath = path.join(extractDir, "index.html");
-    const stylePath = path.join(extractDir, "style.css");
-    const scriptPath = path.join(extractDir, "script.js");
-    const metaPath = path.join(extractDir, "meta.json");
+    console.log("📦 Checking extracted files...");
+    let indexPath = path.join(extractDir, "index.html");
+    let stylePath = path.join(extractDir, "style.css");
+    let metaPath = path.join(extractDir, "meta.json");
+
+    if (!fs.existsSync(indexPath)) {
+      const subDirs = fs
+        .readdirSync(extractDir)
+        .filter((f) => fs.statSync(path.join(extractDir, f)).isDirectory());
+      if (subDirs.length > 0) {
+        const innerDir = path.join(extractDir, subDirs[0]);
+        indexPath = path.join(innerDir, "index.html");
+        stylePath = path.join(innerDir, "style.css");
+        metaPath = path.join(innerDir, "meta.json");
+      }
+    }
 
     if (!fs.existsSync(indexPath) || !fs.existsSync(stylePath) || !fs.existsSync(metaPath)) {
-      return NextResponse.json({ error: "index.html, style.css, and meta.json required" }, { status: 400 });
+      console.error("❌ Missing core files", { indexPath, stylePath, metaPath });
+      return NextResponse.json(
+        { error: "index.html, style.css, and meta.json required" },
+        { status: 400 }
+      );
     }
+
+    console.log("✅ Found index.html, style.css, and meta.json");
+
+    const scriptPath = path.join(path.dirname(indexPath), "script.js");
 
     const html = fs.readFileSync(indexPath, "utf8");
     const css = fs.readFileSync(stylePath, "utf8");
