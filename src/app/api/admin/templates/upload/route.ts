@@ -118,12 +118,21 @@ export async function POST(req: Request) {
       modules,
     });
 
-    const previewPath = path.join(extractDir, "preview.html");
-    fs.writeFileSync(previewPath, renderedHtml, "utf-8");
-    console.log("✅ Preview HTML rendered:", previewPath);
-
     const folderName =
       (typeof meta.id === "string" && meta.id.trim()) || extractedFolderName;
+
+    const templateId = folderName;
+    const basePath = `/templates/${templateId}/`;
+    const fixedHtml = renderedHtml
+      .replace(/href="style\.css"/g, `href="${basePath}style.css"`)
+      .replace(/src="script\.js"/g, `src="${basePath}script.js"`)
+      .replace(/src="images\//g, `src="${basePath}images/`);
+
+    const previewPath = path.join(extractDir, "preview.html");
+    fs.writeFileSync(previewPath, fixedHtml, "utf-8");
+    console.log("✅ Fixed asset paths for preview");
+    console.log("✅ Preview HTML rendered:", previewPath);
+
     const finalDir = path.join(uploadsDir, folderName);
 
     if (finalDir !== extractDir) {
@@ -166,10 +175,18 @@ export async function POST(req: Request) {
       { new: true, upsert: true }
     );
 
-    const basePath = `/templates/${folderName}`;
+    const templateBasePath = `/templates/${folderName}`;
     const responseTemplate = templateDoc?.toObject
-      ? { ...templateDoc.toObject(), basePath, previewPath: `${basePath}/preview.html` }
-      : { ...templateDoc, basePath, previewPath: `${basePath}/preview.html` };
+      ? {
+          ...templateDoc.toObject(),
+          basePath: templateBasePath,
+          previewPath: `${templateBasePath}/preview.html`,
+        }
+      : {
+          ...templateDoc,
+          basePath: templateBasePath,
+          previewPath: `${templateBasePath}/preview.html`,
+        };
 
     return NextResponse.json({ success: true, template: responseTemplate });
   } catch (error: unknown) {
