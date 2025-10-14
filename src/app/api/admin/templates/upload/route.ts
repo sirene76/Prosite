@@ -86,17 +86,18 @@ export async function POST(req: Request) {
 
     const scriptPath = path.join(path.dirname(indexPath), "script.js");
 
-    const html = fs.readFileSync(indexPath, "utf8");
-    const css = fs.readFileSync(stylePath, "utf8");
-    const js = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf8") : "";
-    const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
+    const html = fs.readFileSync(indexPath, "utf-8");
+    const css = fs.readFileSync(stylePath, "utf-8");
+    const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
 
     const values: Record<string, string> = {};
     if (meta?.fields && typeof meta.fields === "object") {
-      for (const [key, field] of Object.entries(meta.fields)) {
-        if (field && typeof field === "object") {
+      for (const [key, field] of Object.entries(meta.fields as Record<string, unknown>)) {
+        if (field && typeof field === "object" && "default" in field) {
           const defaultValue = (field as { default?: unknown }).default;
           values[key] = defaultValue != null ? String(defaultValue) : "";
+        } else {
+          values[key] = "";
         }
       }
     }
@@ -106,9 +107,7 @@ export async function POST(req: Request) {
           .filter((mod) => mod && typeof mod.id === "string" && mod.id.trim())
           .map((mod) => ({
             ...mod,
-            description:
-              mod.description ||
-              `${mod.label || "Module"} content preview for ${meta?.name || "template"}`,
+            description: `${mod.label || "Module"} content preview for ${meta?.name || "template"}`,
           }))
       : [];
 
@@ -121,17 +120,43 @@ export async function POST(req: Request) {
     const folderName =
       (typeof meta.id === "string" && meta.id.trim()) || extractedFolderName;
 
-    const templateId = folderName;
-    const basePath = `/templates/${templateId}/`;
+    const visibleEntries = fs
+      .readdirSync(extractDir)
+      .filter((name) => !name.startsWith("."));
+    const subfolder = visibleEntries.find((entry) => {
+      const fullPath = path.join(extractDir, entry);
+      return (
+        fs.statSync(fullPath).isDirectory() &&
+        fs.existsSync(path.join(fullPath, "index.html"))
+      );
+    });
+    const basePath = subfolder
+      ? `/templates/${folderName}/${subfolder}/`
+      : `/templates/${folderName}/`;
+
     const fixedHtml = renderedHtml
       .replace(/href="style\.css"/g, `href="${basePath}style.css"`)
       .replace(/src="script\.js"/g, `src="${basePath}script.js"`)
-      .replace(/src="images\//g, `src="${basePath}images/`);
+      .replace(/src="images\//g, `src="${basePath}images/`)
+      .replace(/src="assets\//g, `src="${basePath}assets/`);
 
     const previewPath = path.join(extractDir, "preview.html");
     fs.writeFileSync(previewPath, fixedHtml, "utf-8");
-    console.log("✅ Fixed asset paths for preview");
     console.log("✅ Preview HTML rendered:", previewPath);
+
+    let previewUrl: string | undefined;
+    try {
+      previewUrl = await generateThumbnail({
+        id: folderName,
+        html: renderedHtml,
+        css,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("⚠️ Thumbnail generation skipped:", message);
+    }
+
+    const js = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf-8") : "";
 
     const finalDir = path.join(uploadsDir, folderName);
 
@@ -141,14 +166,6 @@ export async function POST(req: Request) {
       }
       fs.renameSync(extractDir, finalDir);
     }
-
-    // 🖼️ Generate screenshot thumbnail
-    const previewUrl = await generateThumbnail({
-      id: folderName,
-      html,
-      css,
-      js,
-    });
 
     // 🧩 Fallback image
     const image =
