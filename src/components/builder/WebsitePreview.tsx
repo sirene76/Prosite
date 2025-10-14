@@ -550,15 +550,27 @@ function normaliseTemplateValues(values: Record<string, unknown>): Record<string
  * Extract default field values from template fields array so placeholders like
  * {{ hero.image }} or {{ hero.video }} render even before user edits any content.
  */
-function getFieldDefaults(fields: any): Record<string, string> {
+type FieldDefinitionLike = {
+  id?: unknown;
+  default?: unknown;
+};
+
+function getFieldDefaults(fields: unknown): Record<string, string> {
   if (!Array.isArray(fields)) return {};
 
   const defaults: Record<string, string> = {};
 
   for (const field of fields) {
-    if (typeof field?.id === "string") {
-      defaults[field.id] = String(field.default ?? "");
+    if (!field || typeof field !== "object") continue;
+    const { id, default: defaultValue } = field as FieldDefinitionLike;
+    if (typeof id !== "string" || id.trim().length === 0) continue;
+
+    if (typeof defaultValue === "string") {
+      defaults[id] = defaultValue;
+      continue;
     }
+
+    defaults[id] = defaultValue != null ? String(defaultValue) : "";
   }
 
   return defaults;
