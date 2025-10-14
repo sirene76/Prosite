@@ -42,9 +42,6 @@
       ],
       "ace-builds/src-noconflict/theme-one_dark": [
         "src/lib/ace-stubs/theme-one_dark"
-      ],
-      "adm-zip": [
-        "src/lib/stub-adm-zip"
       ]
     },
     "plugins": [
