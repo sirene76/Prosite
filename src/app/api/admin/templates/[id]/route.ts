@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
+import { generateThumbnail } from "@/lib/generateThumbnail";
 
 import { createSlug } from "../utils";
 
@@ -28,6 +29,10 @@ type UpdatePayload = {
   thumbnail?: unknown;
   previewVideo?: unknown;
   versions?: unknown;
+  html?: unknown;
+  css?: unknown;
+  js?: unknown;
+  meta?: unknown;
 };
 
 function normaliseTags(value: unknown) {
@@ -112,6 +117,22 @@ function buildUpdates(body: UpdatePayload): Record<string, unknown> | { error: s
         : undefined;
   }
 
+  if (typeof body.html === "string") {
+    updates.html = body.html;
+  }
+
+  if (typeof body.css === "string") {
+    updates.css = body.css;
+  }
+
+  if (typeof body.js === "string") {
+    updates.js = body.js;
+  }
+
+  if (body.meta !== undefined) {
+    updates.meta = body.meta;
+  }
+
   const tags = normaliseTags(body.tags);
   if (tags !== undefined) {
     updates.tags = tags;
@@ -178,6 +199,23 @@ export async function PUT(
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
+    const shouldRefreshThumbnail =
+      typeof body.html === "string" || typeof body.css === "string" || typeof body.js === "string";
+
+    if (shouldRefreshThumbnail) {
+      const previewUrl = await generateThumbnail({
+        id: (updated.meta as { id?: string } | undefined)?.id || id,
+        html: (updated as { html?: string }).html ?? "",
+        css: (updated as { css?: string }).css ?? "",
+        js: (updated as { js?: string }).js ?? "",
+      });
+
+      if (previewUrl) {
+        (updated as { image?: string }).image = previewUrl;
+        await updated.save();
+      }
+    }
+
     return NextResponse.json(updated);
   } catch (error) {
     if ((error as { code?: number }).code === 11000) {
@@ -239,6 +277,23 @@ export async function PATCH(
     const updated = await Template.findByIdAndUpdate(id, updates, { new: true });
     if (!updated) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
+
+    const shouldRefreshThumbnail =
+      typeof body.html === "string" || typeof body.css === "string" || typeof body.js === "string";
+
+    if (shouldRefreshThumbnail) {
+      const previewUrl = await generateThumbnail({
+        id: (updated.meta as { id?: string } | undefined)?.id || id,
+        html: (updated as { html?: string }).html ?? "",
+        css: (updated as { css?: string }).css ?? "",
+        js: (updated as { js?: string }).js ?? "",
+      });
+
+      if (previewUrl) {
+        (updated as { image?: string }).image = previewUrl;
+        await updated.save();
+      }
     }
 
     return NextResponse.json(updated);

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import AdmZip from "adm-zip";
-import puppeteer from "puppeteer";
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
+import { generateThumbnail } from "@/lib/generateThumbnail";
 
 export const runtime = "nodejs";
 
@@ -31,8 +31,8 @@ export async function POST(req: Request) {
 
     // 📦 Extract ZIP
     const zip = new AdmZip(tempPath);
-    const folderName = path.basename(tempPath, ".zip");
-    const extractDir = path.join(uploadsDir, folderName);
+    const extractedFolderName = path.basename(tempPath, ".zip");
+    const extractDir = path.join(uploadsDir, extractedFolderName);
     zip.extractAllTo(extractDir, true);
     fs.unlinkSync(tempPath);
 
@@ -51,70 +51,54 @@ export async function POST(req: Request) {
     const js = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf8") : "";
     const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
 
-    // 🖼️ Generate screenshot thumbnail
-    const previewPath = path.join(extractDir, "preview.png");
-    const previewUrl = `/templates/${folderName}/preview.png`;
+    const folderName =
+      (typeof meta.id === "string" && meta.id.trim()) || extractedFolderName;
+    const finalDir = path.join(uploadsDir, folderName);
 
-    try {
-      const browser = await puppeteer.launch({
-        headless: "new",
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-
-      const page = await browser.newPage();
-
-      const renderHTML = `
-        <html>
-          <head>
-            <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <style>${css}</style>
-          </head>
-          <body>${html}<script>${js}</script></body>
-        </html>
-      `;
-
-      await page.setViewport({ width: 1280, height: 800 });
-      await page.setContent(renderHTML, { waitUntil: "networkidle0" });
-
-      await page.screenshot({
-        path: previewPath,
-        type: "png",
-        fullPage: true,
-      });
-
-      await browser.close();
-      console.log(`✅ Screenshot saved at ${previewPath}`);
-    } catch (thumbErr) {
-      console.warn("⚠️ Thumbnail generation failed:", thumbErr);
+    if (finalDir !== extractDir) {
+      if (fs.existsSync(finalDir)) {
+        fs.rmSync(finalDir, { recursive: true, force: true });
+      }
+      fs.renameSync(extractDir, finalDir);
     }
 
-    // 🧩 Fallback image
-    const image =
-      fs.existsSync(previewPath)
-        ? previewUrl
-        : meta.image && meta.image.startsWith("http")
-        ? meta.image
-        : `/templates/${folderName}/${meta.image || "assets/hero.jpg"}`;
-
-    // 🧠 Save Template to MongoDB
-    const slug = (meta.slug as string | undefined)?.trim() || folderName;
-
-    const templateDoc = await Template.create({
-      name: meta.name || folderName,
-      slug,
-      category: meta.category || "Uncategorized",
-      description: meta.description || "",
-      thumbnail: image,
+    // 🖼️ Generate screenshot thumbnail
+    const previewUrl = await generateThumbnail({
+      id: folderName,
       html,
       css,
       js,
-      meta,
     });
 
+    // 🧩 Fallback image
+    const image =
+      previewUrl ||
+      (meta.image && meta.image.startsWith("http")
+        ? meta.image
+        : `/templates/${folderName}/${meta.image || "assets/hero.jpg"}`);
+
+    const templateName = meta.name || folderName;
+
+    // 🧠 Save Template to MongoDB
+    const templateDoc = await Template.findOneAndUpdate(
+      { name: templateName },
+      {
+        name: templateName,
+        category: meta.category || "Uncategorized",
+        description: meta.description || "",
+        image,
+        html,
+        css,
+        js,
+        meta,
+      },
+      { new: true, upsert: true }
+    );
+
     return NextResponse.json({ success: true, template: templateDoc });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("UPLOAD ERROR:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
