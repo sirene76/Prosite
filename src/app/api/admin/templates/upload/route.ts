@@ -2,115 +2,119 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import AdmZip from "adm-zip";
-import type { TemplateMeta } from "@/types/template";
+import puppeteer from "puppeteer";
+import { connectDB } from "@/lib/mongodb";
+import { Template } from "@/models/template";
 
 export const runtime = "nodejs";
-
-type UploadedTemplate = {
-  id: string;
-  name?: string;
-  html: string;
-  css: string;
-  js: string;
-  meta: TemplateMeta & Record<string, unknown>;
-  basePath: string; // where assets were extracted
-};
 
 export async function POST(req: Request) {
   try {
     const data = await req.formData();
-    const file = data.get("file") as File | null;
+    const file = data.get("file") as File;
 
     if (!file) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 });
     }
 
-    // Ensure uploads base dir exists
+    // 🧱 Connect to MongoDB
+    await connectDB();
+
+    // 📁 Prepare directories
     const uploadsDir = path.join(process.cwd(), "public", "templates");
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-    // Save uploaded zip temporarily
+    // 💾 Save uploaded ZIP temporarily
     const buffer = Buffer.from(await file.arrayBuffer());
-    const tempZipPath = path.join(uploadsDir, `${Date.now()}-upload.zip`);
-    fs.writeFileSync(tempZipPath, buffer);
+    const tempPath = path.join(uploadsDir, `${Date.now()}-upload.zip`);
+    fs.writeFileSync(tempPath, buffer);
 
-    // Extract to a timestamped folder
-    const folderName = path.basename(tempZipPath, ".zip");
+    // 📦 Extract ZIP
+    const zip = new AdmZip(tempPath);
+    const folderName = path.basename(tempPath, ".zip");
     const extractDir = path.join(uploadsDir, folderName);
-
-    const zip = new AdmZip(tempZipPath);
     zip.extractAllTo(extractDir, true);
-    fs.unlinkSync(tempZipPath);
+    fs.unlinkSync(tempPath);
 
-    // Helpers to resolve paths both in root and nested cases
-    const findFile = (candidates: string[]) => candidates.find((candidate) => fs.existsSync(candidate));
+    // 🧾 Read required files
+    const indexPath = path.join(extractDir, "index.html");
+    const stylePath = path.join(extractDir, "style.css");
+    const scriptPath = path.join(extractDir, "script.js");
+    const metaPath = path.join(extractDir, "meta.json");
 
-    const indexPath = findFile([
-      path.join(extractDir, "index.html"),
-    ]) || "";
-
-    const stylePath = findFile([
-      path.join(extractDir, "style.css"),
-    ]) || "";
-
-    const scriptPath = findFile([
-      path.join(extractDir, "script.js"),
-    ]) || "";
-
-    const metaPath = findFile([
-      path.join(extractDir, "meta.json"),
-    ]) || "";
-
-    if (!indexPath || !stylePath || !metaPath) {
-      return NextResponse.json(
-        { error: "index.html, style.css, and meta.json are required in the ZIP root." },
-        { status: 400 }
-      );
+    if (!fs.existsSync(indexPath) || !fs.existsSync(stylePath) || !fs.existsSync(metaPath)) {
+      return NextResponse.json({ error: "index.html, style.css, and meta.json required" }, { status: 400 });
     }
 
     const html = fs.readFileSync(indexPath, "utf8");
     const css = fs.readFileSync(stylePath, "utf8");
-    const js = scriptPath && fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf8") : "";
-    const metaRaw = fs.readFileSync(metaPath, "utf8");
+    const js = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf8") : "";
+    const meta = JSON.parse(fs.readFileSync(metaPath, "utf8"));
 
-    const parsedMeta = parseMeta(metaRaw);
-    if (!parsedMeta.success) {
-      return NextResponse.json({ error: parsedMeta.error }, { status: 400 });
+    // 🖼️ Generate screenshot thumbnail
+    const previewPath = path.join(extractDir, "preview.png");
+    const previewUrl = `/templates/${folderName}/preview.png`;
+
+    try {
+      const browser = await puppeteer.launch({
+        headless: "new",
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+
+      const page = await browser.newPage();
+
+      const renderHTML = `
+        <html>
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <style>${css}</style>
+          </head>
+          <body>${html}<script>${js}</script></body>
+        </html>
+      `;
+
+      await page.setViewport({ width: 1280, height: 800 });
+      await page.setContent(renderHTML, { waitUntil: "networkidle0" });
+
+      await page.screenshot({
+        path: previewPath,
+        type: "png",
+        fullPage: true,
+      });
+
+      await browser.close();
+      console.log(`✅ Screenshot saved at ${previewPath}`);
+    } catch (thumbErr) {
+      console.warn("⚠️ Thumbnail generation failed:", thumbErr);
     }
 
-    const meta = parsedMeta.meta;
+    // 🧩 Fallback image
+    const image =
+      fs.existsSync(previewPath)
+        ? previewUrl
+        : meta.image && meta.image.startsWith("http")
+        ? meta.image
+        : `/templates/${folderName}/${meta.image || "assets/hero.jpg"}`;
 
-    const payload: UploadedTemplate = {
-      id: typeof meta.id === "string" && meta.id.trim() ? meta.id : folderName,
-      name: typeof meta.name === "string" && meta.name.trim() ? meta.name : undefined,
+    // 🧠 Save Template to MongoDB
+    const slug = (meta.slug as string | undefined)?.trim() || folderName;
+
+    const templateDoc = await Template.create({
+      name: meta.name || folderName,
+      slug,
+      category: meta.category || "Uncategorized",
+      description: meta.description || "",
+      thumbnail: image,
       html,
       css,
       js,
       meta,
-      basePath: `/templates/${folderName}`,
-    };
+    });
 
-    // NOTE: In production you should persist payload in DB and upload assets to S3.
-    return NextResponse.json({ success: true, template: payload });
-  } catch (err: unknown) {
-    console.error("UPLOAD ERROR:", err);
-    const message = err instanceof Error ? err.message : "Upload failed";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
-function parseMeta(metaRaw: string):
-  | { success: true; meta: TemplateMeta & Record<string, unknown> }
-  | { success: false; error: string } {
-  try {
-    const parsed = JSON.parse(metaRaw) as unknown;
-    if (!parsed || typeof parsed !== "object") {
-      return { success: false, error: "meta.json must be a JSON object" };
-    }
-
-    return { success: true, meta: parsed as TemplateMeta & Record<string, unknown> };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "meta.json is not valid JSON";
-    return { success: false, error: message };
+    return NextResponse.json({ success: true, template: templateDoc });
+  } catch (error: any) {
+    console.error("UPLOAD ERROR:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

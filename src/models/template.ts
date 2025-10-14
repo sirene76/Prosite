@@ -31,6 +31,7 @@ const TemplateSchema = new mongoose.Schema(
     tags: [String],
     html: String,
     css: String,
+    js: String,
     meta: mongoose.Schema.Types.Mixed,
 
     currentVersion: { type: String, default: "1.0.0" },
