@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    console.log("⚙️ Starting upload...");
     const data = await req.formData();
     const file = data.get("file") as File;
 
@@ -25,8 +26,10 @@ export async function POST(req: Request) {
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
     // 💾 Save uploaded ZIP temporarily
+    console.log("📥 Received file:", file.name, file.size, "bytes");
     const buffer = Buffer.from(await file.arrayBuffer());
     const tempPath = path.join(uploadsDir, `${Date.now()}-upload.zip`);
+    console.log("📝 Writing temp ZIP to:", tempPath);
     fs.writeFileSync(tempPath, buffer);
 
     // 📦 Extract ZIP
@@ -38,8 +41,13 @@ export async function POST(req: Request) {
     }
 
     try {
+      console.log("📂 Extracting zip to:", extractDir);
       const zip = new AdmZip(tempPath);
+      const entries = zip.getEntries();
+      console.log("📦 ZIP entries:", entries.map((entry) => entry.entryName));
+      if (!entries.length) throw new Error("Empty or unreadable ZIP");
       zip.extractAllTo(extractDir, true);
+      console.log("✅ Extracted successfully");
     } finally {
       if (fs.existsSync(tempPath)) {
         fs.unlinkSync(tempPath);
