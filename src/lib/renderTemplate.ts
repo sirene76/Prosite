@@ -40,7 +40,10 @@ export function renderTemplate({ html, values, modules = [] }: RenderTemplateOpt
 }
 
 function renderModule(module: TemplateModuleDefinition) {
+  const badge = '<span class="preview-badge">Preview Content</span>';
   const heading = module.label ? `<h3>${module.label}</h3>` : "";
-  const description = module.description ? `<p>${module.description}</p>` : "";
-  return `<section class="module-block">${heading}${description}</section>`;
+  const description = module.description
+    ? `<p>${module.description}</p>`
+    : "<p>Placeholder content for this section.</p>";
+  return `<section class='glass module-preview'>${badge}${heading}${description}</section>`;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
-import { renderPreview } from "@/lib/renderPreview";
 import type { TemplateMeta } from "@/types/template";
 
 type TemplateResponse = {
@@ -13,11 +12,12 @@ type TemplateResponse = {
   js?: string | null;
   meta?: TemplateMeta | null;
   basePath?: string | null;
+  previewPath?: string | null;
 };
 
 export default function AddTemplatePage() {
   const [template, setTemplate] = useState<TemplateResponse | null>(null);
-  const [preview, setPreview] = useState("");
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,7 +27,7 @@ export default function AddTemplatePage() {
     setLoading(true);
     setError("");
     setTemplate(null);
-    setPreview("");
+    setPreviewSrc(null);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -35,14 +35,7 @@ export default function AddTemplatePage() {
       const data: { success?: boolean; template?: TemplateResponse; error?: string } = await res.json();
       if (res.ok && data.success && data.template) {
         setTemplate(data.template);
-        const previewTemplate = {
-          html: data.template.html,
-          css: data.template.css,
-          js: data.template.js ?? undefined,
-          meta: data.template.meta ?? undefined,
-          basePath: data.template.basePath ?? undefined,
-        };
-        setPreview(renderPreview(previewTemplate));
+        setPreviewSrc(data.template.previewPath ?? null);
       } else {
         setError(data.error || "Upload failed");
       }
@@ -86,9 +79,10 @@ export default function AddTemplatePage() {
             <div className="border-t pt-4">
               <h2 className="font-semibold mb-2 text-lg">Live Preview</h2>
               <iframe
+                key={previewSrc ?? "template-preview"}
                 title="Template Preview"
                 sandbox="allow-scripts allow-same-origin"
-                srcDoc={preview}
+                src={previewSrc ?? undefined}
                 style={{ width: "100%", height: "700px", border: "1px solid #ccc", borderRadius: "8px" }}
               />
             </div>
