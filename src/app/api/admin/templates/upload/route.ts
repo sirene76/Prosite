@@ -1,183 +1,116 @@
 import { NextResponse } from "next/server";
-import { mkdir, writeFile, access } from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
-import path from "node:path";
-
+import fs from "fs";
+import path from "path";
 import AdmZip from "adm-zip";
-
-import { createSlug } from "../utils";
-
-type TemplateMeta = Record<string, unknown> & {
-  id?: unknown;
-  name?: unknown;
-  preview?: unknown;
-  previewImage?: unknown;
-  image?: unknown;
-  thumbnail?: unknown;
-  video?: unknown;
-};
-
-const REQUIRED_FILES = ["index.html", "style.css", "meta.json"] as const;
+import type { TemplateMeta } from "@/types/template";
 
 export const runtime = "nodejs";
 
+type UploadedTemplate = {
+  id: string;
+  name?: string;
+  html: string;
+  css: string;
+  js: string;
+  meta: TemplateMeta & Record<string, unknown>;
+  basePath: string; // where assets were extracted
+};
+
 export async function POST(req: Request) {
-  const formData = await req.formData();
-  const file = formData.get("file");
-
-  if (!file || !(file instanceof File)) {
-    return NextResponse.json({ error: "Missing template archive" }, { status: 400 });
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const zip = new AdmZip(buffer);
-
   try {
-    const entries = zip.getEntries();
-    if (!entries.length) {
-      return NextResponse.json({ error: "Archive is empty" }, { status: 400 });
+    const data = await req.formData();
+    const file = data.get("file") as File | null;
+
+    if (!file) {
+      return NextResponse.json({ error: "Missing file" }, { status: 400 });
     }
 
-    const lookup = new Map<string, () => Buffer>();
+    // Ensure uploads base dir exists
+    const uploadsDir = path.join(process.cwd(), "public", "templates");
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-    for (const entry of entries) {
-      const filename = entry.entryName.split("/").pop();
-      if (!filename) continue;
-      const lower = filename.toLowerCase();
-      if (REQUIRED_FILES.includes(lower as (typeof REQUIRED_FILES)[number]) && !lookup.has(lower)) {
-        lookup.set(lower, entry.getData.bind(entry));
-      }
-    }
+    // Save uploaded zip temporarily
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const tempZipPath = path.join(uploadsDir, `${Date.now()}-upload.zip`);
+    fs.writeFileSync(tempZipPath, buffer);
 
-    for (const required of REQUIRED_FILES) {
-      if (!lookup.has(required)) {
-        return NextResponse.json(
-          { error: `Archive is missing required file: ${required}` },
-          { status: 400 }
-        );
-      }
-    }
+    // Extract to a timestamped folder
+    const folderName = path.basename(tempZipPath, ".zip");
+    const extractDir = path.join(uploadsDir, folderName);
 
-    const htmlEntryGetter = lookup.get("index.html");
-    const cssEntryGetter = lookup.get("style.css");
-    const metaEntryGetter = lookup.get("meta.json");
+    const zip = new AdmZip(tempZipPath);
+    zip.extractAllTo(extractDir, true);
+    fs.unlinkSync(tempZipPath);
 
-    if (!htmlEntryGetter || !cssEntryGetter || !metaEntryGetter) {
-      return NextResponse.json({ error: "Invalid archive structure" }, { status: 400 });
-    }
+    // Helpers to resolve paths both in root and nested cases
+    const findFile = (candidates: string[]) => candidates.find((candidate) => fs.existsSync(candidate));
 
-    const html = htmlEntryGetter().toString("utf8");
-    const css = cssEntryGetter().toString("utf8");
-    const metaRaw = metaEntryGetter().toString("utf8");
+    const indexPath = findFile([
+      path.join(extractDir, "index.html"),
+    ]) || "";
 
-    let meta: TemplateMeta;
-    try {
-      const parsed = JSON.parse(metaRaw) as TemplateMeta;
-      if (!parsed || typeof parsed !== "object") {
-        throw new Error("meta.json must be an object");
-      }
-      meta = parsed;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to parse meta.json";
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
+    const stylePath = findFile([
+      path.join(extractDir, "style.css"),
+    ]) || "";
 
-    const slugSource = determineSlugSource(meta, file.name);
-    const slug = createSlug(slugSource);
-    if (!slug) {
-      return NextResponse.json({ error: "Unable to derive template slug" }, { status: 400 });
-    }
+    const scriptPath = findFile([
+      path.join(extractDir, "script.js"),
+    ]) || "";
 
-    const templatesRoot = path.join(process.cwd(), "templates");
-    await mkdir(templatesRoot, { recursive: true });
+    const metaPath = findFile([
+      path.join(extractDir, "meta.json"),
+    ]) || "";
 
-    const templateDir = path.join(templatesRoot, slug);
-    const exists = await directoryExists(templateDir);
-    if (exists) {
+    if (!indexPath || !stylePath || !metaPath) {
       return NextResponse.json(
-        { error: "A template with this slug already exists" },
-        { status: 409 }
+        { error: "index.html, style.css, and meta.json are required in the ZIP root." },
+        { status: 400 }
       );
     }
 
-    for (const entry of entries) {
-      const normalizedName = sanitizeEntryName(entry.entryName);
-      if (!normalizedName) continue;
+    const html = fs.readFileSync(indexPath, "utf8");
+    const css = fs.readFileSync(stylePath, "utf8");
+    const js = scriptPath && fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf8") : "";
+    const metaRaw = fs.readFileSync(metaPath, "utf8");
 
-      const destination = path.join(templateDir, normalizedName);
-      const safeDestination = path.normalize(destination);
-      if (!safeDestination.startsWith(templateDir)) {
-        return NextResponse.json({ error: "Archive contains invalid file paths" }, { status: 400 });
-      }
-
-      if (entry.isDirectory) {
-        await mkdir(safeDestination, { recursive: true });
-      } else {
-        await mkdir(path.dirname(safeDestination), { recursive: true });
-        const data = entry.getData();
-        await writeFile(safeDestination, data);
-      }
+    const parsedMeta = parseMeta(metaRaw);
+    if (!parsedMeta.success) {
+      return NextResponse.json({ error: parsedMeta.error }, { status: 400 });
     }
 
-    const previewImage = resolveAssetPath(meta, slug, ["preview", "previewImage", "image", "thumbnail"]);
-    const previewVideo = resolveAssetPath(meta, slug, ["previewVideo", "video"]);
+    const meta = parsedMeta.meta;
 
-    const template = {
-      id: typeof meta.id === "string" && meta.id.trim() ? meta.id.trim() : slug,
-      name: typeof meta.name === "string" && meta.name.trim() ? meta.name.trim() : slug,
-      slug,
-      image: previewImage,
-      previewVideo,
-      assetsBasePath: `/templates/${slug}`,
+    const payload: UploadedTemplate = {
+      id: typeof meta.id === "string" && meta.id.trim() ? meta.id : folderName,
+      name: typeof meta.name === "string" && meta.name.trim() ? meta.name : undefined,
       html,
       css,
+      js,
       meta,
+      basePath: `/templates/${folderName}`,
     };
 
-    return NextResponse.json({ template });
-  } finally {
-    zip.dispose?.();
+    // NOTE: In production you should persist payload in DB and upload assets to S3.
+    return NextResponse.json({ success: true, template: payload });
+  } catch (err: unknown) {
+    console.error("UPLOAD ERROR:", err);
+    const message = err instanceof Error ? err.message : "Upload failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-function determineSlugSource(meta: TemplateMeta, fallbackName: string) {
-  const id = typeof meta.id === "string" && meta.id.trim() ? meta.id.trim() : "";
-  if (id) return id;
-  const name = typeof meta.name === "string" && meta.name.trim() ? meta.name.trim() : "";
-  if (name) return name;
-  if (fallbackName) {
-    const withoutExt = fallbackName.replace(/\.zip$/i, "");
-    if (withoutExt.trim()) return withoutExt.trim();
-  }
-  return `template-${Date.now()}`;
-}
-
-async function directoryExists(dir: string) {
+function parseMeta(metaRaw: string):
+  | { success: true; meta: TemplateMeta & Record<string, unknown> }
+  | { success: false; error: string } {
   try {
-    await access(dir, fsConstants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function sanitizeEntryName(entryName: string) {
-  const normalized = entryName.replace(/\\/g, "/");
-  const trimmed = normalized.replace(/^\/+/, "").trim();
-  return trimmed;
-}
-
-function resolveAssetPath(meta: TemplateMeta, slug: string, keys: string[]) {
-  for (const key of keys) {
-    const value = meta[key];
-    if (typeof value === "string" && value.trim()) {
-      const trimmed = value.trim();
-      if (/^https?:\/\//i.test(trimmed)) {
-        return trimmed;
-      }
-      const normalised = trimmed.replace(/^[\.\/\\]+/, "");
-      return `/templates/${slug}/${normalised}`;
+    const parsed = JSON.parse(metaRaw) as unknown;
+    if (!parsed || typeof parsed !== "object") {
+      return { success: false, error: "meta.json must be a JSON object" };
     }
+
+    return { success: true, meta: parsed as TemplateMeta & Record<string, unknown> };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "meta.json is not valid JSON";
+    return { success: false, error: message };
   }
-  return null;
 }
