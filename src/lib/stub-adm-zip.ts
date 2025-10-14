@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -42,6 +42,14 @@ export default class AdmZip {
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
     return entries.map((entryName) => new ZipEntry(this.zipPath, entryName));
+  }
+
+  extractAllTo(targetPath: string, overwrite = false) {
+    mkdirSync(targetPath, { recursive: true });
+    const args = ["-q"];
+    args.push(overwrite ? "-o" : "-n");
+    args.push(this.zipPath, "-d", targetPath);
+    execFileSync("unzip", args, { stdio: "pipe" });
   }
 
   dispose() {
