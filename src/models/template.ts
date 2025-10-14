@@ -1,55 +1,20 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, models } from "mongoose";
 
-const VersionSchema = new mongoose.Schema(
+const TemplateSchema = new Schema(
   {
-    number: { type: String, required: true },
-    changelog: String,
-    htmlUrl: String,
-    cssUrl: String,
-    metaUrl: String,
-    previewUrl: String,
-    previewVideo: String,
-    inlineHtml: String,
-    inlineCss: String,
-    inlineMeta: String,
-    createdAt: { type: Date, default: Date.now },
-    status: { type: String, enum: ["draft", "published"], default: "draft" },
-    previewToken: String,
-  },
-  { _id: false }
-);
-
-const TemplateSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    slug: { type: String, required: true, unique: true },
+    name: String,
+    category: String,
     description: String,
-    thumbnail: { type: String, required: false },
-    previewVideo: { type: String, required: false },
-    category: { type: String, index: true },
-    subcategory: String,
-    tags: [String],
+    image: String,
+
     html: String,
     css: String,
     js: String,
-    meta: mongoose.Schema.Types.Mixed,
 
-    currentVersion: { type: String, default: "1.0.0" },
-    versions: [VersionSchema],
-
-    published: { type: Boolean, default: false },
-    featured: { type: Boolean, default: false },
-
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    meta: Schema.Types.Mixed,
   },
   { timestamps: true }
 );
 
 export const Template =
-  mongoose.models.Template || mongoose.model("Template", TemplateSchema);
-
-export type TemplateVersion = mongoose.InferSchemaType<typeof VersionSchema>;
-
-export type TemplateDocument = mongoose.InferSchemaType<typeof TemplateSchema> & {
-  _id: mongoose.Types.ObjectId;
-};
+  models.Template || mongoose.model("Template", TemplateSchema);
