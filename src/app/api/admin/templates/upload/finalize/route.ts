@@ -13,6 +13,7 @@ type StageInfo = {
   stageId: string;
   folderName: string;
   templateRootRelative: string;
+  originalHtml: string;
   renderedHtml: string;
   css: string;
   js: string;
@@ -125,7 +126,12 @@ export async function POST(req: Request) {
     const finalDir = path.join(uploadsDir, finalFolderName);
     const finalBasePath = `/templates/${finalFolderName}/`;
 
-    const sanitizedHtml = disableExternalScripts(rewriteAssetPaths(info.renderedHtml, finalBasePath));
+    const sanitizedHtml = disableExternalScripts(
+      rewriteAssetPaths(info.originalHtml, finalBasePath)
+    );
+    const previewHtml = disableExternalScripts(
+      rewriteAssetPaths(info.renderedHtml, finalBasePath)
+    );
 
     if (fs.existsSync(finalDir)) {
       fs.rmSync(finalDir, { recursive: true, force: true });
@@ -139,7 +145,7 @@ export async function POST(req: Request) {
     fs.mkdirSync(finalDir, { recursive: true });
     fs.cpSync(templateRoot, finalDir, { recursive: true });
 
-    fs.writeFileSync(path.join(finalDir, "preview.html"), sanitizedHtml, "utf-8");
+    fs.writeFileSync(path.join(finalDir, "preview.html"), previewHtml, "utf-8");
 
     if (fs.existsSync(stageDir)) {
       fs.rmSync(stageDir, { recursive: true, force: true });

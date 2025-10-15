@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
+
 export type TemplateMetaDescriptor = {
   id?: string;
   metaUrl?: string | null;
@@ -48,7 +50,21 @@ export function useTemplateMeta(template?: TemplateMetaDescriptor | null) {
       .then((response) => response.json())
       .then((data: unknown) => {
         if (!isMounted) return;
-        setMeta((data ?? null) as TemplateMeta | null);
+        const parsed = (data ?? null) as TemplateMeta | null;
+
+        if (parsed) {
+          const rawFields = (data as { fields?: unknown })?.fields;
+          const normalisedFields = normaliseTemplateFields(rawFields);
+          if (normalisedFields.length > 0) {
+            parsed.fields = normalisedFields.map((field) => ({
+              key: field.id,
+              label: field.label ?? field.id,
+              type: typeof field.type === "string" ? field.type : undefined,
+            }));
+          }
+        }
+
+        setMeta(parsed);
         if (cacheKey && typeof window !== "undefined") {
           sessionStorage.setItem(cacheKey, JSON.stringify(data));
         }

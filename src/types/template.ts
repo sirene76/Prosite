@@ -14,6 +14,6 @@ export type TemplateMeta = {
     colors: Record<string, string>;
     fonts?: Record<string, string>;
   }>;
-  fields?: Record<string, TemplateField>;
+  fields?: Record<string, TemplateField> | TemplateField[];
   modules?: import("@/lib/templates").TemplateModuleDefinition[];
 };

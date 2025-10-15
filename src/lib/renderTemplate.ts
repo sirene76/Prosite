@@ -16,26 +16,51 @@ export function renderTemplate({ html, values, modules = [] }: RenderTemplateOpt
     moduleMap.set(key, renderModule(module));
   });
 
-  // Resolve nested paths like hero.image
-  function resolvePath(obj: Record<string, unknown>, path: string): string {
+  // Resolve nested paths like hero.image and ensure we always return a string
+  const resolvePath = (obj: Record<string, unknown>, path: string): unknown => {
     const parts = path.split(".");
     let current: unknown = obj;
     for (const part of parts) {
-      if (current && typeof current === "object" && part in (current as Record<string, unknown>)) {
+      if (
+        current &&
+        typeof current === "object" &&
+        part in (current as Record<string, unknown>)
+      ) {
         current = (current as Record<string, unknown>)[part];
       } else {
-        return "";
+        return undefined;
       }
     }
-    return typeof current === "string" ? current : "";
-  }
+    return current;
+  };
+
+  const toStringValue = (value: unknown): string => {
+    if (typeof value === "string") return value;
+    if (value == null) return "";
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => (typeof item === "string" ? item : String(item)))
+        .join("\n");
+    }
+    return String(value);
+  };
 
   // Replace placeholders in HTML
   return html.replace(/{{(.*?)}}/g, (_, rawKey: string) => {
     const key = rawKey.trim();
     if (!key) return "";
     if (moduleMap.has(key)) return moduleMap.get(key) ?? "";
-    return values[key] ?? resolvePath(values, key) ?? "";
+
+    if (Object.prototype.hasOwnProperty.call(values, key)) {
+      return toStringValue(values[key]);
+    }
+
+    const nestedValue = resolvePath(values, key);
+    if (nestedValue !== undefined) {
+      return toStringValue(nestedValue);
+    }
+
+    return "";
   });
 }
 

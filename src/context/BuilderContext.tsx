@@ -18,6 +18,11 @@ import {
   useBuilderStore,
   type BuilderDevice,
 } from "@/store/builderStore";
+import {
+  buildModulePageMap,
+  normaliseTemplateFields,
+  resolveSectionLabel,
+} from "@/lib/templateFieldUtils";
 
 type Device = BuilderDevice;
 
@@ -131,106 +136,155 @@ function buildContentSections(
 ): { sections: TemplateContentSection[]; keys: string[]; defaults: Record<string, string> } {
   const seenKeys = new Set<string>();
   const defaults: Record<string, string> = {};
+  const keys: string[] = [];
+  const registerKey = (key: string) => {
+    const trimmed = key.trim();
+    if (!trimmed || seenKeys.has(trimmed)) {
+      return false;
+    }
+    seenKeys.add(trimmed);
+    keys.push(trimmed);
+    return true;
+  };
 
   const sectionMap = new Map<string, TemplateContentSection>();
+  const modules = buildModulePageMap(template?.modules ?? []);
+
+  const ensureSection = (
+    sectionId: string,
+    label: string,
+    description?: string
+  ): TemplateContentSection => {
+    const existing = sectionMap.get(sectionId);
+    if (existing) {
+      if (description && !existing.description) {
+        existing.description = description;
+      }
+      return existing;
+    }
+
+    const created: TemplateContentSection = {
+      id: sectionId,
+      label,
+      description,
+      fields: [],
+    };
+    sectionMap.set(sectionId, created);
+    return created;
+  };
+
+  const upsertField = (section: TemplateContentSection, field: TemplateContentField) => {
+    const existingIndex = section.fields.findIndex((item) => item.key === field.key);
+    if (existingIndex >= 0) {
+      section.fields[existingIndex] = {
+        ...section.fields[existingIndex],
+        ...field,
+        defaultValue: section.fields[existingIndex].defaultValue ?? field.defaultValue,
+      };
+      return;
+    }
+    section.fields.push(field);
+  };
+
   const templateSections = template?.sections ?? [];
 
   templateSections.forEach((section) => {
-    // ✅ Make sure we always return a TemplateContentField or null
-    const fields: TemplateContentField[] = section.fields
-      .map((field): TemplateContentField | null => {
-        const key = field.id.trim();
-        if (!key) return null;
+    const sectionId = toSlug(section.id);
+    const label = section.label ?? resolveSectionLabel(section.id, modules);
+    const targetSection = ensureSection(sectionId, label, section.description);
 
-        seenKeys.add(key);
+    section.fields.forEach((field) => {
+      const key = field.id.trim();
+      if (!key) {
+        return;
+      }
 
-        if (typeof field.default === "string") {
-          defaults[key] = field.default;
-        }
+      registerKey(key);
 
-        return {
-          key,
-          label: field.label ?? toSentence(key.split(".").pop() ?? key),
-          type: mapFieldType(field.type, key),
-          placeholder: field.placeholder ?? undefined,
-          description: field.description ?? undefined,
-          defaultValue: field.default ?? undefined,
-        };
-      })
-      // ✅ Proper type predicate so TS narrows nulls
-      .filter((field): field is TemplateContentField => field !== null);
+      if (typeof field.default === "string") {
+        defaults[key] = field.default;
+      }
 
-    sectionMap.set(section.id, {
-      id: section.id,
-      label: section.label ?? toSentence(section.id),
-      description: section.description,
-      fields,
+      upsertField(targetSection, {
+        key,
+        label: field.label ?? toSentence(key.split(".").pop() ?? key),
+        type: mapFieldType(field.type, key),
+        placeholder: field.placeholder ?? undefined,
+        description: field.description ?? undefined,
+        defaultValue: field.default ?? undefined,
+      });
     });
   });
 
-  // ✅ Add missing placeholders that aren't explicitly declared
-  placeholders.forEach((placeholder) => {
-    const trimmed = placeholder.trim();
-    if (!trimmed || seenKeys.has(trimmed) || trimmed.startsWith("modules.")) {
+  (template?.fields ?? []).forEach((field) => {
+    const key = field.id?.trim();
+    if (!key) {
       return;
     }
 
-    seenKeys.add(trimmed);
+    registerKey(key);
+
+    if (typeof field.default === "string") {
+      defaults[key] = field.default;
+    }
+
+    const [rawSection, ...fieldParts] = key.split(".");
+    const hasSection = fieldParts.length > 0;
+    const sectionId = hasSection ? toSlug(rawSection) : "general";
+    const sectionLabel = hasSection
+      ? resolveSectionLabel(rawSection, modules)
+      : "General";
+    const targetSection = ensureSection(sectionId, sectionLabel);
+
+    const fieldLabel = field.label
+      ? field.label
+      : toSentence((hasSection ? fieldParts.join(".") : rawSection) || key);
+
+    upsertField(targetSection, {
+      key,
+      label: fieldLabel,
+      type: mapFieldType(field.type, key),
+      placeholder: field.placeholder ?? undefined,
+      description: field.description ?? undefined,
+      defaultValue: field.default ?? undefined,
+    });
+  });
+
+  placeholders.forEach((placeholder) => {
+    const trimmed = placeholder.trim();
+    if (!trimmed || trimmed.startsWith("modules.")) {
+      return;
+    }
+
+    const isNew = registerKey(trimmed);
+    if (!isNew) {
+      return;
+    }
 
     const [rawSection, ...fieldParts] = trimmed.split(".");
     const hasSection = fieldParts.length > 0;
     const sectionId = hasSection ? toSlug(rawSection) : "general";
     const fieldKey = hasSection ? fieldParts.join(".") : rawSection;
+    const sectionLabel = hasSection
+      ? resolveSectionLabel(rawSection, modules)
+      : "General";
 
-    if (!sectionMap.has(sectionId)) {
-      sectionMap.set(sectionId, {
-        id: sectionId,
-        label: hasSection ? toSentence(rawSection) : "General",
-        fields: [],
-      });
-    }
+    const section = ensureSection(sectionId, sectionLabel);
 
-    const section = sectionMap.get(sectionId);
-    if (!section) return;
-
-    section.fields.push({
+    upsertField(section, {
       key: trimmed,
       label: toSentence(fieldKey),
       type: inferFieldType(fieldKey),
       placeholder: undefined,
       description: undefined,
-      defaultValue: undefined,
     });
   });
 
-  // ✅ Sort sections and deduplicate field keys
   const sections = Array.from(sectionMap.values()).filter(
     (section) => section.fields.length > 0
   );
 
-  if (templateSections.length) {
-    const order = new Map(templateSections.map((section, index) => [section.id, index] as const));
-    sections.sort((a, b) => {
-      const aIndex = order.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-      const bIndex = order.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-      if (aIndex === bIndex) return a.label.localeCompare(b.label);
-      return aIndex - bIndex;
-    });
-  } else {
-    sections.sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  sections.forEach((section) => {
-    section.fields = section.fields.filter(
-      (field, index, array) => array.findIndex((item) => item.key === field.key) === index
-    );
-  });
-
-  return {
-    sections,
-    keys: Array.from(seenKeys),
-    defaults,
-  };
+  return { sections, keys, defaults };
 }
 
 
@@ -365,37 +419,25 @@ function extractMetaContentSources(meta: unknown): Array<Record<string, unknown>
 }
 
 function extractFieldDefaults(fields: unknown): Record<string, unknown> {
-  if (!Array.isArray(fields)) {
-    return {};
-  }
+  const normalised = normaliseTemplateFields(fields);
 
-  return fields.reduce<Record<string, unknown>>((acc, field) => {
-    if (!field || typeof field !== "object") {
-      return acc;
-    }
-
-    const id = typeof (field as { id?: unknown }).id === "string" ? (field as { id?: string }).id.trim() : "";
+  return normalised.reduce<Record<string, unknown>>((acc, field) => {
+    const id = field.id?.trim();
     if (!id) {
       return acc;
     }
 
-    const defaultValue = (field as { default?: unknown }).default;
-    if (typeof defaultValue === "string") {
-      acc[id] = defaultValue;
+    if (typeof field.default === "string") {
+      acc[id] = field.default;
       return acc;
     }
 
-    if (defaultValue == null) {
+    if (field.default == null) {
       acc[id] = "";
       return acc;
     }
 
-    if (Array.isArray(defaultValue)) {
-      acc[id] = defaultValue.filter((item): item is string => typeof item === "string");
-      return acc;
-    }
-
-    acc[id] = defaultValue;
+    acc[id] = field.default;
     return acc;
   }, {});
 }
@@ -554,6 +596,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         colors: [],
         fonts: [],
         modules: [],
+        fields: [],
         meta: {},
         builder: undefined,
         html: "",
@@ -592,13 +635,27 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
   const selectedTemplateIdRef = selectedTemplate.id;
 
   useEffect(() => {
+    const moduleLabels = selectedTemplate.modules
+      .map((module) => {
+        if (typeof module.label === "string" && module.label.trim().length > 0) {
+          return module.label.trim();
+        }
+        return toSentence(module.id);
+      })
+      .filter((label) => label.length > 0);
+
+    if (moduleLabels.length > 0) {
+      setStorePages(moduleLabels);
+      return;
+    }
+
     const sectionLabels = selectedTemplate.sections.map((section) =>
       typeof section.label === "string" && section.label.trim().length > 0
         ? section.label.trim()
         : toSentence(section.id)
     );
     setStorePages(sectionLabels.length > 0 ? sectionLabels : [...DEFAULT_BUILDER_PAGES]);
-  }, [selectedTemplate, setStorePages]);
+  }, [selectedTemplate.modules, selectedTemplate.sections, setStorePages]);
 
   const websiteNameForStore = useMemo(() => {
     const contentRecord = content as Record<string, unknown>;

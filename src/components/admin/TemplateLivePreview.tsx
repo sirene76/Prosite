@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { TemplateModuleDefinition } from "@/lib/templates";
 import { renderTemplate } from "@/lib/renderTemplate";
+import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
 
 type TemplateTheme = {
   name: string;
@@ -16,7 +17,7 @@ type TemplateField = {
 
 type TemplateMeta = {
   themes?: TemplateTheme[];
-  fields?: TemplateField[];
+  fields?: TemplateField[] | Record<string, TemplateField>;
   modules?: TemplateModuleDefinition[];
 };
 
@@ -124,11 +125,14 @@ export default function TemplateLivePreview({ html, css, meta }: TemplateLivePre
 }
 
 function getTemplateFields(meta: TemplateMeta | null | undefined): TemplateField[] {
-  if (!meta?.fields || !Array.isArray(meta.fields)) {
+  if (!meta?.fields) {
     return [];
   }
 
-  return meta.fields.filter((field): field is TemplateField => !!field && typeof field === "object");
+  return normaliseTemplateFields(meta.fields).map((field) => ({
+    id: field.id,
+    default: field.default,
+  }));
 }
 
 function getTemplateModules(meta: TemplateMeta | null | undefined): TemplateModuleDefinition[] {
