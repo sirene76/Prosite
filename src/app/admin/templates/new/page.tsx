@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import type { TemplateMeta } from "@/types/template";
+import { applyThemeToIframe } from "@/lib/applyThemeToIframe";
 
 type ThemeOption = {
   name: string;
@@ -85,23 +86,6 @@ export default function AddTemplatePage() {
     [activeThemeId, themes],
   );
 
-  function applyThemeToDocument(doc: Document | null, theme: ThemeOption | null) {
-    if (!doc || !theme) return;
-
-    const root = doc.documentElement;
-    if (!root) return;
-
-    Object.entries(theme.colors).forEach(([key, value]) => {
-      root.style.setProperty(`--${key}`, value);
-    });
-
-    if (theme.fonts) {
-      Object.entries(theme.fonts).forEach(([key, value]) => {
-        root.style.setProperty(`--font-${key}`, value);
-      });
-    }
-  }
-
   useEffect(() => {
     const iframe = iframeRef.current;
     const theme = activeTheme;
@@ -109,7 +93,23 @@ export default function AddTemplatePage() {
     if (!iframe || !theme) return;
 
     const applyTheme = () => {
-      applyThemeToDocument(iframe.contentDocument, theme);
+      applyThemeToIframe(iframe, theme.colors);
+
+      if (theme.fonts) {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        const root = doc?.documentElement;
+
+        if (!root) {
+          return;
+        }
+
+        Object.entries(theme.fonts).forEach(([key, value]) => {
+          if (value.trim()) {
+            const variableName = key.startsWith("--font-") ? key : `--font-${key}`;
+            root.style.setProperty(variableName, value);
+          }
+        });
+      }
     };
 
     const handleLoad = () => {
