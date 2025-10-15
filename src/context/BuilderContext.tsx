@@ -353,6 +353,59 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function resolveNextContentValue(current: unknown, incoming: unknown): unknown {
+  if (Array.isArray(incoming)) {
+    return incoming;
+  }
+
+  if (Array.isArray(current)) {
+    if (typeof incoming === "string") {
+      const trimmed = incoming.trim();
+      if (!trimmed) {
+        return [];
+      }
+      return [...current, trimmed];
+    }
+
+    if (incoming == null) {
+      return [];
+    }
+
+    return current;
+  }
+
+  return incoming;
+}
+
+function shouldBroadcastContentValue(value: unknown) {
+  if (value == null) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return false;
+  }
+
+  const valueType = typeof value;
+  return valueType === "string" || valueType === "number" || valueType === "boolean";
+}
+
+function normaliseBroadcastValue(value: unknown) {
+  if (value == null) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return "";
+}
+
 function getValueAtPath(source: Record<string, unknown>, path: string): unknown {
   if (!path) {
     return undefined;
@@ -786,27 +839,10 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         return;
       }
 
+      const currentValue = content[resolvedKey];
+      const nextValue = resolveNextContentValue(currentValue, value);
+
       setContent((prev) => {
-        const current = prev[resolvedKey];
-        let nextValue: unknown = value;
-
-        if (Array.isArray(value)) {
-          nextValue = value;
-        } else if (Array.isArray(current)) {
-          if (typeof value === "string") {
-            const trimmed = value.trim();
-            if (trimmed.length === 0) {
-              nextValue = [];
-            } else {
-              nextValue = [...current, trimmed];
-            }
-          } else if (value == null) {
-            nextValue = [];
-          } else {
-            nextValue = current;
-          }
-        }
-
         const next = { ...prev, [resolvedKey]: nextValue };
 
         if (websiteId) {
@@ -815,8 +851,22 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
         return next;
       });
+
+      const frameWindow = previewFrame?.contentWindow;
+      if (!frameWindow || !shouldBroadcastContentValue(nextValue)) {
+        return;
+      }
+
+      frameWindow.postMessage(
+        {
+          type: "updateField",
+          key: resolvedKey,
+          value: normaliseBroadcastValue(nextValue),
+        },
+        "*"
+      );
     },
-    [saveWebsiteChanges, websiteId]
+    [content, previewFrame, saveWebsiteChanges, websiteId]
   );
 
   const selectTemplate = useCallback((templateId: string) => {
