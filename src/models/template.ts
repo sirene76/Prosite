@@ -3,6 +3,7 @@ import mongoose, { Schema, models } from "mongoose";
 const TemplateSchema = new Schema(
   {
     name: String,
+    slug: { type: String, unique: true, sparse: true },
     category: String,
     description: String,
     image: String,

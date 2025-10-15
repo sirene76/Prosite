@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import AdmZip from "adm-zip";
+import slugify from "slugify";
 
 import { renderTemplate } from "@/lib/renderTemplate";
 import { createSlug } from "@/app/api/admin/templates/utils";
@@ -233,6 +234,15 @@ export async function POST(req: Request) {
     const html = fs.readFileSync(htmlPath, "utf-8");
     const css = fs.readFileSync(cssPath, "utf-8");
     const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8")) as UploadedTemplateMeta;
+    const providedSlug =
+      typeof meta.slug === "string" && meta.slug.trim() ? meta.slug.trim() : "";
+    const slugSource = meta.name || meta.id || "template";
+    const slug =
+      providedSlug ||
+      slugify(slugSource, { lower: true, strict: true }) ||
+      createSlug(slugSource) ||
+      "template";
+    meta.slug = slug;
     const js = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, "utf-8") : "";
 
     const values = collectDefaultValues(meta);
