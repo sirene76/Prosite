@@ -4,11 +4,22 @@ import Link from "next/link";
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 
+import { TemplateGrid, type TemplateGridTemplate } from "./template-grid";
+
 export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
   await connectDB();
   const templates = await Template.find().sort({ createdAt: -1 }).lean();
+
+  const templateSummaries: TemplateGridTemplate[] = templates.map((tpl) => ({
+    _id: tpl._id.toString(),
+    name: tpl.name,
+    category: tpl.category,
+    description: tpl.description,
+    image: tpl.image,
+    published: tpl.published ?? true,
+  }));
 
   return (
     <div className="p-6">
@@ -23,27 +34,7 @@ export default async function TemplatesPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {templates.map((tpl) => (
-          <div
-            key={tpl._id.toString()}
-            className="border rounded-lg overflow-hidden shadow hover:shadow-md transition"
-          >
-            <img
-              src={tpl.image}
-              alt={tpl.name}
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4 space-y-1">
-              <h2 className="font-semibold text-lg">{tpl.name}</h2>
-              <p className="text-sm text-gray-500">{tpl.category}</p>
-              <p className="text-sm text-gray-600 line-clamp-2">
-                {tpl.description}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <TemplateGrid templates={templateSummaries} />
     </div>
   );
 }

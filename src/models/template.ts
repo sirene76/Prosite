@@ -6,6 +6,7 @@ const TemplateSchema = new Schema(
     category: String,
     description: String,
     image: String,
+    published: { type: Boolean, default: true },
 
     html: String,
     css: String,
