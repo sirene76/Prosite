@@ -1,7 +1,60 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
+
 import type { TemplateMeta } from "@/types/template";
+
+type ThemeOption = {
+  name: string;
+  colors: Record<string, string>;
+  fonts?: Record<string, string>;
+};
+
+function normaliseThemes(meta: TemplateMeta | null | undefined): ThemeOption[] {
+  const source = (meta as { themes?: unknown })?.themes;
+
+  if (!Array.isArray(source)) {
+    return [];
+  }
+
+  return source
+    .map((theme) => {
+      if (
+        theme &&
+        typeof theme === "object" &&
+        typeof (theme as { name?: unknown }).name === "string" &&
+        typeof (theme as { colors?: unknown }).colors === "object" &&
+        (theme as { colors?: unknown }).colors !== null
+      ) {
+        const colors: Record<string, string> = {};
+        Object.entries((theme as { colors: Record<string, unknown> }).colors).forEach(([key, value]) => {
+          if (typeof value === "string" && value.trim()) {
+            colors[key] = value;
+          }
+        });
+
+        const fonts: Record<string, string> = {};
+        const sourceFonts = (theme as { fonts?: Record<string, unknown> }).fonts;
+        if (sourceFonts && typeof sourceFonts === "object") {
+          Object.entries(sourceFonts).forEach(([key, value]) => {
+            if (typeof value === "string" && value.trim()) {
+              fonts[key] = value;
+            }
+          });
+        }
+
+        return {
+          name: (theme as { name: string }).name,
+          colors,
+          fonts,
+        } satisfies ThemeOption;
+      }
+
+      return null;
+    })
+    .filter((theme): theme is ThemeOption => Boolean(theme));
+}
 
 type TemplatePreview = {
   name?: string | null;
@@ -15,6 +68,7 @@ type TemplatePreview = {
 
 export default function AddTemplatePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [template, setTemplate] = useState<TemplatePreview | null>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,11 +76,58 @@ export default function AddTemplatePage() {
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [themes, setThemes] = useState<ThemeOption[]>([]);
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
+  const router = useRouter();
+
+  const activeTheme = useMemo(
+    () => themes.find((theme) => theme.name === selectedTheme) ?? (themes.length ? themes[0] : null),
+    [selectedTheme, themes],
+  );
+
+  function applyTheme(theme: ThemeOption | null) {
+    if (!theme) return;
+
+    const iframe = iframeRef.current;
+    const root = iframe?.contentDocument?.documentElement;
+    if (!root) return;
+
+    Object.entries(theme.colors).forEach(([key, value]) => {
+      root.style.setProperty(`--${key}`, value);
+    });
+
+    if (theme.fonts) {
+      Object.entries(theme.fonts).forEach(([key, value]) => {
+        root.style.setProperty(`--font-${key}`, value);
+      });
+    }
+  }
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const handleLoad = () => {
+      if (!selectedTheme && activeTheme) {
+        setSelectedTheme(activeTheme.name);
+      }
+      applyTheme(activeTheme);
+    };
+
+    iframe.addEventListener("load", handleLoad);
+    handleLoad();
+
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+    };
+  }, [activeTheme, selectedTheme, previewSrc]);
 
   function resetState() {
     setTemplate(null);
     setPreviewSrc(null);
     setStatus("");
+    setThemes([]);
+    setSelectedTheme(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -41,6 +142,8 @@ export default function AddTemplatePage() {
     setStatus("");
     setTemplate(null);
     setPreviewSrc(null);
+    setThemes([]);
+    setSelectedTheme(null);
 
     try {
       const formData = new FormData();
@@ -51,6 +154,9 @@ export default function AddTemplatePage() {
       if (res.ok && data.success && data.template) {
         setTemplate(data.template);
         setPreviewSrc(data.template.previewPath ?? null);
+        const themeOptions = normaliseThemes(data.template.meta ?? null);
+        setThemes(themeOptions);
+        setSelectedTheme(themeOptions.length ? themeOptions[0].name : null);
         setStatus("Preview ready. Review and save when you're ready.");
       } else {
         setError(data.error || "Upload failed");
@@ -79,12 +185,8 @@ export default function AddTemplatePage() {
       const data: { success?: boolean; template?: TemplatePreview; error?: string } = await res.json();
 
       if (res.ok && data.success && data.template) {
-        setTemplate(data.template);
-        setPreviewSrc(data.template.previewPath ?? null);
-        setStatus("Template saved successfully.");
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+        router.push("/admin/templates");
+        return;
       } else {
         setError(data.error || "Failed to save template");
       }
@@ -159,11 +261,33 @@ export default function AddTemplatePage() {
             </div>
             <div className="border-t pt-4 space-y-4">
               <h2 className="font-semibold mb-2 text-lg">Live Preview</h2>
+              {themes.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {themes.map((theme) => (
+                    <button
+                      key={theme.name}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTheme(theme.name);
+                        applyTheme(theme);
+                      }}
+                      className={`rounded-md border px-3 py-1 text-sm font-medium transition-colors ${
+                        selectedTheme === theme.name
+                          ? "border-blue-600 bg-blue-50 text-blue-700"
+                          : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {theme.name}
+                    </button>
+                  ))}
+                </div>
+              )}
               <iframe
                 key={previewSrc ?? "template-preview"}
                 title="Template Preview"
                 sandbox=""
                 src={previewSrc ?? undefined}
+                ref={iframeRef}
                 style={{ width: "100%", height: "700px", border: "1px solid #ccc", borderRadius: "8px" }}
               />
               {template.stageId && (
