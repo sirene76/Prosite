@@ -4,7 +4,12 @@ import { BuilderProvider } from "@/context/BuilderContext";
 import {
   getTemplateAssets,
   getTemplates,
+  resolveActiveTemplateVersion,
   type TemplateDefinition,
+  type TemplateMeta,
+  type TemplateSectionDefinition,
+  type TemplateColorDefinition,
+  type TemplateModuleDefinition,
 } from "@/lib/templates";
 
 import { BuilderLayoutClient } from "./BuilderLayoutClient";
@@ -21,26 +26,49 @@ export default async function BuilderRoot({ children }: BuilderRootProps) {
       if (assets?.template) {
         return assets.template;
       }
-      const activeVersion =
-        template.versions?.find((version) => version.number === template.currentVersion) ??
-        template.versions?.[template.versions.length - 1];
-      if (!activeVersion) {
-        throw new Error(`Template ${template.id} has no versions available.`);
+      const html = typeof template.html === "string" ? template.html : "";
+      const css = typeof template.css === "string" ? template.css : "";
+      let meta: TemplateMeta = {};
+      if (template.meta) {
+        if (typeof template.meta === "string") {
+          try {
+            const parsed = JSON.parse(template.meta) as TemplateMeta;
+            if (parsed && typeof parsed === "object") {
+              meta = parsed;
+            }
+          } catch (error) {
+            console.error("⚠️ Failed to parse inline template meta", error);
+          }
+        } else if (typeof template.meta === "object") {
+          meta = template.meta as TemplateMeta;
+        }
       }
+      const activeVersion = resolveActiveTemplateVersion(template, html, css, meta);
+      const sections = Array.isArray(meta.sections)
+        ? (meta.sections as TemplateSectionDefinition[])
+        : [];
+      const colors = Array.isArray(meta.colors)
+        ? (meta.colors as TemplateColorDefinition[])
+        : [];
+      const fonts = Array.isArray(meta.fonts) ? (meta.fonts as string[]) : [];
+      const modules = Array.isArray(meta.modules)
+        ? (meta.modules as TemplateModuleDefinition[])
+        : [];
       return {
         ...template,
-        sections: [],
-        colors: [],
-        fonts: [],
-        modules: [],
-        meta: {},
-        html: "",
-        css: "",
-        htmlUrl: activeVersion.htmlUrl ?? undefined,
-        cssUrl: activeVersion.cssUrl ?? undefined,
-        metaUrl: activeVersion.metaUrl ?? undefined,
-        previewUrl: activeVersion.previewUrl ?? undefined,
-        previewVideo: activeVersion.previewVideo ?? undefined,
+        sections,
+        colors,
+        fonts,
+        modules,
+        meta,
+        builder: meta.builder,
+        html,
+        css,
+        htmlUrl: template.htmlUrl ?? activeVersion.htmlUrl ?? undefined,
+        cssUrl: template.cssUrl ?? activeVersion.cssUrl ?? undefined,
+        metaUrl: template.metaUrl ?? activeVersion.metaUrl ?? undefined,
+        previewUrl: template.previewUrl ?? activeVersion.previewUrl ?? undefined,
+        previewVideo: template.previewVideo ?? activeVersion.previewVideo ?? undefined,
         activeVersion,
       } satisfies TemplateDefinition;
     })
