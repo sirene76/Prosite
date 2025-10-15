@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { applyThemeToIframe } from "@/lib/applyThemeToIframe";
 import type { TemplateMeta } from "@/types/template";
 import { applyThemeToIframe } from "@/lib/applyThemeToIframe";
 
