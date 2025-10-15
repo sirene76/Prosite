@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, type ReactNode } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
 import { getBuilderStepLabel } from "@/lib/builderSteps";
@@ -30,13 +30,64 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
     }
   }, [setWebsiteId, websiteIdFromParams]);
 
+  const groupedProgressSteps = useMemo(() => {
+    return steps.reduce<
+      { key: string; label: string; steps: string[] }[]
+    >((acc, step) => {
+      if (step === "theme" || step === "content") {
+        const lastGroup = acc[acc.length - 1];
+        if (!lastGroup || lastGroup.key !== "building") {
+          acc.push({ key: "building", label: "Building", steps: [] });
+        }
+        acc[acc.length - 1]?.steps.push(step);
+        return acc;
+      }
+
+      acc.push({ key: step, label: getBuilderStepLabel(step), steps: [step] });
+      return acc;
+    }, []);
+  }, [steps]);
+
   const progressSteps = useMemo(
-    () => steps.map((step) => ({ key: step, label: getBuilderStepLabel(step) })),
-    [steps]
+    () => groupedProgressSteps.map(({ key, label }) => ({ key, label })),
+    [groupedProgressSteps]
+  );
+
+  const activeProgressIndex = useMemo(() => {
+    const activeStepKey = steps[currentStep];
+    if (!activeStepKey) {
+      return 0;
+    }
+
+    const groupIndex = groupedProgressSteps.findIndex((group) =>
+      group.steps.includes(activeStepKey)
+    );
+
+    return groupIndex >= 0 ? groupIndex : 0;
+  }, [currentStep, groupedProgressSteps, steps]);
+
+  const handleProgressStepClick = useCallback(
+    (index: number) => {
+      const group = groupedProgressSteps[index];
+      if (!group) {
+        return;
+      }
+
+      const targetStepKey = group.steps[0];
+      if (!targetStepKey) {
+        return;
+      }
+
+      const targetIndex = steps.indexOf(targetStepKey);
+      if (targetIndex >= 0) {
+        goToStep(targetIndex);
+      }
+    },
+    [goToStep, groupedProgressSteps, steps]
   );
   const stepSummary = useMemo(() => {
     const summary = progressSteps.map((step) => step.label).join(" • ");
-    return summary || "Template • Theme • Content • Checkout";
+    return summary || "Template • Building • Checkout";
   }, [progressSteps]);
 
   return (
@@ -57,7 +108,11 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
             <StepNavigation />
           </div>
         </div>
-        <ProgressBar steps={progressSteps} activeIndex={currentStep} onStepClick={goToStep} />
+        <ProgressBar
+          steps={progressSteps}
+          activeIndex={activeProgressIndex}
+          onStepClick={handleProgressStepClick}
+        />
       </header>
       <main className="flex flex-1 overflow-hidden">
         <section
