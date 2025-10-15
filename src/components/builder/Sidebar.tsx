@@ -330,13 +330,10 @@ function ContentPanel({
       return;
     }
 
-    const selector = buildSectionSelector(activeSection.id);
     previewFrame.contentWindow.postMessage(
       {
-        type: "scrollToSection",
+        type: "scroll-to",
         id: activeSection.id,
-        selector,
-        anchor: selector,
       },
       "*"
     );
@@ -491,17 +488,6 @@ function ContentPanel({
       ) : null}
     </div>
   );
-}
-
-function buildSectionSelector(id?: string | null) {
-  if (!id) {
-    return undefined;
-  }
-  const trimmed = id.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
 }
 
 function ensureColorValue(value: string | undefined) {

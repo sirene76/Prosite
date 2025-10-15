@@ -1,7 +1,5 @@
 "use client";
 
-import { useBuilder } from "@/context/BuilderContext";
-
 type PageDefinition = {
   id: string;
   label: string;
@@ -9,27 +7,12 @@ type PageDefinition = {
 };
 
 export function PageList({ pages }: { pages?: PageDefinition[] }) {
-  const { previewFrame } = useBuilder();
   const resolvedPages = Array.isArray(pages) ? pages : [];
-
   const scrollToSection = (anchor?: string) => {
-    const frameWindow = previewFrame?.contentWindow;
-    if (!frameWindow) {
-      return;
-    }
-
-    const selector = normaliseAnchor(anchor);
-    const sectionId = normaliseSectionId(anchor);
-
-    frameWindow.postMessage(
-      {
-        type: "scrollToSection",
-        id: sectionId ?? undefined,
-        selector: selector ?? undefined,
-        anchor: selector ?? undefined,
-      },
-      "*"
-    );
+    const resolvedAnchor = normaliseAnchor(anchor);
+    const iframe = document.querySelector<HTMLIFrameElement>("#livePreview");
+    if (!iframe?.contentWindow) return;
+    iframe.contentWindow.postMessage({ type: "scrollTo", anchor: resolvedAnchor }, "*");
   };
 
   if (!resolvedPages.length) {
@@ -53,24 +36,9 @@ export function PageList({ pages }: { pages?: PageDefinition[] }) {
 }
 
 function normaliseAnchor(anchor?: string) {
-  if (!anchor) {
-    return null;
-  }
+  if (!anchor) return "#";
   const trimmed = anchor.trim();
-  if (!trimmed) {
-    return null;
-  }
-  if (trimmed === "#") {
-    return "#";
-  }
+  if (!trimmed) return "#";
   return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
-}
-
-function normaliseSectionId(anchor?: string) {
-  const selector = normaliseAnchor(anchor);
-  if (!selector || selector === "#") {
-    return null;
-  }
-  return selector.replace(/^#/, "");
 }
 
