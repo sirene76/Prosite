@@ -109,10 +109,15 @@ export async function POST(req: Request) {
     // Render full HTML
     const renderedHtml = renderTemplate({ html, values, modules });
 
+    const folderName =
+      (typeof meta.id === "string" && meta.id.trim()) || extractedFolderName;
+
     // ✅ FIX: Compute basePath robustly (Windows-safe)
     const [subfolder] = fs.readdirSync(extractDir).filter((n) => !n.startsWith("."));
     const extractDirName = path.basename(extractDir).replace(/\\/g, "/");
-    const basePath = `/templates/${extractDirName}/${subfolder}/`;
+    const shouldRename = folderName !== extractedFolderName;
+    const baseDirName = shouldRename ? folderName : extractDirName;
+    const basePath = `/templates/${baseDirName}/${subfolder}/`;
 
     // ✅ Rewrite relative asset URLs to absolute preview URLs
     const fixedHtml = renderedHtml
@@ -138,9 +143,6 @@ export async function POST(req: Request) {
     } catch (err: any) {
       console.warn("⚠️ Thumbnail generation skipped:", err.message);
     }
-
-    const folderName =
-      (typeof meta.id === "string" && meta.id.trim()) || extractedFolderName;
 
     let previewUrl: string | undefined;
 
@@ -172,7 +174,7 @@ export async function POST(req: Request) {
         category: meta.category || "Uncategorized",
         description: meta.description || "",
         image,
-        html,
+        html: fixedHtml,
         css,
         js,
         meta,
