@@ -1,4 +1,5 @@
 import { renderTemplate } from "@/lib/renderTemplate";
+import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
 import type { TemplateMeta } from "@/types/template";
 
 type TemplateLike = {
@@ -18,11 +19,18 @@ type TemplateLike = {
  */
 export function renderPreview(template: TemplateLike) {
   const defaultValues = template.meta?.fields
-    ? Object.fromEntries(
-        Object.entries(template.meta.fields).map(([key, value]) => [
-          key,
-          value?.default ?? "",
-        ])
+    ? normaliseTemplateFields(template.meta.fields).reduce<Record<string, string>>(
+        (acc, field) => {
+          const id = field.id?.trim();
+          if (!id) {
+            return acc;
+          }
+          if (typeof field.default === "string") {
+            acc[id] = field.default;
+          }
+          return acc;
+        },
+        {}
       )
     : {};
 

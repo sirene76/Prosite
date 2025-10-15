@@ -2,6 +2,7 @@ import type { LeanDocument } from "mongoose";
 
 import { Template, type TemplateDocument, type TemplateVersion } from "@/models/template";
 import { connectDB } from "@/lib/mongodb";
+import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
 
 export type TemplateFieldType = "text" | "textarea" | "image" | "gallery" | "color" | "email";
 
@@ -58,6 +59,9 @@ export type TemplateMeta = {
   colors?: TemplateColorDefinition[];
   fonts?: string[];
   modules?: TemplateModuleDefinition[];
+  fields?:
+    | TemplateFieldDefinition[]
+    | Record<string, Partial<TemplateFieldDefinition> & { default?: unknown }>;
   builder?: TemplateBuilderConfig;
   placeholders?: string[];
   content?: Record<string, unknown>;
@@ -84,6 +88,7 @@ export type TemplateDefinition = TemplateRecord & {
   colors: TemplateColorDefinition[];
   fonts: string[];
   modules: TemplateModuleDefinition[];
+  fields: TemplateFieldDefinition[];
   meta: TemplateMeta;
   builder?: TemplateBuilderConfig;
   html?: string;
@@ -261,6 +266,7 @@ export async function getTemplateAssets(id: string) {
   const modules = Array.isArray(meta.modules)
     ? (meta.modules as TemplateModuleDefinition[])
     : [];
+  const fields = normaliseTemplateFields(meta.fields);
   const builder = meta.builder;
 
   const definition: TemplateDefinition = {
@@ -269,6 +275,7 @@ export async function getTemplateAssets(id: string) {
     colors,
     fonts,
     modules,
+    fields,
     meta,
     builder,
     html,

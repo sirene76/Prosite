@@ -30,6 +30,9 @@ type StageInfo = {
   stageId: string;
   folderName: string;
   templateRootRelative: string;
+  /** Raw template HTML that still includes placeholder tokens */
+  originalHtml: string;
+  /** HTML rendered with default values for quick previews */
   renderedHtml: string;
   css: string;
   js: string;
@@ -266,6 +269,7 @@ export async function POST(req: Request) {
       stageId,
       folderName,
       templateRootRelative,
+      originalHtml: html,
       renderedHtml,
       css,
       js,

@@ -37,6 +37,15 @@ function formatStepLabel(step: string) {
   return step.charAt(0).toUpperCase() + step.slice(1);
 }
 
+function toSentence(value: string) {
+  return value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (match) => match.toUpperCase());
+}
+
 type TabId = (typeof baseTabs)[number]["id"] | string;
 
 export function Sidebar() {
@@ -102,6 +111,22 @@ export function Sidebar() {
     return normalisePages(selectedTemplate.meta?.pages);
   }, [meta?.pages, selectedTemplate.meta]);
 
+  const modulePages = useMemo(() => {
+    return selectedTemplate.modules.map((module) => {
+      const label =
+        typeof module.label === "string" && module.label.trim().length > 0
+          ? module.label.trim()
+          : formatTokenLabel(module.id);
+      return {
+        id: module.id,
+        label,
+        scrollAnchor: module.id,
+      };
+    });
+  }, [selectedTemplate.modules]);
+
+  const pagesForSidebar = metaPages.length > 0 ? metaPages : modulePages;
+
   useEffect(() => {
     if (baseTabs.some((tab) => tab.id === activeTab)) {
       return;
@@ -147,8 +172,8 @@ export function Sidebar() {
   }, [selectedTemplate.id, setStoreTheme, storeTheme, themeOptions]);
 
   useEffect(() => {
-    if (metaPages.length > 0) {
-      setStorePages(metaPages.map((page) => page.label));
+    if (pagesForSidebar.length > 0) {
+      setStorePages(pagesForSidebar.map((page) => page.label));
       return;
     }
 
@@ -158,7 +183,7 @@ export function Sidebar() {
         : toSentence(section.id)
     );
     setStorePages(sectionLabels.length > 0 ? sectionLabels : [...DEFAULT_BUILDER_PAGES]);
-  }, [metaPages, selectedTemplate.sections, setStorePages]);
+  }, [pagesForSidebar, selectedTemplate.sections, setStorePages]);
 
 
   return (
@@ -214,7 +239,7 @@ export function Sidebar() {
                       <p className="text-sm font-semibold text-slate-100">{selectedTemplate.name}</p>
                     </div>
                     <div className="overflow-x-auto w-full">
-                      <PageList pages={metaPages} />
+                    <PageList pages={pagesForSidebar} />
                     </div>
                   </div>
                 ) : null}

@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
-import type { TemplateColorDefinition } from "@/lib/templates";
+import type { TemplateColorDefinition, TemplateFieldDefinition } from "@/lib/templates";
 import { ensureImageReferrerPolicy } from "@/lib/ensureImageReferrerPolicy";
 import { injectThemeTokens } from "@/lib/injectThemeTokens";
 import { renderTemplate } from "@/lib/renderTemplate";
@@ -577,28 +577,19 @@ function normaliseTemplateValues(values: Record<string, unknown>): Record<string
  * Extract default field values from template fields array so placeholders like
  * {{ hero.image }} or {{ hero.video }} render even before user edits any content.
  */
-type FieldDefinitionLike = {
-  id?: unknown;
-  default?: unknown;
-};
-
-function getFieldDefaults(fields: unknown): Record<string, string> {
-  if (!Array.isArray(fields)) return {};
-
+function getFieldDefaults(fields: TemplateFieldDefinition[]): Record<string, string> {
   const defaults: Record<string, string> = {};
 
-  for (const field of fields) {
-    if (!field || typeof field !== "object") continue;
-    const { id, default: defaultValue } = field as FieldDefinitionLike;
-    if (typeof id !== "string" || id.trim().length === 0) continue;
-
-    if (typeof defaultValue === "string") {
-      defaults[id] = defaultValue;
-      continue;
+  fields.forEach((field) => {
+    const key = field.id?.trim();
+    if (!key) {
+      return;
     }
 
-    defaults[id] = defaultValue != null ? String(defaultValue) : "";
-  }
+    if (typeof field.default === "string") {
+      defaults[key] = field.default;
+    }
+  });
 
   return defaults;
 }
