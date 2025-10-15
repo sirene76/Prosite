@@ -8,6 +8,7 @@ export type TemplateField = {
 export type TemplateMeta = {
   id?: string;
   name?: string;
+  slug?: string;
   themes?: Array<{
     name: string;
     colors: Record<string, string>;

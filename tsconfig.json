@@ -25,6 +25,9 @@
       "@/*": [
         "src/*"
       ],
+      "slugify": [
+        "src/lib/slugify"
+      ],
       "lucide-react": [
         "src/icons/lucide-react"
       ],

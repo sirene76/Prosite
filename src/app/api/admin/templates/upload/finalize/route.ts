@@ -5,6 +5,7 @@ import path from "path";
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 import { createSlug } from "@/app/api/admin/templates/utils";
+import slugify from "slugify";
 
 import type { TemplateMeta } from "@/types/template";
 
@@ -151,10 +152,23 @@ export async function POST(req: Request) {
     const description = typeof info.meta?.description === "string" ? info.meta.description : "";
     const image = computeImageUrl(info.meta, finalBasePath);
 
+    const slugFromMeta =
+      typeof info.meta?.slug === "string" && info.meta.slug.trim()
+        ? info.meta.slug.trim()
+        : null;
+    const generatedSlug =
+      slugFromMeta || slugify(templateName, { lower: true, strict: true }) || createSlug(templateName);
+    const templateSlug = generatedSlug || createSlug(info.folderName) || info.folderName;
+
+    if (info.meta) {
+      info.meta.slug = templateSlug;
+    }
+
     const templateDoc = await Template.findOneAndUpdate(
       { name: templateName },
       {
         name: templateName,
+        slug: templateSlug,
         category,
         description,
         image,
