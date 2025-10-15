@@ -110,7 +110,7 @@ export function TemplateGrid({ templates }: { templates: TemplateGridTemplate[] 
                 </span>
                 <div className="mt-auto flex flex-wrap gap-2">
                   <Link
-                    href={`/admin/templates/${tpl._id}`}
+                    href={`/admin/templates/${tpl._id}/edit`}
                     className="rounded-md border border-pink-200 px-3 py-1.5 text-sm font-medium text-pink-700 transition hover:bg-pink-50"
                   >
                     Edit
