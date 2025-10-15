@@ -330,10 +330,15 @@ function ContentPanel({
       return;
     }
 
+    const anchor = normalizeSectionAnchor(activeSection.id);
+    if (!anchor) {
+      return;
+    }
+
     previewFrame.contentWindow.postMessage(
       {
-        type: "scroll-to",
-        id: activeSection.id,
+        type: "scrollTo",
+        anchor,
       },
       "*"
     );
@@ -488,6 +493,19 @@ function ContentPanel({
       ) : null}
     </div>
   );
+}
+
+function normalizeSectionAnchor(id?: string | null) {
+  if (typeof id !== "string") {
+    return null;
+  }
+
+  const trimmed = id.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
 }
 
 function ensureColorValue(value: string | undefined) {
