@@ -6,6 +6,27 @@ import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 import { renderTemplate } from "@/lib/renderTemplate";
 
+type UploadedTemplateField = {
+  default?: unknown;
+};
+
+type UploadedTemplateModule = {
+  id?: unknown;
+  label?: unknown;
+  description?: unknown;
+};
+
+type UploadedTemplateMeta = {
+  id?: string;
+  name?: string;
+  category?: string;
+  description?: string;
+  image?: string;
+  fields?: Record<string, UploadedTemplateField>;
+  modules?: UploadedTemplateModule[];
+  [key: string]: unknown;
+};
+
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
@@ -87,24 +108,48 @@ export async function POST(req: Request) {
     // Read extracted files
     const html = fs.readFileSync(indexPath, "utf-8");
     const css = fs.readFileSync(stylePath, "utf-8");
-    const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+    const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8")) as UploadedTemplateMeta;
 
     // Collect default values
     const values: Record<string, string> = {};
     if (meta.fields) {
       for (const [key, field] of Object.entries(meta.fields)) {
-        values[key] = (field as any).default || "";
+        const defaultValue = field?.default;
+        if (typeof defaultValue === "string") {
+          values[key] = defaultValue;
+        } else if (defaultValue !== undefined && defaultValue !== null) {
+          values[key] = String(defaultValue);
+        } else {
+          values[key] = "";
+        }
       }
     }
 
     // Default module placeholders
     const modules =
-      meta.modules?.map((mod: any) => ({
-        id: mod.id,
-        label: mod.label,
-        description:
-          mod.label + " content preview for " + (meta.name || "template"),
-      })) || [];
+      meta.modules?.map((mod) => {
+        const rawLabel = mod?.label;
+        const label =
+          typeof rawLabel === "string"
+            ? rawLabel
+            : rawLabel !== undefined && rawLabel !== null
+              ? String(rawLabel)
+              : "Module";
+
+        const rawId = mod?.id;
+        const id =
+          typeof rawId === "string"
+            ? rawId
+            : rawId !== undefined && rawId !== null
+              ? String(rawId)
+              : label.toLowerCase().replace(/\s+/g, "-");
+
+        return {
+          id,
+          label,
+          description: `${label} content preview for ${meta.name || "template"}`,
+        };
+      }) || [];
 
     // Render full HTML
     const renderedHtml = renderTemplate({ html, values, modules });
@@ -149,8 +194,11 @@ export async function POST(req: Request) {
       } else {
         console.log("⚙️ Skipping Puppeteer thumbnail (ENABLE_THUMBNAILS not set).");
       }
-    } catch (err: any) {
-      console.warn("⚠️ Thumbnail generation skipped:", err.message);
+    } catch (err: unknown) {
+      console.warn(
+        "⚠️ Thumbnail generation skipped:",
+        err instanceof Error ? err.message : err
+      );
     }
 
     let previewUrl: string | undefined;
@@ -183,6 +231,7 @@ export async function POST(req: Request) {
         category: meta.category || "Uncategorized",
         description: meta.description || "",
         image,
+        published: true,
         html: fixedHtml,
         css,
         js,
