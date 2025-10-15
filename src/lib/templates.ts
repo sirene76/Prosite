@@ -135,6 +135,41 @@ function parseMeta(value: unknown): TemplateMeta | undefined {
   return undefined;
 }
 
+export function resolveActiveTemplateVersion(
+  template: TemplateRecord,
+  html: string,
+  css: string,
+  meta: TemplateMeta
+): TemplateVersion {
+  const fallbackTimestampSource = template.updatedAt ?? template.createdAt ?? new Date();
+  const fallbackTimestamp =
+    fallbackTimestampSource instanceof Date
+      ? fallbackTimestampSource
+      : new Date(fallbackTimestampSource);
+
+  const inlineMeta = meta && Object.keys(meta).length > 0 ? meta : undefined;
+
+  const fallbackVersion = {
+    number: template.currentVersion ?? "inline",
+    previewUrl: template.previewUrl ?? undefined,
+    previewVideo: template.previewVideo ?? undefined,
+    htmlUrl: template.htmlUrl ?? undefined,
+    cssUrl: template.cssUrl ?? undefined,
+    metaUrl: template.metaUrl ?? undefined,
+    inlineHtml: html || undefined,
+    inlineCss: css || undefined,
+    inlineMeta,
+    createdAt: fallbackTimestamp,
+    updatedAt: fallbackTimestamp,
+  } as TemplateVersion;
+
+  return (
+    template.versions?.find((v) => v.number === template.currentVersion) ??
+    template.versions?.[template.versions.length - 1] ??
+    fallbackVersion
+  );
+}
+
 export async function getTemplateById(id: string): Promise<TemplateRecord | null> {
   await connectDB();
   const template = await Template.findById(id).lean();
@@ -209,16 +244,10 @@ export async function getTemplateAssets(id: string) {
     return null;
   }
 
-  const version =
-    template.versions?.find((v) => v.number === template.currentVersion) ??
-    template.versions?.[template.versions.length - 1];
-  if (!version) {
-    throw new Error("Template version not found.");
-  }
-
   const html = typeof template.html === "string" ? template.html : "";
   const css = typeof template.css === "string" ? template.css : "";
   const meta = (template.meta ?? {}) as TemplateMeta;
+  const version = resolveActiveTemplateVersion(template, html, css, meta);
 
   const sections = Array.isArray(meta.sections)
     ? (meta.sections as TemplateSectionDefinition[])
