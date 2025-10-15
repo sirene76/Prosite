@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { applyThemeToIframe } from "@/lib/applyThemeToIframe";
 import type { TemplateMeta } from "@/types/template";
 
 type ThemeOption = {
@@ -86,20 +87,12 @@ export default function AddTemplatePage() {
   );
 
   function applyThemeToDocument(doc: Document | null, theme: ThemeOption | null) {
-    if (!doc || !theme) return;
+    if (!theme) return;
 
-    const root = doc.documentElement;
-    if (!root) return;
-
-    Object.entries(theme.colors).forEach(([key, value]) => {
-      root.style.setProperty(`--${key}`, value);
+    applyThemeToIframe(doc, {
+      colors: theme.colors,
+      fonts: theme.fonts,
     });
-
-    if (theme.fonts) {
-      Object.entries(theme.fonts).forEach(([key, value]) => {
-        root.style.setProperty(`--font-${key}`, value);
-      });
-    }
   }
 
   useEffect(() => {

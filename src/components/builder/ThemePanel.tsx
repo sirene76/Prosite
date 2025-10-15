@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { applyThemeToIframe } from "@/lib/applyThemeToIframe";
 import { useBuilder } from "@/context/BuilderContext";
 import { useBuilderStore } from "@/store/builderStore";
 
@@ -20,17 +21,10 @@ export function ThemePanel({ themes }: { themes: Theme[] }) {
 
   function applyTheme(theme: Theme) {
     const iframe = document.querySelector("iframe");
-    const root = iframe?.contentDocument?.documentElement;
-    if (!root) return;
-
-    const colors = theme.colors || {};
-    Object.entries(colors).forEach(([key, value]) => {
-      root.style.setProperty(`--${key}`, value);
+    applyThemeToIframe(iframe?.contentDocument ?? null, {
+      colors: theme.colors,
+      fonts: theme.fonts,
     });
-
-    const fonts = theme.fonts || {};
-    if (fonts.body) root.style.setProperty("--font-body", fonts.body);
-    if (fonts.heading) root.style.setProperty("--font-heading", fonts.heading);
   }
 
   function handleThemeClick(theme: Theme) {
