@@ -77,19 +77,18 @@ export default function AddTemplatePage() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [themes, setThemes] = useState<ThemeOption[]>([]);
-  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
+  const [activeThemeId, setActiveTheme] = useState<string | null>(null);
   const router = useRouter();
 
   const activeTheme = useMemo(
-    () => themes.find((theme) => theme.name === selectedTheme) ?? (themes.length ? themes[0] : null),
-    [selectedTheme, themes],
+    () => themes.find((theme) => theme.name === activeThemeId) ?? (themes.length ? themes[0] : null),
+    [activeThemeId, themes],
   );
 
-  function applyTheme(theme: ThemeOption | null) {
-    if (!theme) return;
+  function applyThemeToDocument(doc: Document | null, theme: ThemeOption | null) {
+    if (!doc || !theme) return;
 
-    const iframe = iframeRef.current;
-    const root = iframe?.contentDocument?.documentElement;
+    const root = doc.documentElement;
     if (!root) return;
 
     Object.entries(theme.colors).forEach(([key, value]) => {
@@ -105,29 +104,35 @@ export default function AddTemplatePage() {
 
   useEffect(() => {
     const iframe = iframeRef.current;
-    if (!iframe) return;
+    const theme = activeTheme;
+
+    if (!iframe || !theme) return;
+
+    const applyTheme = () => {
+      applyThemeToDocument(iframe.contentDocument, theme);
+    };
 
     const handleLoad = () => {
-      if (!selectedTheme && activeTheme) {
-        setSelectedTheme(activeTheme.name);
-      }
-      applyTheme(activeTheme);
+      applyTheme();
     };
 
     iframe.addEventListener("load", handleLoad);
-    handleLoad();
+
+    if (iframe.contentDocument?.readyState === "complete") {
+      applyTheme();
+    }
 
     return () => {
       iframe.removeEventListener("load", handleLoad);
     };
-  }, [activeTheme, selectedTheme, previewSrc]);
+  }, [activeTheme, previewSrc]);
 
   function resetState() {
     setTemplate(null);
     setPreviewSrc(null);
     setStatus("");
     setThemes([]);
-    setSelectedTheme(null);
+    setActiveTheme(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -143,7 +148,7 @@ export default function AddTemplatePage() {
     setTemplate(null);
     setPreviewSrc(null);
     setThemes([]);
-    setSelectedTheme(null);
+    setActiveTheme(null);
 
     try {
       const formData = new FormData();
@@ -156,7 +161,7 @@ export default function AddTemplatePage() {
         setPreviewSrc(data.template.previewPath ?? null);
         const themeOptions = normaliseThemes(data.template.meta ?? null);
         setThemes(themeOptions);
-        setSelectedTheme(themeOptions.length ? themeOptions[0].name : null);
+        setActiveTheme(themeOptions.length ? themeOptions[0].name : null);
         setStatus("Preview ready. Review and save when you're ready.");
       } else {
         setError(data.error || "Upload failed");
@@ -268,11 +273,10 @@ export default function AddTemplatePage() {
                       key={theme.name}
                       type="button"
                       onClick={() => {
-                        setSelectedTheme(theme.name);
-                        applyTheme(theme);
+                        setActiveTheme(theme.name);
                       }}
                       className={`rounded-md border px-3 py-1 text-sm font-medium transition-colors ${
-                        selectedTheme === theme.name
+                        activeTheme?.name === theme.name
                           ? "border-blue-600 bg-blue-50 text-blue-700"
                           : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
                       }`}
