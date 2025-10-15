@@ -8,6 +8,7 @@ import type { TemplateColorDefinition } from "@/lib/templates";
 import { ensureImageReferrerPolicy } from "@/lib/ensureImageReferrerPolicy";
 import { injectThemeTokens } from "@/lib/injectThemeTokens";
 import { renderTemplate } from "@/lib/renderTemplate";
+import { applyThemeToIframe } from "@/lib/applyThemeToIframe";
 import { useBuilderStore } from "@/store/builderStore";
 
 const DEVICE_WIDTHS = {
@@ -130,6 +131,14 @@ export function WebsitePreview() {
     return normaliseTemplateValues(mergedData);
   }, [mergedData]);
 
+  const previewColors = useMemo(() => {
+    return {
+      ...(themeDefaults.colors ?? {}),
+      ...storeTheme,
+      ...(theme.colors ?? {}),
+    } as Record<string, string>;
+  }, [storeTheme, theme.colors, themeDefaults.colors]);
+
   useEffect(() => {
     if (!assets) {
       updatePreviewDocument("");
@@ -139,12 +148,6 @@ export function WebsitePreview() {
     const timeout = setTimeout(() => {
       const storeFonts =
         (storeTheme as unknown as { fonts?: Record<string, string> }).fonts ?? {};
-
-      const mergedColors = {
-        ...themeDefaults.colors,
-        ...storeTheme,
-        ...theme.colors,
-      };
 
       const mergedFonts = {
         ...themeDefaults.fonts,
@@ -169,12 +172,12 @@ export function WebsitePreview() {
       const themedDocument = injectThemeTokens({
         html: htmlWithReferrerPolicy,
         css: assets.css,
-        colors: mergedColors,
+        colors: previewColors,
         fonts: mergedFonts,
       });
 
       const finalDoc = injectScrollScript(themedDocument);
-      console.log("🎨 Applying theme to preview", mergedColors);
+      console.log("🎨 Applying theme to preview", previewColors);
       updatePreviewDocument(finalDoc);
     }, 150);
 
@@ -182,6 +185,7 @@ export function WebsitePreview() {
   }, [
     assets,
     templateValues,
+    selectedTemplate.fields,
     selectedTemplate.id,
     selectedTemplate.modules,
     theme.colors,
@@ -189,8 +193,31 @@ export function WebsitePreview() {
     themeDefaults.colors,
     themeDefaults.fonts,
     storeTheme,
+    previewColors,
     updatePreviewDocument,
   ]);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) {
+      return;
+    }
+
+    if (!previewColors || Object.keys(previewColors).length === 0) {
+      return;
+    }
+
+    const applyColors = () => {
+      applyThemeToIframe(iframe, previewColors);
+    };
+
+    iframe.addEventListener("load", applyColors);
+    applyColors();
+
+    return () => {
+      iframe.removeEventListener("load", applyColors);
+    };
+  }, [previewColors, previewDocument]);
 
   const handleZoomIn = useCallback(() => {
     setIsAutoFit(false);
