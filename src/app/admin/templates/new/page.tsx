@@ -81,7 +81,7 @@ export default function AddTemplatePage() {
               <iframe
                 key={previewSrc ?? "template-preview"}
                 title="Template Preview"
-                sandbox="allow-scripts allow-same-origin"
+                sandbox=""
                 src={previewSrc ?? undefined}
                 style={{ width: "100%", height: "700px", border: "1px solid #ccc", borderRadius: "8px" }}
               />

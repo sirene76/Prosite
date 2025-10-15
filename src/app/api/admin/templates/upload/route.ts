@@ -120,11 +120,20 @@ export async function POST(req: Request) {
     const basePath = `/templates/${baseDirName}/${subfolder}/`;
 
     // ✅ Rewrite relative asset URLs to absolute preview URLs
-    const fixedHtml = renderedHtml
+    const fixedHtmlWithPaths = renderedHtml
       .replace(/href="style\.css"/g, `href="${basePath}style.css"`)
       .replace(/src="script\.js"/g, `src="${basePath}script.js"`)
       .replace(/src="images\//g, `src="${basePath}images/`)
       .replace(/src="assets\//g, `src="${basePath}assets/`);
+
+    // 🛡️ Strip potentially dangerous script tags
+    const fixedHtml = fixedHtmlWithPaths.replace(
+      /<script\b[^>]*\bsrc\s*=\s*(?:"([^"]*script\.js)"|'([^']*script\.js)')[^>]*>\s*<\/script>/gi,
+      (_match, doubleQuotedSrc: string, singleQuotedSrc: string) => {
+        const srcPath = doubleQuotedSrc || singleQuotedSrc || "";
+        return `<noscript data-disabled-script="${srcPath}"></noscript>`;
+      }
+    );
 
     // Save the final preview
     const previewPath = path.join(extractDir, "preview.html");
