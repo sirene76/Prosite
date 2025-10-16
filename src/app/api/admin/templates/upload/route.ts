@@ -353,9 +353,7 @@ export async function POST(req: Request) {
         fileName: sanitizeUploadFileName(stageId, scriptEntryPath),
         contentType: "text/javascript",
       });
-      if (jsUrl) {
-        assetMap[normaliseAssetKey(scriptEntryPath)] = jsUrl;
-      }
+      assetMap[normaliseAssetKey(scriptEntryPath)] = jsUrl;
     }
 
     const metaString = JSON.stringify(meta, null, 2);
