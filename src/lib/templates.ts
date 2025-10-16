@@ -6,7 +6,7 @@ import {
   type TemplateVersion,
 } from "@/models/template";
 import { connectDB } from "@/lib/mongodb";
-import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
+import { ensureTemplateFieldIds, normaliseTemplateFields } from "@/lib/templateFieldUtils";
 
 export type TemplateFieldType = "text" | "textarea" | "image" | "gallery" | "color" | "email";
 
@@ -129,6 +129,7 @@ function parseMeta(value: unknown): TemplateMeta | undefined {
     try {
       const parsed = JSON.parse(value) as TemplateMeta;
       if (parsed && typeof parsed === "object") {
+        parsed.fields = ensureTemplateFieldIds(parsed.fields);
         return parsed;
       }
     } catch (error) {
@@ -138,7 +139,9 @@ function parseMeta(value: unknown): TemplateMeta | undefined {
   }
 
   if (typeof value === "object") {
-    return value as TemplateMeta;
+    const meta = value as TemplateMeta;
+    meta.fields = ensureTemplateFieldIds(meta.fields);
+    return meta;
   }
 
   return undefined;
@@ -290,7 +293,9 @@ export async function getTemplateAssets(id: string) {
   const modules = Array.isArray(meta.modules)
     ? (meta.modules as TemplateModuleDefinition[])
     : [];
-  const fields = normaliseTemplateFields(meta.fields);
+  const fieldSource = ensureTemplateFieldIds(meta.fields);
+  meta.fields = fieldSource;
+  const fields = normaliseTemplateFields(fieldSource);
   const builder = meta.builder;
 
   const definition: TemplateDefinition = {

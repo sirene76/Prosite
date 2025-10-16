@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { TemplateModuleDefinition } from "@/lib/templates";
 import { renderTemplate } from "@/lib/renderTemplate";
-import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
+import { ensureTemplateFieldIds, normaliseTemplateFields } from "@/lib/templateFieldUtils";
 
 type TemplateTheme = {
   name: string;
@@ -129,7 +129,9 @@ function getTemplateFields(meta: TemplateMeta | null | undefined): TemplateField
     return [];
   }
 
-  return normaliseTemplateFields(meta.fields).map((field) => ({
+  const fieldsSource = ensureTemplateFieldIds(meta.fields);
+
+  return normaliseTemplateFields(fieldsSource).map((field) => ({
     id: field.id,
     default: field.default,
   }));

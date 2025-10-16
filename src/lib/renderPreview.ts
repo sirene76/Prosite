@@ -1,5 +1,5 @@
 import { renderTemplate } from "@/lib/renderTemplate";
-import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
+import { ensureTemplateFieldIds, normaliseTemplateFields } from "@/lib/templateFieldUtils";
 import type { TemplateMeta } from "@/types/template";
 
 type TemplateLike = {
@@ -18,8 +18,16 @@ type TemplateLike = {
  * - Rewrites relative asset URLs if a basePath exists
  */
 export function renderPreview(template: TemplateLike) {
-  const defaultValues = template.meta?.fields
-    ? normaliseTemplateFields(template.meta.fields).reduce<Record<string, string>>(
+  const fieldsSource = template.meta?.fields
+    ? ensureTemplateFieldIds(template.meta.fields)
+    : undefined;
+
+  if (template.meta && fieldsSource) {
+    template.meta.fields = fieldsSource;
+  }
+
+  const defaultValues = fieldsSource
+    ? normaliseTemplateFields(fieldsSource).reduce<Record<string, string>>(
         (acc, field) => {
           const id = field.id?.trim();
           if (!id) {

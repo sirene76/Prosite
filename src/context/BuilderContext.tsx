@@ -20,6 +20,7 @@ import {
 } from "@/store/builderStore";
 import {
   buildModulePageMap,
+  ensureTemplateFieldIds,
   normaliseTemplateFields,
   resolveSectionLabel,
 } from "@/lib/templateFieldUtils";
@@ -419,7 +420,8 @@ function extractMetaContentSources(meta: unknown): Array<Record<string, unknown>
 }
 
 function extractFieldDefaults(fields: unknown): Record<string, unknown> {
-  const normalised = normaliseTemplateFields(fields);
+  const fieldSource = ensureTemplateFieldIds(fields);
+  const normalised = normaliseTemplateFields(fieldSource);
 
   return normalised.reduce<Record<string, unknown>>((acc, field) => {
     const id = field.id?.trim();

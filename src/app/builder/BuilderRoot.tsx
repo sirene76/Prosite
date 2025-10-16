@@ -11,7 +11,7 @@ import {
   type TemplateColorDefinition,
   type TemplateModuleDefinition,
 } from "@/lib/templates";
-import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
+import { ensureTemplateFieldIds, normaliseTemplateFields } from "@/lib/templateFieldUtils";
 
 import { BuilderLayoutClient } from "./BuilderLayoutClient";
 
@@ -55,7 +55,9 @@ export default async function BuilderRoot({ children }: BuilderRootProps) {
       const modules = Array.isArray(meta.modules)
         ? (meta.modules as TemplateModuleDefinition[])
         : [];
-      const fields = normaliseTemplateFields(meta.fields);
+      const fieldSource = ensureTemplateFieldIds(meta.fields);
+      meta.fields = fieldSource;
+      const fields = normaliseTemplateFields(fieldSource);
       return {
         ...template,
         sections,
