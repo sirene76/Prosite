@@ -74,6 +74,7 @@ export default async function TemplatePreviewPage({
         <h1 className="text-lg font-medium mb-3">Previewing {title} (v{version.number})</h1>
         <iframe
           srcDoc={rendered}
+          sandbox="allow-scripts allow-same-origin"
           className="w-[1200px] h-[700px] border shadow-lg rounded-lg bg-white"
           title={`Preview of ${title}`}
         />

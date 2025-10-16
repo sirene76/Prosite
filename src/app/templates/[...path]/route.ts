@@ -17,10 +17,6 @@ export async function GET(
       return new NextResponse("Missing path", { status: 400 });
     }
 
-    if (segments.includes("_staging")) {
-      return new NextResponse("Not Found", { status: 404 });
-    }
-
     // Build absolute path inside /public/templates
     const filePath = path.join(process.cwd(), "public", "templates", ...segments);
 
