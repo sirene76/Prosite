@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
+import slugify from "slugify";
 
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 import { createSlug } from "@/app/api/admin/templates/utils";
-import slugify from "slugify";
 import { ensureTemplateFieldIds } from "@/lib/templateFieldUtils";
 
 import type { TemplateMeta } from "@/types/template";
@@ -14,14 +13,20 @@ import type { TemplateMeta } from "@/types/template";
 type StageInfo = {
   stageId: string;
   folderName: string;
-  templateRootRelative: string;
   originalHtml: string;
+  processedHtml: string;
   renderedHtml: string;
   css: string;
   js: string;
   meta: TemplateMeta & {
     image?: string;
   };
+  htmlUrl: string;
+  cssUrl: string;
+  jsUrl?: string;
+  metaUrl: string;
+  previewUrl: string;
+  assets: Record<string, string>;
 };
 
 type FinalizeRequest = {
@@ -40,42 +45,16 @@ type TemplateResponse = {
     category?: string | null;
     description?: string | null;
     meta?: TemplateMeta | null;
-    basePath: string;
-    previewPath: string;
+    basePath?: string | null;
+    previewPath?: string | null;
   };
 };
 
-const REQUIRED_FILES = ["index.html", "style.css", "meta.json"] as const;
+const STAGING_ROOT = path.join(process.cwd(), ".upload-staging");
+const DEFAULT_PREVIEW_IMAGE = "/templates/default-template-preview.svg";
 
-function stageInfoPath(stageDir: string): string {
-  return path.join(stageDir, "__stage.json");
-}
-
-function rewriteAssetPaths(html: string, basePath: string): string {
-  return html
-    .replace(/href="style\.css"/g, `href="${basePath}style.css"`)
-    .replace(/src="script\.js"/g, `src="${basePath}script.js"`)
-    .replace(/src="images\//g, `src="${basePath}images/`)
-    .replace(/src="assets\//g, `src="${basePath}assets/`);
-}
-
-function disableExternalScripts(html: string): string {
-  return html.replace(
-    /<script\b[^>]*\bsrc\s*=\s*(?:"([^"]*script\.js)"|'([^']*script\.js)')[^>]*>\s*<\/script>/gi,
-    (_match, doubleQuotedSrc: string, singleQuotedSrc: string) => {
-      const srcPath = doubleQuotedSrc || singleQuotedSrc || "";
-      return `<noscript data-disabled-script="${srcPath}"></noscript>`;
-    }
-  );
-}
-
-function ensureHasCoreFiles(templateRoot: string) {
-  for (const file of REQUIRED_FILES) {
-    const filePath = path.join(templateRoot, file);
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`Missing required file: ${file}`);
-    }
-  }
+function stageInfoPath(stageId: string) {
+  return path.join(STAGING_ROOT, `${stageId}.json`);
 }
 
 function normalizeTemplateName(info: StageInfo, override?: string | null) {
@@ -90,45 +69,39 @@ function normalizeTemplateName(info: StageInfo, override?: string | null) {
   return info.folderName;
 }
 
-async function ensurePreviewImage(finalDir: string) {
-  const previewPath = path.join(finalDir, "preview.png");
-  if (fs.existsSync(previewPath)) {
-    return;
-  }
-
-  const fallbackPreview = path.join(
-    process.cwd(),
-    "public",
-    "templates",
-    "default-template-preview.svg"
+function disableExternalScripts(html: string): string {
+  return html.replace(
+    /<script\b[^>]*\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>\s*<\/script>/gi,
+    (_match, doubleQuotedSrc: string, singleQuotedSrc: string) => {
+      const srcPath = doubleQuotedSrc || singleQuotedSrc || "";
+      return `<noscript data-disabled-script="${srcPath}"></noscript>`;
+    }
   );
-
-  if (!fs.existsSync(fallbackPreview)) {
-    return;
-  }
-
-  try {
-    const buffer = await sharp(fallbackPreview).png().toBuffer();
-    fs.writeFileSync(previewPath, buffer);
-  } catch (error) {
-    console.error("Failed to create fallback preview image:", error);
-  }
 }
 
-function resolveTemplateImage(meta: StageInfo["meta"], finalFolderName: string) {
-  const providedImage =
-    typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : "";
-
+function resolveTemplateImage(meta: StageInfo["meta"]) {
+  const providedImage = typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : "";
   if (providedImage) {
     return providedImage;
   }
 
-  const metaId =
-    typeof meta.id === "string" && meta.id.trim()
-      ? createSlug(meta.id.trim()) || meta.id.trim()
-      : finalFolderName;
+  return DEFAULT_PREVIEW_IMAGE;
+}
 
-  return `/templates/${metaId}/preview.png`;
+function deriveRemoteBase(url: string | null | undefined) {
+  if (!url) return null;
+  try {
+    const [cleaned] = url.split("?");
+    if (!cleaned) return null;
+    const lastSlash = cleaned.lastIndexOf("/");
+    if (lastSlash === -1) {
+      return `${cleaned}/`;
+    }
+    return `${cleaned.slice(0, lastSlash + 1)}`;
+  } catch (error) {
+    console.error("Failed to derive remote base", error);
+    return null;
+  }
 }
 
 export const runtime = "nodejs";
@@ -142,10 +115,7 @@ export async function POST(req: Request) {
       return NextResponse.json<ErrorResponse>({ error: "stageId is required" }, { status: 400 });
     }
 
-    const uploadsDir = path.join(process.cwd(), "public", "templates");
-    const stagingDir = path.join(uploadsDir, "_staging");
-    const stageDir = path.join(stagingDir, stageId);
-    const infoPath = stageInfoPath(stageDir);
+    const infoPath = stageInfoPath(stageId);
 
     if (!fs.existsSync(infoPath)) {
       return NextResponse.json<ErrorResponse>({ error: "Upload stage not found" }, { status: 404 });
@@ -154,45 +124,13 @@ export async function POST(req: Request) {
     const info = JSON.parse(fs.readFileSync(infoPath, "utf-8")) as StageInfo;
     info.meta.fields = ensureTemplateFieldIds(info.meta.fields);
 
-    const templateRoot = path.join(uploadsDir, info.templateRootRelative);
-    ensureHasCoreFiles(templateRoot);
-
-    const finalFolderName = createSlug(info.folderName) || info.folderName;
-    const finalDir = path.join(uploadsDir, finalFolderName);
-    const finalBasePath = `/templates/${finalFolderName}/`;
-
-    const sanitizedHtml = disableExternalScripts(
-      rewriteAssetPaths(info.originalHtml, finalBasePath)
-    );
-    const previewHtml = disableExternalScripts(
-      rewriteAssetPaths(info.renderedHtml, finalBasePath)
-    );
-
-    if (fs.existsSync(finalDir)) {
-      fs.rmSync(finalDir, { recursive: true, force: true });
-    }
-
-    const stageInfoInsideTemplate = path.join(templateRoot, "__stage.json");
-    if (fs.existsSync(stageInfoInsideTemplate)) {
-      fs.rmSync(stageInfoInsideTemplate, { force: true });
-    }
-
-    fs.mkdirSync(finalDir, { recursive: true });
-    fs.cpSync(templateRoot, finalDir, { recursive: true });
-
-    fs.writeFileSync(path.join(finalDir, "preview.html"), previewHtml, "utf-8");
-    await ensurePreviewImage(finalDir);
-
-    if (fs.existsSync(stageDir)) {
-      fs.rmSync(stageDir, { recursive: true, force: true });
-    }
-
     await connectDB();
 
     const templateName = normalizeTemplateName(info, body.nameOverride ?? null);
     const category = typeof info.meta?.category === "string" ? info.meta.category : "Uncategorized";
     const description = typeof info.meta?.description === "string" ? info.meta.description : "";
-    const image = resolveTemplateImage(info.meta, finalFolderName);
+    const image = resolveTemplateImage(info.meta);
+
     if (!info.meta.image) {
       info.meta.image = image;
     }
@@ -209,6 +147,9 @@ export async function POST(req: Request) {
       info.meta.slug = templateSlug;
     }
 
+    const sanitizedHtml = disableExternalScripts(info.processedHtml);
+    const basePath = deriveRemoteBase(info.htmlUrl) ?? deriveRemoteBase(info.cssUrl) ?? null;
+
     const templateDoc = await Template.findOneAndUpdate(
       { name: templateName },
       {
@@ -222,25 +163,34 @@ export async function POST(req: Request) {
         css: info.css,
         js: info.js,
         meta: info.meta,
+        htmlUrl: info.htmlUrl,
+        cssUrl: info.cssUrl,
+        jsUrl: info.jsUrl,
+        metaUrl: info.metaUrl,
+        previewUrl: info.previewUrl,
       },
       { new: true, upsert: true }
     );
 
-    const response = {
-      success: true as const,
+    if (fs.existsSync(infoPath)) {
+      fs.unlinkSync(infoPath);
+    }
+
+    const response: TemplateResponse = {
+      success: true,
       template: {
         name: templateDoc?.name ?? templateName,
         category: templateDoc?.category ?? category,
         description: templateDoc?.description ?? description,
         meta: info.meta,
-        basePath: finalBasePath,
-        previewPath: `${finalBasePath}preview.html`,
+        basePath,
+        previewPath: info.previewUrl,
       },
-    } satisfies TemplateResponse;
+    };
 
     return NextResponse.json(response);
   } catch (error: unknown) {
-    console.error("UPLOAD FINALIZE ERROR:", error);
+    console.error("FINALIZE TEMPLATE ERROR:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json<ErrorResponse>({ error: message }, { status: 500 });
   }

@@ -14,32 +14,44 @@ import {
   ensureTemplateFieldIds,
   normaliseTemplateFields,
 } from "@/lib/templateFieldUtils";
+import { uploadFile } from "@/lib/uploadFile";
 
 import type { TemplateMeta } from "@/types/template";
+
+const REQUIRED_FILES = ["index.html", "style.css", "meta.json"] as const;
+const STAGING_ROOT = path.join(process.cwd(), ".upload-staging");
 
 type UploadedTemplateMeta = TemplateMeta & {
   [key: string]: unknown;
 };
 
+type AssetMap = Record<string, string>;
+
 type StageInfo = {
   stageId: string;
   folderName: string;
-  templateRootRelative: string;
   originalHtml: string;
+  processedHtml: string;
   renderedHtml: string;
   css: string;
   js: string;
   meta: TemplateMeta & {
     image?: string;
   };
+  htmlUrl: string;
+  cssUrl: string;
+  jsUrl?: string;
+  metaUrl: string;
+  previewUrl: string;
+  assets: AssetMap;
 };
 
 type UploadSuccessResponse = {
   success: true;
   template: {
     stageId: string;
-    basePath: string;
-    previewPath: string;
+    basePath?: string | null;
+    previewPath?: string | null;
     name?: string | null;
     category?: string | null;
     description?: string | null;
@@ -51,7 +63,13 @@ type ErrorResponse = {
   error: string;
 };
 
-const REQUIRED_FILES = ["index.html", "style.css", "meta.json"] as const;
+function ensureStagingRoot() {
+  fs.mkdirSync(STAGING_ROOT, { recursive: true });
+}
+
+function stageInfoPath(stageId: string) {
+  return path.join(STAGING_ROOT, `${stageId}.json`);
+}
 
 function normaliseEntryName(entry: IZipEntry) {
   return entry.entryName.replace(/\\/g, "/");
@@ -115,6 +133,129 @@ function stringOrUndefined(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function getDirectory(entryPath: string) {
+  const normalised = entryPath.includes("/") ? entryPath.slice(0, entryPath.lastIndexOf("/")) : "";
+  return normalised;
+}
+
+function sanitizeUploadFileName(stageId: string, entryName: string) {
+  const safe = entryName
+    .replace(/\\/g, "/")
+    .replace(/\.\.+/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "-");
+  return `${stageId}-${safe}`;
+}
+
+function detectContentType(fileName: string) {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".html")) return "text/html";
+  if (lower.endsWith(".css")) return "text/css";
+  if (lower.endsWith(".js")) return "text/javascript";
+  if (lower.endsWith(".json")) return "application/json";
+  if (lower.endsWith(".svg")) return "image/svg+xml";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".avif")) return "image/avif";
+  if (lower.endsWith(".woff2")) return "font/woff2";
+  if (lower.endsWith(".woff")) return "font/woff";
+  if (lower.endsWith(".ttf")) return "font/ttf";
+  if (lower.endsWith(".otf")) return "font/otf";
+  if (lower.endsWith(".eot")) return "application/vnd.ms-fontobject";
+  if (lower.endsWith(".mp4")) return "video/mp4";
+  if (lower.endsWith(".webm")) return "video/webm";
+  if (lower.endsWith(".ogg")) return "video/ogg";
+  return "application/octet-stream";
+}
+
+function normaliseAssetKey(value: string) {
+  const normalised = path.posix.normalize(value.replace(/\\/g, "/"));
+  const segments = normalised.split("/").filter((segment) => segment && segment !== "." && segment !== "..");
+  return segments.join("/");
+}
+
+function resolveAssetUrl(value: string, baseDir: string, assets: AssetMap) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^(?:https?:|data:|mailto:|tel:|#|javascript:)/i.test(trimmed)) {
+    return null;
+  }
+
+  const match = trimmed.match(/^([^?#]+)(.*)$/);
+  if (!match) return null;
+
+  const [, rawPath, suffix] = match;
+  let candidate = rawPath.replace(/\\/g, "/");
+
+  if (candidate.startsWith("/")) {
+    candidate = candidate.replace(/^\/+/g, "");
+  } else if (baseDir) {
+    candidate = path.posix.join(baseDir, candidate);
+  }
+
+  const key = normaliseAssetKey(candidate);
+  if (!key) return null;
+
+  const remote = assets[key];
+  if (!remote) return null;
+
+  return `${remote}${suffix}`;
+}
+
+function rewriteHtmlWithAssets(html: string, baseDir: string, assets: AssetMap) {
+  if (!html) return "";
+
+  let output = html.replace(
+    /(src|href)=(["'])([^"']+)(["'])/gi,
+    (_match, attr: string, quote: string, value: string) => {
+      const resolved = resolveAssetUrl(value, baseDir, assets);
+      if (!resolved) return `${attr}=${quote}${value}${quote}`;
+      return `${attr}=${quote}${resolved}${quote}`;
+    }
+  );
+
+  output = output.replace(/srcset=(["'])([^"']+)(["'])/gi, (_match, quote: string, value: string) => {
+    const parts = value.split(",").map((part) => {
+      const [candidate, descriptor] = part.trim().split(/\s+/, 2);
+      const resolved = resolveAssetUrl(candidate, baseDir, assets);
+      if (!resolved) {
+        return part.trim();
+      }
+      return descriptor ? `${resolved} ${descriptor}` : resolved;
+    });
+    return `srcset=${quote}${parts.join(", ")}${quote}`;
+  });
+
+  return output;
+}
+
+function rewriteCssWithAssets(css: string, baseDir: string, assets: AssetMap) {
+  if (!css) return "";
+
+  return css.replace(/url\((\s*['"]?)([^"')]+)(['"]?\s*)\)/gi, (_match, prefix: string, value: string, suffix: string) => {
+    const resolved = resolveAssetUrl(value, baseDir, assets);
+    if (!resolved) return `url(${prefix}${value}${suffix})`;
+    return `url(${prefix}${resolved}${suffix})`;
+  });
+}
+
+function deriveRemoteBase(url: string | null | undefined) {
+  if (!url) return null;
+  try {
+    const [cleaned] = url.split("?");
+    if (!cleaned) return null;
+    const lastSlash = cleaned.lastIndexOf("/");
+    if (lastSlash === -1) {
+      return `${cleaned}/`;
+    }
+    return `${cleaned.slice(0, lastSlash + 1)}`;
+  } catch (error) {
+    console.error("Failed to derive remote base", error);
+    return null;
+  }
+}
+
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
@@ -144,21 +285,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const html = htmlEntry.getData().toString("utf-8");
-    const css = cssEntry.getData().toString("utf-8");
-    const js = scriptEntry ? scriptEntry.getData().toString("utf-8") : "";
-    const meta = parseMeta(metaEntry.getData().toString("utf-8"));
-
-    const slug = resolveSlug(meta);
-    meta.slug = slug;
-
-    const uploadsDir = path.join(process.cwd(), "public", "templates");
-    const stagingDir = path.join(uploadsDir, "_staging");
-    const stageId = randomUUID();
-    const stageDir = path.join(stagingDir, stageId);
-
-    fs.mkdirSync(stageDir, { recursive: true });
-
+    const fileBuffers = new Map<string, Buffer>();
     for (const entry of entries) {
       const entryName = normaliseEntryName(entry);
 
@@ -166,69 +293,139 @@ export async function POST(req: Request) {
         throw new Error("Archive contains invalid paths");
       }
 
-      const destinationPath = path.join(stageDir, entryName);
-
       if (entry.isDirectory) {
-        fs.mkdirSync(destinationPath, { recursive: true });
         continue;
       }
 
-      fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
-      fs.writeFileSync(destinationPath, entry.getData());
+      fileBuffers.set(entryName, entry.getData());
     }
 
     const htmlEntryPath = normaliseEntryName(htmlEntry);
-    const htmlDir = htmlEntryPath.includes("/")
-      ? htmlEntryPath.slice(0, htmlEntryPath.lastIndexOf("/"))
-      : "";
+    const cssEntryPath = normaliseEntryName(cssEntry);
+    const metaEntryPath = normaliseEntryName(metaEntry);
+    const scriptEntryPath = scriptEntry ? normaliseEntryName(scriptEntry) : null;
 
-    const templateRootRelative = path.posix.join("_staging", stageId, htmlDir);
-    const stageBasePath = `/templates/_staging/${stageId}`;
-    const templateBasePath = htmlDir ? `${stageBasePath}/${htmlDir}` : stageBasePath;
+    const htmlDir = getDirectory(htmlEntryPath);
+    const cssDir = getDirectory(cssEntryPath);
 
+    const html = fileBuffers.get(htmlEntryPath)?.toString("utf-8") ?? "";
+    const css = fileBuffers.get(cssEntryPath)?.toString("utf-8") ?? "";
+    const js = scriptEntryPath ? fileBuffers.get(scriptEntryPath)?.toString("utf-8") ?? "" : "";
+    const meta = parseMeta(fileBuffers.get(metaEntryPath)?.toString("utf-8") ?? "{}");
+
+    const slug = resolveSlug(meta);
+    meta.slug = slug;
     meta.fields = ensureTemplateFieldIds(meta.fields);
 
-    const defaults = buildFieldDefaults(normaliseTemplateFields(meta.fields));
+    const stageId = randomUUID();
+    const assetMap: AssetMap = {};
+    const nonCoreEntries = Array.from(fileBuffers.entries()).filter(
+      ([entryName]) =>
+        entryName !== htmlEntryPath &&
+        entryName !== cssEntryPath &&
+        entryName !== metaEntryPath &&
+        entryName !== scriptEntryPath,
+    );
 
+    for (const [entryName, entryBuffer] of nonCoreEntries) {
+      const key = normaliseAssetKey(entryName);
+      if (!key) continue;
+      const url = await uploadFile({
+        buffer: entryBuffer,
+        fileName: sanitizeUploadFileName(stageId, entryName),
+        contentType: detectContentType(entryName),
+      });
+      assetMap[key] = url;
+    }
+
+    const processedCss = rewriteCssWithAssets(css, cssDir, assetMap);
+    const cssUrl = await uploadFile({
+      buffer: Buffer.from(processedCss, "utf-8"),
+      fileName: sanitizeUploadFileName(stageId, cssEntryPath),
+      contentType: "text/css",
+    });
+    assetMap[normaliseAssetKey(cssEntryPath)] = cssUrl;
+
+    let jsUrl: string | undefined;
+    if (scriptEntryPath) {
+      jsUrl = await uploadFile({
+        buffer: Buffer.from(js, "utf-8"),
+        fileName: sanitizeUploadFileName(stageId, scriptEntryPath),
+        contentType: "text/javascript",
+      });
+      assetMap[normaliseAssetKey(scriptEntryPath)] = jsUrl;
+    }
+
+    const metaString = JSON.stringify(meta, null, 2);
+    const metaUrl = await uploadFile({
+      buffer: Buffer.from(metaString, "utf-8"),
+      fileName: sanitizeUploadFileName(stageId, metaEntryPath),
+      contentType: "application/json",
+    });
+    assetMap[normaliseAssetKey(metaEntryPath)] = metaUrl;
+
+    const processedHtml = rewriteHtmlWithAssets(html, htmlDir, assetMap);
+    const htmlUrl = await uploadFile({
+      buffer: Buffer.from(processedHtml, "utf-8"),
+      fileName: sanitizeUploadFileName(stageId, htmlEntryPath),
+      contentType: "text/html",
+    });
+    assetMap[normaliseAssetKey(htmlEntryPath)] = htmlUrl;
+
+    const defaults = buildFieldDefaults(normaliseTemplateFields(meta.fields));
     const renderedHtml = renderTemplate({
-      html,
+      html: processedHtml,
       values: defaults,
       modules: meta?.modules || [],
     });
 
     const previewDocument = await renderPreview({
-      html,
-      css,
+      html: processedHtml,
+      css: processedCss,
       js,
-      meta: meta,
-      assetBase: templateBasePath,
+      meta,
+      htmlUrl,
+      cssUrl,
+      jsUrl,
     });
 
-    fs.writeFileSync(path.join(stageDir, "preview.html"), previewDocument, "utf-8");
+    const previewUrl = await uploadFile({
+      buffer: Buffer.from(previewDocument, "utf-8"),
+      fileName: `${stageId}-preview.html`,
+      contentType: "text/html",
+    });
 
     const stageInfo: StageInfo = {
       stageId,
       folderName: slug,
-      templateRootRelative,
       originalHtml: html,
+      processedHtml,
       renderedHtml,
-      css,
+      css: processedCss,
       js,
       meta,
+      htmlUrl,
+      cssUrl,
+      jsUrl,
+      metaUrl,
+      previewUrl,
+      assets: assetMap,
     };
 
-    fs.writeFileSync(path.join(stageDir, "__stage.json"), JSON.stringify(stageInfo, null, 2), "utf-8");
+    ensureStagingRoot();
+    fs.writeFileSync(stageInfoPath(stageId), JSON.stringify(stageInfo, null, 2), "utf-8");
 
     const name = stringOrUndefined(meta.name) ?? slug;
     const category = stringOrUndefined(meta.category) ?? "Uncategorized";
     const description = stringOrUndefined(meta.description) ?? "";
+    const basePath = deriveRemoteBase(htmlUrl) ?? deriveRemoteBase(cssUrl) ?? null;
 
     const response: UploadSuccessResponse = {
       success: true,
       template: {
         stageId,
-        basePath: `${stageBasePath}/`,
-        previewPath: `${stageBasePath}/preview.html`,
+        basePath,
+        previewPath: previewUrl,
         name,
         category,
         description,
@@ -253,10 +450,10 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: true });
     }
 
-    const stageDir = path.join(process.cwd(), "public", "templates", "_staging", stageId);
+    const infoPath = stageInfoPath(stageId);
 
-    if (fs.existsSync(stageDir)) {
-      fs.rmSync(stageDir, { recursive: true, force: true });
+    if (fs.existsSync(infoPath)) {
+      fs.unlinkSync(infoPath);
     }
 
     return NextResponse.json({ success: true });
