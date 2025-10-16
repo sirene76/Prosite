@@ -15,6 +15,7 @@ type BuilderStoreState = {
   device: BuilderDevice;
   theme: Record<string, string>;
   values: Record<string, unknown>;
+  setValues: (values: Record<string, unknown> | null | undefined) => void;
   setWebsiteId: (websiteId: string | null | undefined) => void;
   setWebsiteName: (websiteName: string | null | undefined) => void;
   setThemeName: (themeName: string | null | undefined) => void;
@@ -35,6 +36,9 @@ export const useBuilderStore = create<BuilderStoreState>((set) => ({
   device: "desktop",
   theme: {},
   values: {},
+  setValues: (values) => {
+    set({ values: values ? { ...values } : {} });
+  },
   setWebsiteId: (websiteId) => {
     set({ websiteId: websiteId ?? null });
   },

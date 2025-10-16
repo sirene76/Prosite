@@ -6,6 +6,7 @@ type ContentField = {
   key: string;
   label: string;
   type?: string;
+  default?: string;
 };
 
 type ContentEditorProps = {
@@ -31,7 +32,7 @@ export function ContentEditor({ fields }: ContentEditorProps) {
             <textarea
               id={field.key}
               className="w-full border border-gray-800 rounded-lg bg-gray-950/60 p-3 text-sm text-slate-100 focus:border-builder-accent focus:outline-none"
-              value={toInputValue(values[field.key])}
+              value={toInputValue(resolveFieldValue(values[field.key], field.default))}
               onChange={(event) => updateValue(field.key, event.target.value)}
               rows={4}
             />
@@ -40,7 +41,7 @@ export function ContentEditor({ fields }: ContentEditorProps) {
               id={field.key}
               type="text"
               className="w-full border border-gray-800 rounded-lg bg-gray-950/60 p-3 text-sm text-slate-100 focus:border-builder-accent focus:outline-none"
-              value={toInputValue(values[field.key])}
+              value={toInputValue(resolveFieldValue(values[field.key], field.default))}
               onChange={(event) => updateValue(field.key, event.target.value)}
             />
           )}
@@ -55,4 +56,11 @@ function toInputValue(value: unknown) {
     return "";
   }
   return typeof value === "string" ? value : String(value);
+}
+
+function resolveFieldValue(value: unknown, fallback?: string) {
+  if (value === undefined || value === null) {
+    return fallback ?? "";
+  }
+  return value;
 }

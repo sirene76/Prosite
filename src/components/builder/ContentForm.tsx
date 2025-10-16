@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Image from "next/image";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
 import ImageDropInput from "@/components/ui/ImageDropInput";
@@ -20,12 +20,28 @@ export type ContentFormProps = {
 };
 
 export function ContentForm({ section, values, onChange }: ContentFormProps) {
+  const groups = useMemo(() => createFieldGroups(section.fields), [section.fields]);
+
   return (
     <form className="space-y-4" onSubmit={(event) => event.preventDefault()}>
-      {section.fields.map((field) => (
-        <Fragment key={field.key}>
-          {renderField(field, values[field.key], onChange)}
-        </Fragment>
+      {groups.map((group) => (
+        <div key={group.id} className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
+              {group.label}
+            </span>
+            <span className="text-[10px] uppercase tracking-[0.3em] text-slate-600">
+              {group.fields.length} fields
+            </span>
+          </div>
+          <div className="space-y-4">
+            {group.fields.map((field) => (
+              <Fragment key={field.key}>
+                {renderField(field, values[field.key], onChange)}
+              </Fragment>
+            ))}
+          </div>
+        </div>
       ))}
     </form>
   );
@@ -37,10 +53,11 @@ function renderField(
   onChange: (key: string, value: unknown) => void
 ) {
   const { key, label, placeholder, description } = field;
-  const resolvedType = determineFieldType(field, value);
+  const resolvedValue = value ?? field.defaultValue ?? "";
+  const resolvedType = determineFieldType(field, resolvedValue);
 
   if (resolvedType === "textarea") {
-    const stringValue = toTextValue(value);
+    const stringValue = toTextValue(resolvedValue);
     return (
       <label className="flex flex-col gap-2">
         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
@@ -57,7 +74,7 @@ function renderField(
   }
 
   if (resolvedType === "image") {
-    const stringValue = toTextValue(value);
+    const stringValue = toTextValue(resolvedValue);
     return (
       <ImageField
         label={label}
@@ -70,7 +87,7 @@ function renderField(
   }
 
   if (resolvedType === "gallery") {
-    const galleryItems = toGalleryItems(value);
+    const galleryItems = toGalleryItems(resolvedValue);
 
     return (
       <div className="space-y-3">
@@ -114,7 +131,7 @@ function renderField(
   }
 
   if (resolvedType === "color") {
-    const stringValue = toTextValue(value);
+    const stringValue = toTextValue(resolvedValue);
     return (
       <label className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/50 p-3">
         <div
@@ -145,7 +162,7 @@ function renderField(
   }
 
   const inputType = resolvedType === "email" ? "email" : "text";
-  const stringValue = toTextValue(value);
+  const stringValue = toTextValue(resolvedValue);
 
   return (
     <label className="flex flex-col gap-2">
@@ -160,6 +177,52 @@ function renderField(
       {description ? <span className="text-[11px] text-slate-500">{description}</span> : null}
     </label>
   );
+}
+
+type FieldGroup = {
+  id: string;
+  label: string;
+  fields: TemplateContentField[];
+};
+
+function createFieldGroups(fields: TemplateContentField[]): FieldGroup[] {
+  const order: string[] = [];
+  const map = new Map<string, TemplateContentField[]>();
+
+  fields.forEach((field) => {
+    const groupId = getFieldGroupId(field.key);
+    if (!map.has(groupId)) {
+      map.set(groupId, []);
+      order.push(groupId);
+    }
+    map.get(groupId)?.push(field);
+  });
+
+  return order.map((groupId) => ({
+    id: groupId,
+    label: formatGroupLabel(groupId),
+    fields: map.get(groupId) ?? [],
+  }));
+}
+
+function getFieldGroupId(key: string) {
+  if (!key.includes(".")) {
+    return "general";
+  }
+  const [group] = key.split(".");
+  return group?.trim() || "general";
+}
+
+function formatGroupLabel(groupId: string) {
+  if (groupId === "general") {
+    return "General";
+  }
+  return groupId
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (match) => match.toUpperCase());
 }
 
 function ensureColorValue(value: string | undefined) {

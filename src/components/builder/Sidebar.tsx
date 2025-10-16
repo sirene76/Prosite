@@ -65,6 +65,7 @@ export function Sidebar() {
   } = useBuilder();
   const meta = useTemplateMeta(selectedTemplate);
   const resetValues = useBuilderStore((state) => state.resetValues);
+  const setBuilderValues = useBuilderStore((state) => state.setValues);
   const storeTheme = useBuilderStore((state) => state.theme);
   const setStoreTheme = useBuilderStore((state) => state.setTheme);
   const setStorePages = useBuilderStore((state) => state.setPages);
@@ -72,6 +73,11 @@ export function Sidebar() {
   const setSelectedThemeName = useBuilderStore((state) => state.setSelectedTheme);
   const [activeTab, setActiveTab] = useState<TabId>("pages");
   const seededForTemplateRef = useRef<string | null>(null);
+  const seededContentDefaultsRef = useRef<string | null>(null);
+  const templateFieldSource = useMemo(
+    () => (Array.isArray(selectedTemplate.fields) ? selectedTemplate.fields : []),
+    [selectedTemplate.fields]
+  );
 
   const currentStepKey = steps[currentStep] ?? steps[0];
 
@@ -143,7 +149,56 @@ export function Sidebar() {
 
   useEffect(() => {
     resetValues();
+    seededContentDefaultsRef.current = null;
   }, [resetValues, selectedTemplate.id]);
+
+  useEffect(() => {
+    const templateId = String(selectedTemplate.id ?? "");
+    if (!templateId) {
+      return;
+    }
+
+    const metaFields = Array.isArray(meta?.fields) ? meta.fields : [];
+    const sourceFields = metaFields.length > 0 ? metaFields : templateFieldSource;
+
+    if (!sourceFields.length) {
+      return;
+    }
+
+    if (seededContentDefaultsRef.current === templateId) {
+      return;
+    }
+
+    const defaults = Object.fromEntries(
+      sourceFields
+        .map((field) => {
+          const key = "key" in field ? field.key : "id" in field ? field.id : undefined;
+          if (typeof key !== "string" || key.trim().length === 0) {
+            return null;
+          }
+          const rawDefault = (field as { default?: unknown }).default;
+          let defaultValue: unknown = rawDefault;
+          if (typeof rawDefault === "number" || typeof rawDefault === "boolean") {
+            defaultValue = String(rawDefault);
+          } else if (Array.isArray(rawDefault)) {
+            defaultValue = rawDefault.map((item) => String(item ?? "")).join("\n");
+          } else if (rawDefault == null) {
+            defaultValue = "";
+          }
+          return [key, defaultValue ?? ""] as const;
+        })
+        .filter((entry): entry is readonly [string, unknown] => entry !== null)
+    );
+
+    if (Object.keys(defaults).length === 0) {
+      return;
+    }
+
+    seededContentDefaultsRef.current = templateId;
+    safeSchedule(() => {
+      setBuilderValues(defaults);
+    });
+  }, [meta?.fields, selectedTemplate.id, setBuilderValues, templateFieldSource]);
 
   useEffect(() => {
     const templateId = String(selectedTemplate.id ?? "");

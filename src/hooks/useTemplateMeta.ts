@@ -9,7 +9,7 @@ export type TemplateMetaDescriptor = {
 
 export type TemplateMeta = {
   pages?: Array<{ id: string; label: string; scrollAnchor?: string }>;
-  fields?: Array<{ key: string; label: string; type?: string }>;
+  fields?: Array<{ key: string; label: string; type?: string; default?: string }>;
   themes?: Array<{ name: string; colors: Record<string, string> }>;
   [key: string]: unknown;
 };
@@ -61,6 +61,8 @@ export function useTemplateMeta(template?: TemplateMetaDescriptor | null) {
               key: field.id,
               label: field.label ?? field.id,
               type: typeof field.type === "string" ? field.type : undefined,
+              default:
+                typeof field.default === "string" ? field.default : undefined,
             }));
           }
         }
