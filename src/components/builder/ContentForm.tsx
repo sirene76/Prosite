@@ -4,6 +4,13 @@
 import Image from "next/image";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
 import ImageDropInput from "@/components/ui/ImageDropInput";
 import { UploadDropzone } from "@/utils/uploadthing";
@@ -21,28 +28,36 @@ export type ContentFormProps = {
 
 export function ContentForm({ section, values, onChange }: ContentFormProps) {
   const groups = useMemo(() => createFieldGroups(section.fields), [section.fields]);
+  const defaultGroupId = groups[0]?.id;
 
   return (
     <form className="space-y-4" onSubmit={(event) => event.preventDefault()}>
-      {groups.map((group) => (
-        <div key={group.id} className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
-              {group.label}
-            </span>
-            <span className="text-[10px] uppercase tracking-[0.3em] text-slate-600">
-              {group.fields.length} fields
-            </span>
-          </div>
-          <div className="space-y-4">
-            {group.fields.map((field) => (
-              <Fragment key={field.key}>
-                {renderField(field, values[field.key], onChange)}
-              </Fragment>
-            ))}
-          </div>
-        </div>
-      ))}
+      <Accordion
+        type="single"
+        collapsible
+        defaultValue={defaultGroupId}
+        className="space-y-2"
+      >
+        {groups.map((group) => (
+          <AccordionItem key={group.id} value={group.id} className="border-none">
+            <AccordionTrigger className="rounded-xl border border-gray-800 bg-gray-950/40 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500 hover:text-slate-200">
+              <div className="flex w-full items-center justify-between">
+                <span>{group.label}</span>
+                <span className="text-[10px] font-normal tracking-[0.3em] text-slate-600">
+                  {group.fields.length} fields
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 rounded-b-xl border border-t-0 border-gray-800 bg-gray-950/20 p-4">
+              {group.fields.map((field) => (
+                <Fragment key={field.key}>
+                  {renderField(field, values[field.key], onChange)}
+                </Fragment>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </form>
   );
 }
