@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ site.title }}</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- HEADER -->
+    <header id="hero" class="section glass">
+      <h1 data-field="hero.title">{{ hero.title }}</h1>
+      <p data-field="hero.text">{{ hero.text }}</p>
+      <button id="hero-btn">{{ hero.button }}</button>
+    </header>
+
+    <!-- ABOUT -->
+    <section id="about" class="section glass">
+      <h2 data-field="about.title">{{ about.title }}</h2>
+      <p data-field="about.text">{{ about.text }}</p>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="projects" class="section glass">
+      <h2 data-field="projects.title">{{ projects.title }}</h2>
+      <div class="grid">
+        <div class="card"><h3>{{ projects.card1 }}</h3></div>
+        <div class="card"><h3>{{ projects.card2 }}</h3></div>
+        <div class="card"><h3>{{ projects.card3 }}</h3></div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="section glass">
+      <h2 data-field="contact.title">{{ contact.title }}</h2>
+      <p data-field="contact.text">{{ contact.text }}</p>
+      <button>{{ contact.button }}</button>
+    </section>
+
+    <footer class="footer">
+      <p data-field="footer.text">{{ footer.text }}</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

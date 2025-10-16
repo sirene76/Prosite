@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ site.title }}</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- HERO -->
+  <header id="hero" class="section hero glass">
+    <h1 data-field="hero.title">{{ hero.title }}</h1>
+    <p data-field="hero.subtitle">{{ hero.subtitle }}</p>
+    <button class="cta">{{ hero.button }}</button>
+  </header>
+
+  <!-- FEATURES -->
+  <section id="features" class="section glass">
+    <h2 data-field="features.title">{{ features.title }}</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>{{ features.card1.title }}</h3>
+        <p>{{ features.card1.text }}</p>
+      </div>
+      <div class="card">
+        <h3>{{ features.card2.title }}</h3>
+        <p>{{ features.card2.text }}</p>
+      </div>
+      <div class="card">
+        <h3>{{ features.card3.title }}</h3>
+        <p>{{ features.card3.text }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="section glass">
+    <h2 data-field="pricing.title">{{ pricing.title }}</h2>
+    <div class="grid pricing-grid">
+      <div class="plan">
+        <h3>{{ pricing.plan1.title }}</h3>
+        <p>{{ pricing.plan1.price }}</p>
+        <button>{{ pricing.plan1.button }}</button>
+      </div>
+      <div class="plan">
+        <h3>{{ pricing.plan2.title }}</h3>
+        <p>{{ pricing.plan2.price }}</p>
+        <button>{{ pricing.plan2.button }}</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="section glass">
+    <h2 data-field="contact.title">{{ contact.title }}</h2>
+    <p data-field="contact.text">{{ contact.text }}</p>
+    <button>{{ contact.button }}</button>
+  </section>
+
+  <footer class="footer">
+    <p data-field="footer.text">{{ footer.text }}</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
