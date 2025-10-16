@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { normaliseTemplateFields } from "@/lib/templateFieldUtils";
+import { ensureTemplateFieldIds, normaliseTemplateFields } from "@/lib/templateFieldUtils";
 
 export type TemplateMetaDescriptor = {
   id?: string;
@@ -54,7 +54,8 @@ export function useTemplateMeta(template?: TemplateMetaDescriptor | null) {
 
         if (parsed) {
           const rawFields = (data as { fields?: unknown })?.fields;
-          const normalisedFields = normaliseTemplateFields(rawFields);
+          const fieldsSource = ensureTemplateFieldIds(rawFields);
+          const normalisedFields = normaliseTemplateFields(fieldsSource);
           if (normalisedFields.length > 0) {
             parsed.fields = normalisedFields.map((field) => ({
               key: field.id,

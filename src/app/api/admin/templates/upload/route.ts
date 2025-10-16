@@ -9,7 +9,11 @@ import slugify from "slugify";
 import { createSlug } from "@/app/api/admin/templates/utils";
 import { renderPreview } from "@/lib/renderPreview";
 import { renderTemplate } from "@/lib/renderTemplate";
-import { buildFieldDefaults, normaliseTemplateFields } from "@/lib/templateFieldUtils";
+import {
+  buildFieldDefaults,
+  ensureTemplateFieldIds,
+  normaliseTemplateFields,
+} from "@/lib/templateFieldUtils";
 
 import type { TemplateMeta } from "@/types/template";
 
@@ -182,7 +186,9 @@ export async function POST(req: Request) {
     const stageBasePath = `/templates/_staging/${stageId}`;
     const templateBasePath = htmlDir ? `${stageBasePath}/${htmlDir}` : stageBasePath;
 
-    const defaults = buildFieldDefaults(normaliseTemplateFields(meta?.fields));
+    meta.fields = ensureTemplateFieldIds(meta.fields);
+
+    const defaults = buildFieldDefaults(normaliseTemplateFields(meta.fields));
 
     const renderedHtml = renderTemplate({
       html,

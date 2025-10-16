@@ -1,9 +1,6 @@
-export type TemplateField = {
-  label: string;
-  type: "text" | "textarea" | "image" | "color" | "select";
-  default?: string;
-  options?: string[];
-};
+import type { TemplateFieldDefinition, TemplateModuleDefinition } from "@/lib/templates";
+
+export type TemplateField = TemplateFieldDefinition;
 
 export type TemplateMeta = {
   id?: string;
@@ -14,6 +11,8 @@ export type TemplateMeta = {
     colors: Record<string, string>;
     fonts?: Record<string, string>;
   }>;
-  fields?: Record<string, TemplateField> | TemplateField[];
-  modules?: import("@/lib/templates").TemplateModuleDefinition[];
+  fields?:
+    | TemplateFieldDefinition[]
+    | Record<string, Partial<TemplateFieldDefinition> & { default?: unknown }>;
+  modules?: TemplateModuleDefinition[];
 };

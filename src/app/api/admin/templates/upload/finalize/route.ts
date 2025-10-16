@@ -7,6 +7,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 import { createSlug } from "@/app/api/admin/templates/utils";
 import slugify from "slugify";
+import { ensureTemplateFieldIds } from "@/lib/templateFieldUtils";
 
 import type { TemplateMeta } from "@/types/template";
 
@@ -151,6 +152,7 @@ export async function POST(req: Request) {
     }
 
     const info = JSON.parse(fs.readFileSync(infoPath, "utf-8")) as StageInfo;
+    info.meta.fields = ensureTemplateFieldIds(info.meta.fields);
 
     const templateRoot = path.join(uploadsDir, info.templateRootRelative);
     ensureHasCoreFiles(templateRoot);
