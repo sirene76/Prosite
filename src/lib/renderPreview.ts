@@ -3,11 +3,14 @@ import { ensureTemplateFieldIds, normaliseTemplateFields } from "@/lib/templateF
 import type { TemplateMeta } from "@/types/template";
 
 type TemplateLike = {
-  html: string;
-  css: string;
+  html?: string;
+  css?: string;
   js?: string;
+  htmlUrl?: string | null;
+  cssUrl?: string | null;
+  jsUrl?: string | null;
   meta?: TemplateMeta;
-  basePath?: string; // where assets live (e.g., /templates/<folder>)
+  assetBase?: string | null;
 };
 
 /**
@@ -15,9 +18,9 @@ type TemplateLike = {
  * - Injects rendered HTML (placeholders via renderTemplate)
  * - Inlines CSS
  * - Appends JS so it executes inside iframe
- * - Rewrites relative asset URLs if a basePath exists
+ * - Rewrites relative asset URLs to point at remote UploadThing assets when available
  */
-export function renderPreview(template: TemplateLike) {
+export async function renderPreview(template: TemplateLike) {
   const fieldsSource = template.meta?.fields
     ? ensureTemplateFieldIds(template.meta.fields)
     : undefined;
@@ -42,19 +45,21 @@ export function renderPreview(template: TemplateLike) {
       )
     : {};
 
-  // Optionally rewrite relative asset URLs (src/href) to use basePath
-  // Basic, safe replacement to keep this lightweight:
-  const rewriteAssets = (html: string) => {
-    if (!template.basePath) return html;
-    return html
-      .replaceAll('src="./', `src="${template.basePath}/`)
-      .replaceAll("src='./", `src='${template.basePath}/`)
-      .replaceAll('href="./', `href="${template.basePath}/`)
-      .replaceAll("href='./", `href='${template.basePath}/`);
-  };
+  const assetBase =
+    template.assetBase ??
+    deriveAssetBase(
+      [template.htmlUrl, template.cssUrl, template.jsUrl].find(isRemoteUrl) ?? null,
+    );
+
+  const html = await resolveTemplateAsset(template.html, template.htmlUrl);
+  const css = await resolveTemplateAsset(template.css, template.cssUrl);
+  const js = await resolveTemplateAsset(template.js, template.jsUrl);
+
+  const rewrittenHtml = rewriteDocumentAssets(html, assetBase);
+  const rewrittenCss = rewriteCssAssets(css, assetBase);
 
   const renderedHtml = renderTemplate({
-    html: rewriteAssets(template.html),
+    html: rewrittenHtml,
     values: defaultValues,
     modules: template.meta?.modules || [],
   });
@@ -65,12 +70,123 @@ export function renderPreview(template: TemplateLike) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>${template.css}</style>
+    <style>${rewrittenCss}</style>
   </head>
   <body>
     ${renderedHtml}
-    <script>${template.js || ""}</script>
+    <script>${js}</script>
   </body>
 </html>
   `.trim();
+}
+
+async function resolveTemplateAsset(
+  inlineValue: string | undefined,
+  remoteUrl: string | null | undefined,
+) {
+  if (inlineValue && inlineValue.trim()) {
+    return inlineValue;
+  }
+
+  if (!remoteUrl || !isRemoteUrl(remoteUrl)) {
+    return "";
+  }
+
+  try {
+    const response = await fetch(remoteUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch template asset from ${remoteUrl}`);
+    }
+    return await response.text();
+  } catch (error) {
+    console.error(error);
+    return "";
+  }
+}
+
+function deriveAssetBase(url: string | null | undefined) {
+  if (!url) return null;
+
+  try {
+    const [cleaned] = url.split("?");
+    if (!cleaned) return null;
+    const lastSlash = cleaned.lastIndexOf("/");
+    if (lastSlash === -1) {
+      return ensureTrailingSlash(cleaned);
+    }
+    return ensureTrailingSlash(cleaned.slice(0, lastSlash + 1));
+  } catch (error) {
+    console.error("Failed to derive asset base", error);
+    return null;
+  }
+}
+
+function ensureTrailingSlash(value: string) {
+  return value.endsWith("/") ? value : `${value}/`;
+}
+
+function isRemoteUrl(url: string | null | undefined): url is string {
+  if (!url) return false;
+  if (url.startsWith("/")) return false;
+  if (url.includes("/templates/_staging/")) return false;
+  return /^https?:\/\//i.test(url);
+}
+
+function rewriteDocumentAssets(html: string, assetBase: string | null | undefined) {
+  if (!html) return "";
+  if (!assetBase) return html;
+
+  const base = ensureTrailingSlash(assetBase);
+  let output = html
+    .replace(/(src|href)=\"\.\/(.*?)\"/g, (_match, attr: string, path: string) => {
+      return `${attr}="${base}${path}"`;
+    })
+    .replace(/(src|href)=\'\.\/(.*?)\'/g, (_match, attr: string, path: string) => {
+      return `${attr}='${base}${path}'`;
+    });
+
+  output = output.replace(
+    /(src|href)=(["'])\/templates\/_staging\/([^"']+)(["'])/g,
+    (_match, attr: string, quote: string, path: string) => {
+      const relative = stripStageId(path);
+      return `${attr}=${quote}${base}${relative}${quote}`;
+    },
+  );
+
+  return output;
+}
+
+function rewriteCssAssets(css: string, assetBase: string | null | undefined) {
+  if (!css) return "";
+  if (!assetBase) return css;
+
+  const base = ensureTrailingSlash(assetBase);
+  let output = css
+    .replace(/url\(\s*"\.\/(.*?)"\s*\)/g, (_match, path: string) => {
+      return `url("${base}${path}")`;
+    })
+    .replace(/url\(\s*'\.\/(.*?)'\s*\)/g, (_match, path: string) => {
+      return `url('${base}${path}')`;
+    })
+    .replace(/url\(\s*\.\/(.*?)\s*\)/g, (_match, path: string) => {
+      return `url(${base}${path})`;
+    });
+
+  output = output.replace(
+    /url\(\s*(["'])?\/templates\/_staging\/([^"')]+)(["'])?\s*\)/g,
+    (_match, _openQuote: string | undefined, path: string) => {
+      const relative = stripStageId(path);
+      return `url("${base}${relative}")`;
+    },
+  );
+
+  return output;
+}
+
+function stripStageId(path: string) {
+  const [stage, ...rest] = path.split("/");
+  if (!rest.length) {
+    return stage;
+  }
+  return rest.join("/");
 }

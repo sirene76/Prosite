@@ -26,6 +26,7 @@ export async function GET(
     htmlUrl: template.htmlUrl ?? null,
     cssUrl: template.cssUrl ?? null,
     jsUrl: template.jsUrl ?? null,
+    metaUrl: template.metaUrl ?? null,
     meta,
   });
 }

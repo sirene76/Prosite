@@ -196,12 +196,12 @@ export async function POST(req: Request) {
       modules: meta?.modules || [],
     });
 
-    const previewDocument = renderPreview({
+    const previewDocument = await renderPreview({
       html,
       css,
       js,
       meta: meta,
-      basePath: templateBasePath,
+      assetBase: templateBasePath,
     });
 
     fs.writeFileSync(path.join(stageDir, "preview.html"), previewDocument, "utf-8");
