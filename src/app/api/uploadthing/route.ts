@@ -4,11 +4,12 @@ const f = createUploadthing();
 
 export const ourFileRouter = {
   templateFiles: f({
-    "text/html": { maxFileSize: "2MB" },
-    "text/css": { maxFileSize: "2MB" },
-    "text/javascript": { maxFileSize: "2MB" },
-    "application/json": { maxFileSize: "1MB" },
-    "image/*": { maxFileSize: "5MB" },
+    "text/html": { maxFileSize: "4MB" },
+    "text/css": { maxFileSize: "4MB" },
+    "application/javascript": { maxFileSize: "4MB" },
+    "text/javascript": { maxFileSize: "4MB" },
+    "application/json": { maxFileSize: "2MB" },
+    "image/*": { maxFileSize: "10MB" },
   }).onUploadComplete(({ file }) => {
     console.log("✅ Uploaded template file:", file.ufsUrl ?? file.url);
     return { url: file.ufsUrl ?? file.url };
