@@ -155,7 +155,7 @@ export async function POST(req: Request) {
         ? uploadFile({
             buffer: Buffer.from(js, "utf-8"),
             fileName: `${storageKey}/script.js`,
-            contentType: "text/javascript",
+            contentType: "application/javascript",
           })
         : Promise.resolve<string | null>(null),
     ]);
