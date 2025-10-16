@@ -96,6 +96,22 @@ function stringOrUndefined(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function resolveStatusCode(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+
+  if ("status" in error && typeof (error as { status?: unknown }).status === "number") {
+    return (error as { status?: number }).status;
+  }
+
+  if ("statusCode" in error && typeof (error as { statusCode?: unknown }).statusCode === "number") {
+    return (error as { statusCode?: number }).statusCode;
+  }
+
+  return undefined;
+}
+
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
@@ -134,6 +150,23 @@ export async function POST(req: Request) {
     meta.slug = slug;
 
     const storageKey = `${slug}-${randomUUID()}`;
+    const trimmedJs = js.trim();
+
+    const uploadJsPromise = trimmedJs
+      ? uploadFile({
+          buffer: Buffer.from(js, "utf-8"),
+          fileName: `${storageKey}/script.js`,
+          contentType: "application/javascript",
+        }).catch((error: unknown) => {
+          const status = resolveStatusCode(error);
+
+          if (status === 400 || (error instanceof Error && /\b400\b/.test(error.message))) {
+            return null;
+          }
+
+          throw error;
+        })
+      : Promise.resolve<string | null>(null);
 
     const [htmlUrl, cssUrl, metaUrl, jsUrl] = await Promise.all([
       uploadFile({
@@ -151,13 +184,7 @@ export async function POST(req: Request) {
         fileName: `${storageKey}/meta.json`,
         contentType: "application/json",
       }),
-      js.trim()
-        ? uploadFile({
-            buffer: Buffer.from(js, "utf-8"),
-            fileName: `${storageKey}/script.js`,
-            contentType: "application/javascript",
-          })
-        : Promise.resolve<string | null>(null),
+      uploadJsPromise,
     ]);
 
     await connectDB();
@@ -186,7 +213,18 @@ export async function POST(req: Request) {
       setUpdate.jsUrl = jsUrl;
     }
 
-    const unsetUpdate: Record<string, 1> = { html: 1, css: 1, js: 1 };
+    const shouldPersistInlineJs = Boolean(trimmedJs) && !jsUrl;
+
+    if (shouldPersistInlineJs) {
+      setUpdate.js = js;
+    }
+
+    const unsetUpdate: Record<string, 1> = { html: 1, css: 1 };
+
+    if (!shouldPersistInlineJs) {
+      unsetUpdate.js = 1;
+    }
+
     if (!image) {
       unsetUpdate.image = 1;
     }
