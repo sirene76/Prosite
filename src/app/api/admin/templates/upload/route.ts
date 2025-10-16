@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { Buffer } from "node:buffer";
+import fs from "fs";
+import path from "path";
 import AdmZip, { type IZipEntry } from "adm-zip";
 import slugify from "slugify";
 
-import { uploadFile } from "@/lib/uploadFile";
-import { connectDB } from "@/lib/mongodb";
-import { Template } from "@/models/template";
 import { createSlug } from "@/app/api/admin/templates/utils";
+import { renderPreview } from "@/lib/renderPreview";
+import { renderTemplate } from "@/lib/renderTemplate";
+import { buildFieldDefaults, normaliseTemplateFields } from "@/lib/templateFieldUtils";
 
 import type { TemplateMeta } from "@/types/template";
 
@@ -15,16 +17,29 @@ type UploadedTemplateMeta = TemplateMeta & {
   [key: string]: unknown;
 };
 
+type StageInfo = {
+  stageId: string;
+  folderName: string;
+  templateRootRelative: string;
+  originalHtml: string;
+  renderedHtml: string;
+  css: string;
+  js: string;
+  meta: TemplateMeta & {
+    image?: string;
+  };
+};
+
 type UploadSuccessResponse = {
   success: true;
   template: {
-    id: string;
-    slug: string;
-    htmlUrl: string;
-    cssUrl: string;
-    jsUrl: string | null;
-    meta: UploadedTemplateMeta;
-    metaUrl: string;
+    stageId: string;
+    basePath: string;
+    previewPath: string;
+    name?: string | null;
+    category?: string | null;
+    description?: string | null;
+    meta?: UploadedTemplateMeta;
   };
 };
 
@@ -96,22 +111,6 @@ function stringOrUndefined(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-function resolveStatusCode(error: unknown): number | undefined {
-  if (typeof error !== "object" || error === null) {
-    return undefined;
-  }
-
-  if ("status" in error && typeof (error as { status?: unknown }).status === "number") {
-    return (error as { status?: number }).status;
-  }
-
-  if ("statusCode" in error && typeof (error as { statusCode?: unknown }).statusCode === "number") {
-    return (error as { statusCode?: number }).statusCode;
-  }
-
-  return undefined;
-}
-
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
@@ -149,112 +148,89 @@ export async function POST(req: Request) {
     const slug = resolveSlug(meta);
     meta.slug = slug;
 
-    const storageKey = `${slug}-${randomUUID()}`;
-    const trimmedJs = js.trim();
+    const uploadsDir = path.join(process.cwd(), "public", "templates");
+    const stagingDir = path.join(uploadsDir, "_staging");
+    const stageId = randomUUID();
+    const stageDir = path.join(stagingDir, stageId);
 
-    const uploadJsPromise = trimmedJs
-      ? uploadFile({
-          buffer: Buffer.from(js, "utf-8"),
-          fileName: `${storageKey}/script.js`,
-          contentType: "application/javascript",
-        }).catch((error: unknown) => {
-          const status = resolveStatusCode(error);
+    fs.mkdirSync(stageDir, { recursive: true });
 
-          if (status === 400 || (error instanceof Error && /\b400\b/.test(error.message))) {
-            return null;
-          }
+    for (const entry of entries) {
+      const entryName = normaliseEntryName(entry);
 
-          throw error;
-        })
-      : Promise.resolve<string | null>(null);
+      if (entryName.includes("..") || entryName.startsWith("/")) {
+        throw new Error("Archive contains invalid paths");
+      }
 
-    const [htmlUrl, cssUrl, metaUrl, jsUrl] = await Promise.all([
-      uploadFile({
-        buffer: Buffer.from(html, "utf-8"),
-        fileName: `${storageKey}/index.html`,
-        contentType: "text/html",
-      }),
-      uploadFile({
-        buffer: Buffer.from(css, "utf-8"),
-        fileName: `${storageKey}/style.css`,
-        contentType: "text/css",
-      }),
-      uploadFile({
-        buffer: Buffer.from(JSON.stringify(meta, null, 2), "utf-8"),
-        fileName: `${storageKey}/meta.json`,
-        contentType: "application/json",
-      }),
-      uploadJsPromise,
-    ]);
+      const destinationPath = path.join(stageDir, entryName);
 
-    await connectDB();
+      if (entry.isDirectory) {
+        fs.mkdirSync(destinationPath, { recursive: true });
+        continue;
+      }
+
+      fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+      fs.writeFileSync(destinationPath, entry.getData());
+    }
+
+    const htmlEntryPath = normaliseEntryName(htmlEntry);
+    const htmlDir = htmlEntryPath.includes("/")
+      ? htmlEntryPath.slice(0, htmlEntryPath.lastIndexOf("/"))
+      : "";
+
+    const templateRootRelative = path.posix.join("_staging", stageId, htmlDir);
+    const stageBasePath = `/templates/_staging/${stageId}`;
+    const templateBasePath = htmlDir ? `${stageBasePath}/${htmlDir}` : stageBasePath;
+
+    const defaults = buildFieldDefaults(normaliseTemplateFields(meta?.fields));
+
+    const renderedHtml = renderTemplate({
+      html,
+      values: defaults,
+      modules: meta?.modules || [],
+    });
+
+    const previewDocument = renderPreview({
+      html,
+      css,
+      js,
+      meta: meta,
+      basePath: templateBasePath,
+    });
+
+    fs.writeFileSync(path.join(stageDir, "preview.html"), previewDocument, "utf-8");
+
+    const stageInfo: StageInfo = {
+      stageId,
+      folderName: slug,
+      templateRootRelative,
+      originalHtml: html,
+      renderedHtml,
+      css,
+      js,
+      meta,
+    };
+
+    fs.writeFileSync(path.join(stageDir, "__stage.json"), JSON.stringify(stageInfo, null, 2), "utf-8");
 
     const name = stringOrUndefined(meta.name) ?? slug;
     const category = stringOrUndefined(meta.category) ?? "Uncategorized";
     const description = stringOrUndefined(meta.description) ?? "";
-    const image = stringOrUndefined(meta.image);
 
-    const setUpdate: Record<string, unknown> = {
-      name,
-      slug,
-      category,
-      description,
-      htmlUrl,
-      cssUrl,
-      metaUrl,
-      meta,
-    };
-
-    if (image) {
-      setUpdate.image = image;
-    }
-
-    if (jsUrl) {
-      setUpdate.jsUrl = jsUrl;
-    }
-
-    const shouldPersistInlineJs = Boolean(trimmedJs) && !jsUrl;
-
-    if (shouldPersistInlineJs) {
-      setUpdate.js = js;
-    }
-
-    const unsetUpdate: Record<string, 1> = { html: 1, css: 1 };
-
-    if (!shouldPersistInlineJs) {
-      unsetUpdate.js = 1;
-    }
-
-    if (!image) {
-      unsetUpdate.image = 1;
-    }
-    if (!jsUrl) {
-      unsetUpdate.jsUrl = 1;
-    }
-
-    const templateDoc = (await Template.findOneAndUpdate(
-      { slug },
-      {
-        $set: setUpdate,
-        $unset: unsetUpdate,
-      },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    ).lean()) as (Record<string, any> & { _id?: string }) | null;
-
-    const id = templateDoc?._id?.toString?.() ?? randomUUID();
-
-    return NextResponse.json<UploadSuccessResponse>({
+    const response: UploadSuccessResponse = {
       success: true,
       template: {
-        id,
-        slug,
-        htmlUrl,
-        cssUrl,
-        jsUrl,
+        stageId,
+        basePath: `${stageBasePath}/`,
+        previewPath: `${stageBasePath}/preview.html`,
+        name,
+        category,
+        description,
         meta,
-        metaUrl,
       },
-    });
+    };
+
+    return NextResponse.json(response);
   } catch (error: unknown) {
     console.error("UPLOAD TEMPLATE ERROR:", error);
     const message = error instanceof Error ? error.message : "Internal server error";
@@ -262,6 +238,25 @@ export async function POST(req: Request) {
   }
 }
 
-export async function DELETE() {
-  return NextResponse.json({ success: true });
+export async function DELETE(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const stageId = typeof (body as { stageId?: unknown }).stageId === "string" ? (body as { stageId: string }).stageId : null;
+
+    if (!stageId) {
+      return NextResponse.json({ success: true });
+    }
+
+    const stageDir = path.join(process.cwd(), "public", "templates", "_staging", stageId);
+
+    if (fs.existsSync(stageDir)) {
+      fs.rmSync(stageDir, { recursive: true, force: true });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    console.error("UPLOAD TEMPLATE DELETE ERROR:", error);
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json<ErrorResponse>({ error: message }, { status: 500 });
+  }
 }
