@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 
 import { useBuilder } from "@/context/BuilderContext";
 import { getBuilderStepLabel } from "@/lib/builderSteps";
@@ -17,7 +17,7 @@ type BuilderLayoutClientProps = {
 };
 
 export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
-  const { isSidebarCollapsed, steps, currentStep, goToStep, setWebsiteId } = useBuilder();
+  const { isSidebarCollapsed, steps, currentStep, setWebsiteId } = useBuilder();
   const params = useParams<{ websiteId?: string }>();
   const websiteIdFromParams =
     typeof params?.websiteId === "string" && params.websiteId.trim().length > 0
@@ -66,25 +66,6 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
     return groupIndex >= 0 ? groupIndex : 0;
   }, [currentStep, groupedProgressSteps, steps]);
 
-  const handleProgressStepClick = useCallback(
-    (index: number) => {
-      const group = groupedProgressSteps[index];
-      if (!group) {
-        return;
-      }
-
-      const targetStepKey = group.steps[0];
-      if (!targetStepKey) {
-        return;
-      }
-
-      const targetIndex = steps.indexOf(targetStepKey);
-      if (targetIndex >= 0) {
-        goToStep(targetIndex);
-      }
-    },
-    [goToStep, groupedProgressSteps, steps]
-  );
   const stepSummary = useMemo(() => {
     const summary = progressSteps.map((step) => step.label).join(" • ");
     return summary || "Template • Building • Checkout";
@@ -111,7 +92,6 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
         <ProgressBar
           steps={progressSteps}
           activeIndex={activeProgressIndex}
-          onStepClick={handleProgressStepClick}
         />
       </header>
       <main className="flex flex-1 overflow-hidden">
