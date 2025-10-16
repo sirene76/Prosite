@@ -536,7 +536,6 @@ export function WebsitePreview() {
 function isRemoteUrl(url: string | null | undefined) {
   if (!url) return false;
   if (url.startsWith("/")) return false;
-  if (url.includes("/templates/_staging/")) return false;
   return /^https?:\/\//i.test(url);
 }
 
@@ -579,21 +578,13 @@ function normaliseDocument(html: string, assetBase: string | null) {
   }
 
   const base = ensureTrailingSlash(assetBase);
-  let output = html
+  const output = html
     .replace(/(src|href)=\"\.\/(.*?)\"/g, (_match, attr: string, path: string) => {
       return `${attr}="${base}${path}"`;
     })
     .replace(/(src|href)=\'\.\/(.*?)\'/g, (_match, attr: string, path: string) => {
       return `${attr}='${base}${path}'`;
     });
-
-  output = output.replace(
-    /(src|href)=(["'])\/templates\/_staging\/([^"']+)(["'])/g,
-    (_match, attr: string, quote: string, path: string) => {
-      const relative = stripStageId(path);
-      return `${attr}=${quote}${base}${relative}${quote}`;
-    },
-  );
 
   return output;
 }
@@ -608,7 +599,7 @@ function normaliseStylesheet(css: string, assetBase: string | null) {
   }
 
   const base = ensureTrailingSlash(assetBase);
-  let output = css
+  const output = css
     .replace(/url\(\s*"\.\/(.*?)"\s*\)/g, (_match, path: string) => {
       return `url("${base}${path}")`;
     })
@@ -619,23 +610,7 @@ function normaliseStylesheet(css: string, assetBase: string | null) {
       return `url(${base}${path})`;
     });
 
-  output = output.replace(
-    /url\(\s*(["'])?\/templates\/_staging\/([^"')]+)(["'])?\s*\)/g,
-    (_match, _openQuote: string | undefined, path: string) => {
-      const relative = stripStageId(path);
-      return `url("${base}${relative}")`;
-    },
-  );
-
   return output;
-}
-
-function stripStageId(path: string) {
-  const [stage, ...rest] = path.split("/");
-  if (!rest.length) {
-    return stage;
-  }
-  return rest.join("/");
 }
 
 function injectScrollScript(html: string, additionalScript?: string) {
