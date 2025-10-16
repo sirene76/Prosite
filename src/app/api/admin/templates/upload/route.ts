@@ -232,16 +232,16 @@ export async function POST(req: Request) {
       unsetUpdate.jsUrl = 1;
     }
 
-    const templateDoc = await Template.findOneAndUpdate(
+    const templateDoc = (await Template.findOneAndUpdate(
       { slug },
       {
         $set: setUpdate,
         $unset: unsetUpdate,
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
-    ).lean();
+    ).lean()) as (Record<string, any> & { _id?: string }) | null;
 
-    const id = templateDoc?._id?.toString() ?? randomUUID();
+    const id = templateDoc?._id?.toString?.() ?? randomUUID();
 
     return NextResponse.json<UploadSuccessResponse>({
       success: true,
