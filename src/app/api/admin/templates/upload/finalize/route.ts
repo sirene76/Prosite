@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
 
 import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
@@ -88,13 +89,45 @@ function normalizeTemplateName(info: StageInfo, override?: string | null) {
   return info.folderName;
 }
 
-function computeImageUrl(meta: StageInfo["meta"], finalBasePath: string) {
-  if (meta.image && meta.image.startsWith("http")) {
-    return meta.image;
+async function ensurePreviewImage(finalDir: string) {
+  const previewPath = path.join(finalDir, "preview.png");
+  if (fs.existsSync(previewPath)) {
+    return;
   }
 
-  const imagePath = meta.image || "assets/hero.jpg";
-  return `${finalBasePath}${imagePath}`;
+  const fallbackPreview = path.join(
+    process.cwd(),
+    "public",
+    "templates",
+    "default-template-preview.svg"
+  );
+
+  if (!fs.existsSync(fallbackPreview)) {
+    return;
+  }
+
+  try {
+    const buffer = await sharp(fallbackPreview).png().toBuffer();
+    fs.writeFileSync(previewPath, buffer);
+  } catch (error) {
+    console.error("Failed to create fallback preview image:", error);
+  }
+}
+
+function resolveTemplateImage(meta: StageInfo["meta"], finalFolderName: string) {
+  const providedImage =
+    typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : "";
+
+  if (providedImage) {
+    return providedImage;
+  }
+
+  const metaId =
+    typeof meta.id === "string" && meta.id.trim()
+      ? createSlug(meta.id.trim()) || meta.id.trim()
+      : finalFolderName;
+
+  return `/templates/${metaId}/preview.png`;
 }
 
 export const runtime = "nodejs";
@@ -146,6 +179,7 @@ export async function POST(req: Request) {
     fs.cpSync(templateRoot, finalDir, { recursive: true });
 
     fs.writeFileSync(path.join(finalDir, "preview.html"), previewHtml, "utf-8");
+    await ensurePreviewImage(finalDir);
 
     if (fs.existsSync(stageDir)) {
       fs.rmSync(stageDir, { recursive: true, force: true });
@@ -156,7 +190,10 @@ export async function POST(req: Request) {
     const templateName = normalizeTemplateName(info, body.nameOverride ?? null);
     const category = typeof info.meta?.category === "string" ? info.meta.category : "Uncategorized";
     const description = typeof info.meta?.description === "string" ? info.meta.description : "";
-    const image = computeImageUrl(info.meta, finalBasePath);
+    const image = resolveTemplateImage(info.meta, finalFolderName);
+    if (!info.meta.image) {
+      info.meta.image = image;
+    }
 
     const slugFromMeta =
       typeof info.meta?.slug === "string" && info.meta.slug.trim()

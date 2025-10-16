@@ -56,19 +56,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 />
               ) : null}
 
-              {tpl.thumbnail ? (
-                <img
-                  src={tpl.thumbnail}
-                  alt={tpl.name}
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
-                    tpl.previewVideo ? "opacity-100 group-hover:opacity-0" : ""
-                  }`}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-slate-500 text-sm">
-                  No Preview
-                </div>
-              )}
+              <img
+                src={
+                  tpl.image && tpl.image.startsWith("http")
+                    ? tpl.image
+                    : `/templates/${tpl._id}/preview.png`
+                }
+                alt={tpl.name}
+                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+                  tpl.previewVideo ? "opacity-100 group-hover:opacity-0" : ""
+                }`}
+              />
             </div>
 
             <div className="p-4 z-10 relative bg-gradient-to-t from-black/60 via-black/20 to-transparent">

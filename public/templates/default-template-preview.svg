@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">Template preview placeholder</title>
+  <desc id="desc">An abstract gradient background with a card layout icon</desc>
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.92" />
+      <stop offset="100%" stop-color="#e0e7ff" stop-opacity="0.85" />
+    </linearGradient>
+  </defs>
+  <rect width="960" height="600" fill="url(#gradient)" rx="48" />
+  <g transform="translate(200 130)">
+    <rect width="560" height="340" rx="32" fill="url(#card)" />
+    <rect x="56" y="72" width="272" height="48" rx="16" fill="#4f46e5" opacity="0.25" />
+    <rect x="56" y="150" width="448" height="32" rx="12" fill="#312e81" opacity="0.18" />
+    <rect x="56" y="202" width="448" height="32" rx="12" fill="#312e81" opacity="0.18" />
+    <rect x="56" y="254" width="320" height="32" rx="12" fill="#312e81" opacity="0.18" />
+    <rect x="408" y="72" width="96" height="96" rx="24" fill="#6366f1" opacity="0.3" />
+    <rect x="408" y="180" width="96" height="96" rx="24" fill="#6366f1" opacity="0.18" />
+  </g>
+  <rect x="64" y="480" width="832" height="72" rx="20" fill="rgba(15, 23, 42, 0.32)" />
+</svg>
