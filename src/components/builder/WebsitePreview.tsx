@@ -30,6 +30,7 @@ const MAX_ZOOM = 2;
 type TemplatePayload = {
   html: string;
   css: string;
+  js?: string;
 };
 
 export function WebsitePreview() {
@@ -70,6 +71,21 @@ export function WebsitePreview() {
 
   useEffect(() => {
     let isMounted = true;
+
+    const fetchText = async (url?: string | null) => {
+      if (!url) return null;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch asset from ${url}`);
+        }
+        return await response.text();
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    };
+
     const fetchTemplate = async () => {
       setIsLoading(true);
       setAssets(null);
@@ -79,12 +95,22 @@ export function WebsitePreview() {
           throw new Error("Unable to load template");
         }
         const data = (await response.json()) as {
-          html?: string;
-          css?: string;
+          htmlUrl?: string | null;
+          cssUrl?: string | null;
+          jsUrl?: string | null;
         };
+
+        const [htmlFromUrl, cssFromUrl, jsFromUrl] = await Promise.all([
+          fetchText(data.htmlUrl ?? selectedTemplate.htmlUrl ?? null),
+          fetchText(data.cssUrl ?? selectedTemplate.cssUrl ?? null),
+          fetchText(data.jsUrl ?? selectedTemplate.jsUrl ?? null),
+        ]);
+
         if (isMounted) {
-          const html = data.html ?? selectedTemplate.html ?? "";
-          const css = data.css ?? selectedTemplate.css ?? "";
+          const html = htmlFromUrl ?? selectedTemplate.html ?? "";
+          const css = cssFromUrl ?? selectedTemplate.css ?? "";
+          const js = jsFromUrl ?? selectedTemplate.js ?? "";
+
           const placeholders = extractPlaceholders(html);
           const colorDefaults = extractColorDefaults(
             css,
@@ -97,7 +123,7 @@ export function WebsitePreview() {
           registerContentPlaceholders(placeholders);
           registerThemeDefaults({ colors: colorDefaults, fonts: fontDefaults });
 
-          setAssets({ html, css });
+          setAssets({ html, css, js });
         }
       } catch (error) {
         console.error(error);
@@ -116,10 +142,14 @@ export function WebsitePreview() {
     registerContentPlaceholders,
     registerThemeDefaults,
     selectedTemplate.colors,
-    selectedTemplate.fonts,
-    selectedTemplate.id,
-    selectedTemplate.html,
     selectedTemplate.css,
+    selectedTemplate.cssUrl,
+    selectedTemplate.fonts,
+    selectedTemplate.html,
+    selectedTemplate.htmlUrl,
+    selectedTemplate.id,
+    selectedTemplate.js,
+    selectedTemplate.jsUrl,
   ]);
 
   const mergedData = useMemo(() => {
@@ -490,18 +520,27 @@ export function WebsitePreview() {
   );
 }
 
-function injectScrollScript(html: string) {
+function injectScrollScript(html: string, additionalScript?: string) {
   if (!html) {
     return html;
   }
 
-  const script = `\n<script>\n  (function () {\n    const findTarget = (raw) => {\n      if (typeof raw !== "string") return null;\n      const trimmed = raw.trim();\n      if (!trimmed) return null;\n\n      const selectors = new Set();\n      const id = trimmed.startsWith("#") ? trimmed.slice(1) : trimmed;\n\n      selectors.add(trimmed);\n      if (id) {\n        selectors.add("#" + id);\n        selectors.add('[data-section-id="' + id + '"]');\n        selectors.add('[data-builder-section="' + id + '"]');\n        selectors.add('[data-builder-section-id="' + id + '"]');\n        selectors.add('[data-module-id="' + id + '"]');\n        selectors.add('[data-scroll-anchor="' + id + '"]');\n        selectors.add('[data-anchor="' + id + '"]');\n      }\n\n      for (const selector of selectors) {\n        try {\n          const element = document.querySelector(selector);\n          if (element) {\n            return element;\n          }\n        } catch (err) {\n          // ignore invalid selectors\n        }\n      }\n\n      return null;\n    };\n\n    window.addEventListener("message", (event) => {\n      const data = event?.data;\n      if (!data || typeof data !== "object") return;\n\n      let anchor = null;\n\n      if (data.type === "scrollTo" && typeof data.anchor === "string") {\n        anchor = data.anchor;\n      } else if (\n        (data.type === "scroll-to" || data.type === "scrollToSection") &&\n        typeof data.id === "string"\n      ) {\n        anchor = data.id;\n      }\n\n      if (!anchor) return;\n\n      const target = findTarget(anchor);\n      if (target) {\n        try {\n          target.scrollIntoView({ behavior: "smooth", block: "start" });\n        } catch (err) {\n          target.scrollIntoView();\n        }\n      }\n    });\n  })();\n</script>\n`;
+  const scripts: string[] = [];
 
-  if (/<\/body>/i.test(html)) {
-    return html.replace(/<\/body>/i, `${script}</body>`);
+  if (additionalScript && additionalScript.trim()) {
+    scripts.push(`<script>${additionalScript}</script>`);
   }
 
-  return `${html}${script}`;
+  scripts.push(`\n<script>\n  (function () {\n    const findTarget = (raw) => {\n      if (typeof raw !== "string") return null;\n      const trimmed = raw.trim();\n      if (!trimmed) return null;\n\n      const selectors = new Set();\n      const id = trimmed.startsWith("#") ? trimmed.slice(1) : trimmed;\n\n      selectors.add(trimmed);\n      if (id) {\n        selectors.add("#" + id);\n        selectors.add('[data-section-id="' + id + '"]');\n        selectors.add('[data-builder-section="' + id + '"]');\n        selectors.add('[data-builder-section-id="' + id + '"]');\n        selectors.add('[data-module-id="' + id + '"]');\n        selectors.add('[data-scroll-anchor="' + id + '"]');\n        selectors.add('[data-anchor="' + id + '"]');\n      }\n\n      for (const selector of selectors) {\n        try {\n          const element = document.querySelector(selector);\n          if (element) {\n            return element;\n          }\n        } catch (err) {\n          // ignore invalid selectors\n        }\n      }\n\n      return null;\n    };\n\n    window.addEventListener("message", (event) => {\n      const data = event?.data;\n      if (!data || typeof data !== "object") return;\n\n      let anchor = null;\n\n      if (data.type === "scrollTo" && typeof data.anchor === "string") {
+        anchor = data.anchor;\n      } else if (\n        (data.type === "scroll-to" || data.type === "scrollToSection") &&\n        typeof data.id === "string"\n      ) {\n        anchor = data.id;\n      }\n\n      if (!anchor) return;\n\n      const target = findTarget(anchor);\n      if (target) {\n        try {\n          target.scrollIntoView({ behavior: "smooth", block: "start" });\n        } catch (err) {\n          target.scrollIntoView();\n        }\n      }\n    });\n  })();\n</script>\n`);
+
+  const combinedScript = `\n${scripts.join("\n")}\n`;
+
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${combinedScript}</body>`);
+  }
+
+  return `${html}${combinedScript}`;
 }
 
 function extractPlaceholders(html: string) {

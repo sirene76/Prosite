@@ -23,14 +23,9 @@ export async function GET(
   }
 
   return NextResponse.json({
-    id: template._id,
-    name: template.name,
-    html: template.html ?? "",
-    css: template.css ?? "",
+    htmlUrl: template.htmlUrl ?? null,
+    cssUrl: template.cssUrl ?? null,
+    jsUrl: template.jsUrl ?? null,
     meta,
-    createdAt:
-      template.createdAt instanceof Date
-        ? template.createdAt.toISOString()
-        : template.createdAt,
   });
 }
