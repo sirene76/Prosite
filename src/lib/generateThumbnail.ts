@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import puppeteer from "puppeteer-core";
+import sharp from "sharp";
 import chromium from "@sparticuz/chromium";
 
 type ThumbnailOptions = {
@@ -15,6 +16,31 @@ export async function generateThumbnail({ id, html, css, js = "" }: ThumbnailOpt
   if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir, { recursive: true });
 
   const previewPath = path.join(extractDir, "preview.png");
+  const fallbackPreviewPath = path.join(
+    process.cwd(),
+    "public",
+    "templates",
+    "default-template-preview.svg"
+  );
+
+  const ensurePreview = async () => {
+    if (fs.existsSync(previewPath)) {
+      return true;
+    }
+
+    if (!fs.existsSync(fallbackPreviewPath)) {
+      return false;
+    }
+
+    try {
+      const buffer = await sharp(fallbackPreviewPath).png().toBuffer();
+      fs.writeFileSync(previewPath, buffer);
+      return true;
+    } catch (error) {
+      console.error("❌ Failed to create fallback preview:", error);
+      return false;
+    }
+  };
 
   try {
     // Launch headless Chromium compatible with both local & serverless
@@ -44,10 +70,15 @@ export async function generateThumbnail({ id, html, css, js = "" }: ThumbnailOpt
 
     await browser.close();
 
+    await ensurePreview();
+
     console.log("✅ Thumbnail generated:", previewPath);
     return `/templates/${id}/preview.png`;
   } catch (err) {
     console.error("❌ Thumbnail generation failed:", err);
+    if (await ensurePreview()) {
+      return `/templates/${id}/preview.png`;
+    }
     return null;
   }
 }

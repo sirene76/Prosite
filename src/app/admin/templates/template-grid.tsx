@@ -76,23 +76,21 @@ export function TemplateGrid({ templates }: { templates: TemplateGridTemplate[] 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {templates.map((tpl) => {
           const isPending = pendingAction?.id === tpl._id;
+          const imageSrc =
+            tpl.image && tpl.image.startsWith("http")
+              ? tpl.image
+              : `/templates/${tpl._id}/preview.png`;
 
           return (
             <div
               key={tpl._id}
               className="flex flex-col overflow-hidden rounded-lg border shadow transition hover:shadow-md"
             >
-              {tpl.image ? (
-                <img
-                  src={tpl.image}
-                  alt={tpl.name || "Template preview"}
-                  className="h-48 w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-48 w-full items-center justify-center bg-gray-100 text-sm text-gray-400">
-                  No preview
-                </div>
-              )}
+              <img
+                src={imageSrc}
+                alt={tpl.name || "Template preview"}
+                className="h-48 w-full object-cover"
+              />
               <div className="flex flex-1 flex-col space-y-3 p-4">
                 <div className="space-y-1">
                   <h2 className="text-lg font-semibold">{tpl.name}</h2>
