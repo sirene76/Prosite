@@ -10,10 +10,9 @@ type ProgressBarStep = {
 type ProgressBarProps = {
   steps: ProgressBarStep[];
   activeIndex: number;
-  onStepClick?: (index: number) => void;
 };
 
-export function ProgressBar({ steps, activeIndex, onStepClick }: ProgressBarProps) {
+export function ProgressBar({ steps, activeIndex }: ProgressBarProps) {
   return (
     <nav className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 pb-3">
       {steps.map((step, index) => {
@@ -22,10 +21,11 @@ export function ProgressBar({ steps, activeIndex, onStepClick }: ProgressBarProp
 
         return (
           <div key={step.key} className="flex flex-1 items-center gap-4">
-            <button
-              type="button"
-              onClick={() => onStepClick?.(index)}
-              className="group flex items-center gap-3 text-left transition-colors"
+            <div
+              className={clsx(
+                "group flex cursor-not-allowed items-center gap-3 text-left transition-opacity",
+                isActive ? "opacity-100" : "opacity-70"
+              )}
             >
               <span className="relative flex h-4 w-4 items-center justify-center">
                 <span
@@ -50,7 +50,7 @@ export function ProgressBar({ steps, activeIndex, onStepClick }: ProgressBarProp
                 </span>
                 <span className="text-[11px] text-slate-600">Step {index + 1}</span>
               </span>
-            </button>
+            </div>
             {index < steps.length - 1 ? (
               <span className="hidden flex-1 border-t border-dashed border-slate-800/80 sm:block" aria-hidden />
             ) : null}
