@@ -74,6 +74,9 @@ export function WebsitePreview() {
 
     const fetchText = async (url?: string | null) => {
       if (!url) return null;
+      if (!isRemoteUrl(url)) {
+        return null;
+      }
       try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -107,8 +110,18 @@ export function WebsitePreview() {
         ]);
 
         if (isMounted) {
-          const html = htmlFromUrl ?? selectedTemplate.html ?? "";
-          const css = cssFromUrl ?? selectedTemplate.css ?? "";
+          const remoteBase =
+            resolveAssetBase([
+              data.htmlUrl,
+              data.cssUrl,
+              data.jsUrl,
+              selectedTemplate.htmlUrl,
+              selectedTemplate.cssUrl,
+              selectedTemplate.jsUrl,
+            ]) ?? null;
+
+          const html = normaliseDocument(htmlFromUrl ?? selectedTemplate.html ?? "", remoteBase);
+          const css = normaliseStylesheet(cssFromUrl ?? selectedTemplate.css ?? "", remoteBase);
           const js = jsFromUrl ?? selectedTemplate.js ?? "";
 
           const placeholders = extractPlaceholders(html);
@@ -518,6 +531,111 @@ export function WebsitePreview() {
       </div>
     </div>
   );
+}
+
+function isRemoteUrl(url: string | null | undefined) {
+  if (!url) return false;
+  if (url.startsWith("/")) return false;
+  if (url.includes("/templates/_staging/")) return false;
+  return /^https?:\/\//i.test(url);
+}
+
+function resolveAssetBase(urls: Array<string | null | undefined>) {
+  for (const candidate of urls) {
+    if (!candidate) continue;
+    if (!isRemoteUrl(candidate)) continue;
+    const derived = deriveAssetBase(candidate);
+    if (derived) return derived;
+  }
+  return null;
+}
+
+function deriveAssetBase(url: string) {
+  try {
+    const [cleaned] = url.split("?");
+    if (!cleaned) return null;
+    const lastSlash = cleaned.lastIndexOf("/");
+    if (lastSlash === -1) {
+      return ensureTrailingSlash(cleaned);
+    }
+    return ensureTrailingSlash(cleaned.slice(0, lastSlash + 1));
+  } catch (error) {
+    console.error("Failed to derive asset base for preview", error);
+    return null;
+  }
+}
+
+function ensureTrailingSlash(value: string) {
+  return value.endsWith("/") ? value : `${value}/`;
+}
+
+function normaliseDocument(html: string, assetBase: string | null) {
+  if (!html) {
+    return "";
+  }
+
+  if (!assetBase) {
+    return html;
+  }
+
+  const base = ensureTrailingSlash(assetBase);
+  let output = html
+    .replace(/(src|href)=\"\.\/(.*?)\"/g, (_match, attr: string, path: string) => {
+      return `${attr}="${base}${path}"`;
+    })
+    .replace(/(src|href)=\'\.\/(.*?)\'/g, (_match, attr: string, path: string) => {
+      return `${attr}='${base}${path}'`;
+    });
+
+  output = output.replace(
+    /(src|href)=(["'])\/templates\/_staging\/([^"']+)(["'])/g,
+    (_match, attr: string, quote: string, path: string) => {
+      const relative = stripStageId(path);
+      return `${attr}=${quote}${base}${relative}${quote}`;
+    },
+  );
+
+  return output;
+}
+
+function normaliseStylesheet(css: string, assetBase: string | null) {
+  if (!css) {
+    return "";
+  }
+
+  if (!assetBase) {
+    return css;
+  }
+
+  const base = ensureTrailingSlash(assetBase);
+  let output = css
+    .replace(/url\(\s*"\.\/(.*?)"\s*\)/g, (_match, path: string) => {
+      return `url("${base}${path}")`;
+    })
+    .replace(/url\(\s*'\.\/(.*?)'\s*\)/g, (_match, path: string) => {
+      return `url('${base}${path}')`;
+    })
+    .replace(/url\(\s*\.\/(.*?)\s*\)/g, (_match, path: string) => {
+      return `url(${base}${path})`;
+    });
+
+  output = output.replace(
+    /url\(\s*(["'])?\/templates\/_staging\/([^"')]+)(["'])?\s*\)/g,
+    (_match, _openQuote: string | undefined, path: string) => {
+      const relative = stripStageId(path);
+      return `url("${base}${relative}")`;
+    },
+  );
+
+  return output;
+}
+
+function stripStageId(path: string) {
+  const [stage, ...rest] = path.split("/");
+  if (!rest.length) {
+    return stage;
+  }
+  return rest.join("/");
 }
 
 function injectScrollScript(html: string, additionalScript?: string) {
