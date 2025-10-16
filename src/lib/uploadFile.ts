@@ -21,10 +21,10 @@ export async function uploadFile({ buffer, fileName, contentType }: UploadFileIn
   const result = await utapi.uploadFiles([file]);
   const response = Array.isArray(result) ? result[0] : result;
 
-  if (!response || response.error || !response.data?.url) {
+  if (!response || response.error || !response.data?.ufsUrl) {
     const errorMessage = response?.error ?? "Upload failed";
     throw new Error(typeof errorMessage === "string" ? errorMessage : "Upload failed");
   }
 
-  return response.data.url;
+  return response.data.ufsUrl;
 }
