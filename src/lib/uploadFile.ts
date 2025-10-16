@@ -1,29 +1,22 @@
 import { Buffer } from "node:buffer";
 
-import { UTApi } from "uploadthing/server";
-
-const utapi = new UTApi();
+import { utapi } from "uploadthing/server";
 
 export type UploadFileInput = {
-  buffer: Buffer | ArrayBuffer | Uint8Array;
+  buffer: BlobPart | ArrayBuffer | Uint8Array;
   fileName: string;
   contentType?: string;
 };
 
 export async function uploadFile({ buffer, fileName, contentType }: UploadFileInput) {
-  const resolvedBuffer =
-    buffer instanceof Buffer ? buffer : Buffer.from(buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer);
+  const source: BlobPart =
+    buffer instanceof ArrayBuffer || buffer instanceof Uint8Array ? Buffer.from(buffer) : buffer;
 
-  const file = new File([resolvedBuffer], fileName, {
-    type: contentType ?? "application/octet-stream",
-  });
-
-  const result = await utapi.uploadFiles([file]);
-  const response = Array.isArray(result) ? result[0] : result;
+  const file = new File([source], fileName, { type: contentType ?? "application/octet-stream" });
+  const response = await utapi.uploadFiles(file);
 
   if (!response || response.error || !response.data?.ufsUrl) {
-    const errorMessage = response?.error ?? "Upload failed";
-    throw new Error(typeof errorMessage === "string" ? errorMessage : "Upload failed");
+    throw new Error(response?.error ?? "Upload failed");
   }
 
   return response.data.ufsUrl;
