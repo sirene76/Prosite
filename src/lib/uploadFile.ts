@@ -1,6 +1,8 @@
 import { Buffer } from "node:buffer";
 
-import { utapi } from "uploadthing/server";
+import { UTApi } from "uploadthing/server";
+
+const utapi = new UTApi();
 
 export type UploadFileInput = {
   buffer: BlobPart | ArrayBuffer | Uint8Array;
