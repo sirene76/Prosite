@@ -43,6 +43,7 @@ type StageInfo = {
   jsUrl?: string;
   metaUrl: string;
   previewUrl: string;
+  previewHtml: string;
   assets: AssetMap;
 };
 
@@ -52,6 +53,7 @@ type UploadSuccessResponse = {
     stageId: string;
     basePath?: string | null;
     previewPath?: string | null;
+    previewHtml?: string | null;
     name?: string | null;
     category?: string | null;
     description?: string | null;
@@ -409,6 +411,7 @@ export async function POST(req: Request) {
       jsUrl,
       metaUrl,
       previewUrl,
+      previewHtml: previewDocument,
       assets: assetMap,
     };
 
@@ -426,6 +429,7 @@ export async function POST(req: Request) {
         stageId,
         basePath,
         previewPath: previewUrl,
+        previewHtml: previewDocument,
         name,
         category,
         description,

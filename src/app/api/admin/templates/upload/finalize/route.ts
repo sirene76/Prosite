@@ -26,6 +26,7 @@ type StageInfo = {
   jsUrl?: string;
   metaUrl: string;
   previewUrl: string;
+  previewHtml: string;
   assets: Record<string, string>;
 };
 
