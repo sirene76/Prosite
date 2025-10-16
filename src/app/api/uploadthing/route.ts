@@ -6,7 +6,7 @@ export const ourFileRouter = {
   templateFiles: f({
     "text/html": { maxFileSize: "2MB" },
     "text/css": { maxFileSize: "2MB" },
-    "text/javascript": { maxFileSize: "2MB" },
+    "application/javascript": { maxFileSize: "2MB" },
     "application/json": { maxFileSize: "1MB" },
     "image/*": { maxFileSize: "5MB" },
   }).onUploadComplete(({ file }) => {
