@@ -51,9 +51,9 @@ export async function renderPreview(template: TemplateLike) {
       [template.htmlUrl, template.cssUrl, template.jsUrl].find(isRemoteUrl) ?? null,
     );
 
-  const html = await resolveTemplateAsset(template.html, template.htmlUrl);
-  const css = await resolveTemplateAsset(template.css, template.cssUrl);
-  const js = await resolveTemplateAsset(template.js, template.jsUrl);
+  const html = await resolveTemplateAsset(template.htmlUrl, template.html);
+  const css = await resolveTemplateAsset(template.cssUrl, template.css);
+  const js = await resolveTemplateAsset(template.jsUrl, template.js);
 
   const rewrittenHtml = rewriteDocumentAssets(html, assetBase);
   const rewrittenCss = rewriteCssAssets(css, assetBase);
@@ -81,14 +81,13 @@ export async function renderPreview(template: TemplateLike) {
 }
 
 async function resolveTemplateAsset(
-  inlineValue: string | undefined,
   remoteUrl: string | null | undefined,
+  inlineValue: string | undefined,
 ) {
-  if (inlineValue && inlineValue.trim()) {
-    return inlineValue;
-  }
-
   if (!remoteUrl || !isRemoteUrl(remoteUrl)) {
+    if (inlineValue && inlineValue.trim()) {
+      return inlineValue;
+    }
     return "";
   }
 
@@ -100,6 +99,9 @@ async function resolveTemplateAsset(
     return await response.text();
   } catch (error) {
     console.error(error);
+    if (inlineValue && inlineValue.trim()) {
+      return inlineValue;
+    }
     return "";
   }
 }
@@ -128,7 +130,6 @@ function ensureTrailingSlash(value: string) {
 function isRemoteUrl(url: string | null | undefined): url is string {
   if (!url) return false;
   if (url.startsWith("/")) return false;
-  if (url.includes("/templates/_staging/")) return false;
   return /^https?:\/\//i.test(url);
 }
 
@@ -137,21 +138,13 @@ function rewriteDocumentAssets(html: string, assetBase: string | null | undefine
   if (!assetBase) return html;
 
   const base = ensureTrailingSlash(assetBase);
-  let output = html
+  const output = html
     .replace(/(src|href)=\"\.\/(.*?)\"/g, (_match, attr: string, path: string) => {
       return `${attr}="${base}${path}"`;
     })
     .replace(/(src|href)=\'\.\/(.*?)\'/g, (_match, attr: string, path: string) => {
       return `${attr}='${base}${path}'`;
     });
-
-  output = output.replace(
-    /(src|href)=(["'])\/templates\/_staging\/([^"']+)(["'])/g,
-    (_match, attr: string, quote: string, path: string) => {
-      const relative = stripStageId(path);
-      return `${attr}=${quote}${base}${relative}${quote}`;
-    },
-  );
 
   return output;
 }
@@ -161,7 +154,7 @@ function rewriteCssAssets(css: string, assetBase: string | null | undefined) {
   if (!assetBase) return css;
 
   const base = ensureTrailingSlash(assetBase);
-  let output = css
+  const output = css
     .replace(/url\(\s*"\.\/(.*?)"\s*\)/g, (_match, path: string) => {
       return `url("${base}${path}")`;
     })
@@ -172,21 +165,5 @@ function rewriteCssAssets(css: string, assetBase: string | null | undefined) {
       return `url(${base}${path})`;
     });
 
-  output = output.replace(
-    /url\(\s*(["'])?\/templates\/_staging\/([^"')]+)(["'])?\s*\)/g,
-    (_match, _openQuote: string | undefined, path: string) => {
-      const relative = stripStageId(path);
-      return `url("${base}${relative}")`;
-    },
-  );
-
   return output;
-}
-
-function stripStageId(path: string) {
-  const [stage, ...rest] = path.split("/");
-  if (!rest.length) {
-    return stage;
-  }
-  return rest.join("/");
 }
