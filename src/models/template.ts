@@ -13,6 +13,11 @@ const TemplateSchema = new Schema(
     css: String,
     js: String,
 
+    htmlUrl: String,
+    cssUrl: String,
+    jsUrl: String,
+    metaUrl: String,
+
     meta: Schema.Types.Mixed,
   },
   { timestamps: true }

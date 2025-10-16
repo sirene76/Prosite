@@ -78,9 +78,11 @@ export type TemplateRecord = LeanDocument<TemplateDocument> & {
   previewVideo?: string;
   htmlUrl?: string;
   cssUrl?: string;
+  jsUrl?: string;
   metaUrl?: string;
   html?: string;
   css?: string;
+  js?: string;
   meta?: TemplateMeta;
 };
 
@@ -94,8 +96,10 @@ export type TemplateDefinition = TemplateRecord & {
   builder?: TemplateBuilderConfig;
   html?: string;
   css?: string;
+  js?: string;
   htmlUrl?: string;
   cssUrl?: string;
+  jsUrl?: string;
   metaUrl?: string;
   previewUrl?: string;
   previewVideo?: string;
@@ -161,9 +165,13 @@ export function resolveActiveTemplateVersion(
     previewVideo: template.previewVideo ?? undefined,
     htmlUrl: template.htmlUrl ?? undefined,
     cssUrl: template.cssUrl ?? undefined,
+    // @ts-expect-error legacy schemas may not include jsUrl
+    jsUrl: (template as TemplateRecord & { jsUrl?: string }).jsUrl ?? undefined,
     metaUrl: template.metaUrl ?? undefined,
     inlineHtml: html || undefined,
     inlineCss: css || undefined,
+    // @ts-expect-error legacy schemas may not include inlineJs
+    inlineJs: (template as TemplateRecord & { js?: string }).js || undefined,
     inlineMeta,
     createdAt: fallbackTimestamp,
     updatedAt: fallbackTimestamp,
@@ -192,12 +200,20 @@ export async function getTemplateById(id: string): Promise<TemplateRecord | null
     record.previewVideo = version.previewVideo ?? undefined;
     record.htmlUrl = version.htmlUrl ?? undefined;
     record.cssUrl = version.cssUrl ?? undefined;
+    // @ts-expect-error legacy versions may not include jsUrl
+    record.jsUrl = (version as TemplateVersion & { jsUrl?: string }).jsUrl ?? record.jsUrl;
     record.metaUrl = version.metaUrl ?? undefined;
     if (!record.html && typeof version.inlineHtml === "string" && version.inlineHtml.trim()) {
       record.html = version.inlineHtml;
     }
     if (!record.css && typeof version.inlineCss === "string" && version.inlineCss.trim()) {
       record.css = version.inlineCss;
+    }
+    if (!record.js && typeof (version as { inlineJs?: unknown }).inlineJs === "string") {
+      const inlineJs = (version as { inlineJs: string }).inlineJs;
+      if (inlineJs.trim()) {
+        record.js = inlineJs;
+      }
     }
     if (!record.meta) {
       record.meta = parseMeta(version.inlineMeta);
@@ -218,6 +234,13 @@ export async function getTemplateById(id: string): Promise<TemplateRecord | null
     }
   }
 
+  if (!record.js && typeof (template as { js?: unknown }).js === "string") {
+    const inlineJs = (template as { js?: unknown }).js as string;
+    if (inlineJs.trim()) {
+      record.js = inlineJs;
+    }
+  }
+
   if (!record.meta) {
     record.meta = parseMeta((template as { meta?: unknown }).meta);
   }
@@ -228,6 +251,9 @@ export async function getTemplateById(id: string): Promise<TemplateRecord | null
     }
     if (!record.css && record.cssUrl) {
       record.css = await fetch(record.cssUrl).then((response) => response.text());
+    }
+    if (!record.js && record.jsUrl) {
+      record.js = await fetch(record.jsUrl).then((response) => response.text());
     }
     if (!record.meta && record.metaUrl) {
       const fetchedMeta = await fetch(record.metaUrl).then((response) => response.json());
@@ -252,6 +278,7 @@ export async function getTemplateAssets(id: string) {
 
   const html = typeof template.html === "string" ? template.html : "";
   const css = typeof template.css === "string" ? template.css : "";
+  const js = typeof template.js === "string" ? template.js : "";
   const meta = (template.meta ?? {}) as TemplateMeta;
   const version = resolveActiveTemplateVersion(template, html, css, meta);
 
@@ -281,8 +308,10 @@ export async function getTemplateAssets(id: string) {
     builder,
     html,
     css,
+    js,
     htmlUrl: template.htmlUrl ?? version.htmlUrl ?? undefined,
     cssUrl: template.cssUrl ?? version.cssUrl ?? undefined,
+    jsUrl: template.jsUrl ?? (version as TemplateVersion & { jsUrl?: string }).jsUrl ?? undefined,
     metaUrl: template.metaUrl ?? version.metaUrl ?? undefined,
     previewUrl: template.previewUrl ?? version.previewUrl ?? undefined,
     previewVideo: template.previewVideo ?? version.previewVideo ?? undefined,
