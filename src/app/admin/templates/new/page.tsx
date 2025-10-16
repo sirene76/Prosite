@@ -64,6 +64,7 @@ type TemplatePreview = {
   meta?: TemplateMeta | null;
   basePath?: string | null;
   previewPath?: string | null;
+  previewHtml?: string | null;
   stageId?: string | null;
 };
 
@@ -71,7 +72,7 @@ export default function AddTemplatePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [template, setTemplate] = useState<TemplatePreview | null>(null);
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [supportsSrcDoc, setSupportsSrcDoc] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -85,6 +86,16 @@ export default function AddTemplatePage() {
     () => themes.find((theme) => theme.name === activeThemeId) ?? (themes.length ? themes[0] : null),
     [activeThemeId, themes],
   );
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      setSupportsSrcDoc(false);
+      return;
+    }
+
+    const iframe = document.createElement("iframe");
+    setSupportsSrcDoc("srcdoc" in iframe);
+  }, []);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -118,18 +129,25 @@ export default function AddTemplatePage() {
 
     iframe.addEventListener("load", handleLoad);
 
-    if (iframe.contentDocument?.readyState === "complete") {
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    let timeout: number | null = null;
+
+    if (doc?.readyState === "complete" || doc?.readyState === "interactive") {
       applyTheme();
+    } else if (supportsSrcDoc && template?.previewHtml) {
+      timeout = window.setTimeout(applyTheme, 50);
     }
 
     return () => {
       iframe.removeEventListener("load", handleLoad);
+      if (timeout !== null) {
+        window.clearTimeout(timeout);
+      }
     };
-  }, [activeTheme, previewSrc]);
+  }, [activeTheme, supportsSrcDoc, template?.previewHtml, template?.previewPath]);
 
   function resetState() {
     setTemplate(null);
-    setPreviewSrc(null);
     setStatus("");
     setThemes([]);
     setActiveTheme(null);
@@ -146,7 +164,6 @@ export default function AddTemplatePage() {
     setError("");
     setStatus("");
     setTemplate(null);
-    setPreviewSrc(null);
     setThemes([]);
     setActiveTheme(null);
 
@@ -158,7 +175,6 @@ export default function AddTemplatePage() {
 
       if (res.ok && data.success && data.template) {
         setTemplate(data.template);
-        setPreviewSrc(data.template.previewPath ?? null);
         const themeOptions = normaliseThemes(data.template.meta ?? null);
         setThemes(themeOptions);
         setActiveTheme(themeOptions.length ? themeOptions[0].name : null);
@@ -287,10 +303,15 @@ export default function AddTemplatePage() {
                 </div>
               )}
               <iframe
-                key={previewSrc ?? "template-preview"}
+                key={template?.stageId ?? template?.previewPath ?? "template-preview"}
                 title="Template Preview"
                 sandbox="allow-scripts allow-same-origin"
-                src={previewSrc ?? undefined}
+                srcDoc={supportsSrcDoc ? template?.previewHtml ?? undefined : undefined}
+                src={
+                  supportsSrcDoc && template?.previewHtml
+                    ? undefined
+                    : template?.previewPath ?? undefined
+                }
                 ref={iframeRef}
                 style={{ width: "100%", height: "700px", border: "1px solid #ccc", borderRadius: "8px" }}
               />
