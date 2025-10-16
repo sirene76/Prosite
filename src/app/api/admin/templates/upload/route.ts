@@ -150,7 +150,7 @@ function detectContentType(fileName: string) {
   const lower = fileName.toLowerCase();
   if (lower.endsWith(".html")) return "text/html";
   if (lower.endsWith(".css")) return "text/css";
-  if (lower.endsWith(".js")) return "text/javascript";
+  if (lower.endsWith(".js")) return "application/javascript";
   if (lower.endsWith(".json")) return "application/json";
   if (lower.endsWith(".svg")) return "image/svg+xml";
   if (lower.endsWith(".png")) return "image/png";
@@ -351,7 +351,7 @@ export async function POST(req: Request) {
       jsUrl = await uploadFile({
         buffer: Buffer.from(js, "utf-8"),
         fileName: sanitizeUploadFileName(stageId, scriptEntryPath),
-        contentType: "text/javascript",
+        contentType: "application/javascript",
       });
       assetMap[normaliseAssetKey(scriptEntryPath)] = jsUrl;
     }
