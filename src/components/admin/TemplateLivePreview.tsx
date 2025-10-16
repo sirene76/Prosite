@@ -111,6 +111,7 @@ export default function TemplateLivePreview({ html, css, meta }: TemplateLivePre
       <div className="bg-gray-100 flex justify-center py-6">
         <iframe
           srcDoc={doc}
+          sandbox="allow-scripts allow-same-origin"
           className="rounded-md shadow-md bg-white transition-all duration-300"
           style={{
             width: "100%",
