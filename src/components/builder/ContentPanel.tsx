@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, ChevronDown, Clock3 } from "lucide-react";
 
@@ -8,6 +8,13 @@ import { useBuilder } from "@/hooks/use-builder";
 
 import { ContentForm } from "./ContentForm";
 import { ensureColorValue, formatModuleType, formatTokenLabel, normalizeSectionAnchor } from "./utils";
+import type { TemplateContentSection } from "@/context/BuilderContext";
+
+type ContentPanelProps = {
+  sections?: TemplateContentSection[];
+  values?: Record<string, unknown>;
+  onChange?: (key: string, value: unknown) => void;
+};
 
 type SectionAccent = {
   header: string;
@@ -57,7 +64,7 @@ function isValueFilled(value: unknown) {
   return true;
 }
 
-export function ContentPanel() {
+export function ContentPanel({ sections, values, onChange }: ContentPanelProps = {}) {
   const {
     contentSections,
     content,
@@ -72,29 +79,51 @@ export function ContentPanel() {
   const colors = useMemo(() => selectedTemplate.colors ?? [], [selectedTemplate]);
   const modules = useMemo(() => selectedTemplate.modules ?? [], [selectedTemplate]);
 
+  const resolvedSections = useMemo(() => {
+    return Array.isArray(sections) && sections.length > 0 ? sections : contentSections;
+  }, [contentSections, sections]);
+
+  const resolvedValues = useMemo(() => {
+    if (values && typeof values === "object") {
+      return values;
+    }
+    return content;
+  }, [content, values]);
+
+  const handleChange = useCallback(
+    (key: string, value: unknown) => {
+      if (onChange) {
+        onChange(key, value);
+        return;
+      }
+      updateContent(key, value);
+    },
+    [onChange, updateContent]
+  );
+
   const [expandedSections, setExpandedSections] = useState<string[]>(() =>
-    contentSections[0] ? [contentSections[0].id] : []
+    resolvedSections[0] ? [resolvedSections[0].id] : []
   );
   const previousExpandedRef = useRef<string[]>(expandedSections);
 
   useEffect(() => {
-    if (!contentSections.length) {
+    if (!resolvedSections.length) {
       setExpandedSections([]);
       previousExpandedRef.current = [];
       return;
     }
 
     setExpandedSections((previous) => {
-      const valid = previous.filter((id) => contentSections.some((section) => section.id === id));
+      const valid = previous.filter((id) => resolvedSections.some((section) => section.id === id));
       if (valid.length > 0) {
         previousExpandedRef.current = valid;
         return valid;
       }
-      const initial = contentSections[0]!.id;
+      const initial = resolvedSections[0]!.id;
       previousExpandedRef.current = [initial];
       return [initial];
     });
-  }, [contentSections]);
+  }, [resolvedSections]);
 
   useEffect(() => {
     const previous = previousExpandedRef.current;
@@ -119,7 +148,7 @@ export function ContentPanel() {
     );
   }, [expandedSections, previewFrame]);
 
-  if (!contentSections.length) {
+  if (!resolvedSections.length) {
     return (
       <div className="space-y-3 rounded-2xl border border-gray-800/60 bg-gray-950/60 p-5 text-sm text-slate-400">
         <p>No editable fields found for this template.</p>
@@ -140,10 +169,6 @@ export function ContentPanel() {
     });
   };
 
-  const handleContentChange = (key: string, value: unknown) => {
-    updateContent(key, value);
-  };
-
   return (
     <div className="space-y-8">
       <div className="space-y-4">
@@ -154,13 +179,13 @@ export function ContentPanel() {
           </p>
         </div>
         <div className="space-y-4">
-          {contentSections.map((section, index) => {
+          {resolvedSections.map((section, index) => {
             const isOpen = expandedSections.includes(section.id);
             const accent = sectionAccents[index % sectionAccents.length];
 
             const totalFields = section.fields.length;
             const filledFields = section.fields.reduce((count, field) => {
-              if (isValueFilled(content[field.key])) {
+              if (isValueFilled(resolvedValues[field.key])) {
                 return count + 1;
               }
               return count;
@@ -225,7 +250,7 @@ export function ContentPanel() {
                       className="border-t border-white/5 bg-gray-950/80"
                     >
                       <div className="space-y-4 px-5 pb-5 pt-4">
-                        <ContentForm section={section} values={content} onChange={handleContentChange} />
+                        <ContentForm section={section} values={resolvedValues} onChange={handleChange} />
                       </div>
                     </motion.div>
                   ) : null}
