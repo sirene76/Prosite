@@ -1,23 +1,23 @@
 <section class="layout">
   <aside class="sidebar">
     <div class="profile">
-      <div class="avatar">{{name}}</div>
-      <p class="tagline">{{tagline}}</p>
+      <div class="avatar">{{hero.headline}}</div>
+      <p class="tagline">{{hero.tagline}}</p>
     </div>
     <nav class="nav">
-      <a href="#home">Home</a>
+      <a href="#hero">Home</a>
       <a href="#about">About</a>
-      <a href="#services">Services</a>
+      <a href="#experience">Experience</a>
       <a href="#portfolio">Portfolio</a>
       <a href="#testimonials">Testimonials</a>
       <a href="#contact">Contact</a>
     </nav>
   </aside>
   <main class="content">
-    <section id="home" class="hero">
+    <section id="hero" class="hero">
       <p class="eyebrow">Now booking new collaborations</p>
-      <h1>{{name}}</h1>
-      <p class="lede">{{tagline}}</p>
+      <h1>{{hero.headline}}</h1>
+      <p class="lede">{{hero.tagline}}</p>
       <div class="actions">
         <a class="button primary" href="#portfolio">View portfolio</a>
         <a class="button secondary" href="#contact">Book a discovery call</a>
@@ -26,12 +26,12 @@
 
     <section id="about" class="section about">
       <h2>About</h2>
-      <p>{{about}}</p>
+      <p>{{about.body}}</p>
     </section>
 
-    <section id="services" class="section resume">
-      <h2>{{resumeTitle}}</h2>
-      <p>{{resumeSummary}}</p>
+    <section id="experience" class="section resume">
+      <h2>{{experience.title}}</h2>
+      <p>{{experience.summary}}</p>
       <ul class="timeline">
         <li>
           <span>2022 — Present</span>
@@ -59,7 +59,7 @@
 
     <section id="portfolio" class="section portfolio">
       <div class="section-heading">
-        <h2>{{portfolioHeading}}</h2>
+        <h2>{{portfolio.heading}}</h2>
         <a class="view-all" href="#">View all projects →</a>
       </div>
       <div class="grid">
@@ -81,13 +81,13 @@
     <section id="testimonials" class="section testimonials">
       <h2>Testimonials</h2>
       <blockquote>
-        <p>“{{testimonialQuote}}”</p>
-        <footer>— {{testimonialAuthor}}</footer>
+        <p>“{{testimonials.quote}}”</p>
+        <footer>— {{testimonials.author}}</footer>
       </blockquote>
     </section>
 
     <section id="contact" class="section contact">
-      <h2>{{contactHeadline}}</h2>
+      <h2>{{contact.headline}}</h2>
       <form class="contact-form">
         <div class="field">
           <label for="name">Name</label>
@@ -95,7 +95,7 @@
         </div>
         <div class="field">
           <label for="email">Email</label>
-          <input id="email" type="email" placeholder="you@example.com" value="{{contactEmail}}" />
+          <input id="email" type="email" placeholder="you@example.com" value="{{contact.email}}" />
         </div>
         <div class="field full">
           <label for="message">Project details</label>
@@ -116,7 +116,12 @@
       return;
     }
 
-    var target = document.getElementById(event.data.id);
+    var sectionId = typeof event.data.section === "string" ? event.data.section : event.data.id;
+    if (typeof sectionId !== "string") {
+      return;
+    }
+
+    var target = document.getElementById(sectionId);
     if (target) {
       target.scrollIntoView({ behavior: "smooth", block: "start" });
     }

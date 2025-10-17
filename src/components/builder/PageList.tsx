@@ -3,21 +3,21 @@
 import { useCallback } from "react";
 import { useBuilder } from "@/context/BuilderContext";
 
-const defaultPages = ["Home", "About", "Services", "Contact"];
+const defaultPages = ["Hero", "About", "Experience", "Portfolio", "Testimonials", "Contact"];
 
 type PageListProps = {
   pages?: string[];
 };
 
 export function PageList({ pages = defaultPages }: PageListProps) {
-  const { previewFrame } = useBuilder();
+  const { scrollPreviewToSection } = useBuilder();
 
   const handleNavigate = useCallback(
     (page: string) => {
       const id = page.trim().toLowerCase().replace(/\s+/g, "-");
-      previewFrame?.contentWindow?.postMessage({ type: "scroll-to", id }, "*");
+      scrollPreviewToSection(id);
     },
-    [previewFrame]
+    [scrollPreviewToSection]
   );
 
   return (
