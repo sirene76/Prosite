@@ -4,12 +4,8 @@
 import Image from "next/image";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
 import ImageDropInput from "@/components/ui/ImageDropInput";
@@ -18,7 +14,15 @@ import { UploadDropzone } from "@/utils/uploadthing";
 const IMAGE_URL_PATTERN = /\.(jpe?g|png|gif|webp|svg)$/i;
 
 const inputBaseClass =
-  "w-full rounded-xl border border-gray-800 bg-gray-950/60 px-3 py-2 text-sm text-slate-100 transition focus:border-builder-accent focus:outline-none";
+  "w-full rounded-xl border border-gray-800/70 bg-gray-950/60 px-3 py-2 text-sm text-slate-100 transition focus:border-builder-accent focus:outline-none";
+
+const pastelGradients = [
+  "from-rose-500/15 via-rose-400/10 to-transparent",
+  "from-emerald-500/15 via-emerald-400/10 to-transparent",
+  "from-sky-500/15 via-sky-400/10 to-transparent",
+  "from-amber-500/15 via-amber-400/10 to-transparent",
+  "from-purple-500/15 via-purple-400/10 to-transparent",
+];
 
 export type ContentFormProps = {
   section: TemplateContentSection;
@@ -28,36 +32,91 @@ export type ContentFormProps = {
 
 export function ContentForm({ section, values, onChange }: ContentFormProps) {
   const groups = useMemo(() => createFieldGroups(section.fields), [section.fields]);
-  const defaultGroupId = groups[0]?.id;
+  const [openSections, setOpenSections] = useState<string[]>(() =>
+    groups.length ? [groups[0]!.id] : []
+  );
+
+  useEffect(() => {
+    if (!groups.length) {
+      setOpenSections([]);
+      return;
+    }
+
+    setOpenSections((previous) => {
+      const existing = previous.filter((id) => groups.some((group) => group.id === id));
+      if (existing.length) {
+        return existing;
+      }
+      return [groups[0]!.id];
+    });
+  }, [groups]);
+
+  const toggleSection = (id: string) => {
+    setOpenSections((previous) =>
+      previous.includes(id)
+        ? previous.filter((openId) => openId !== id)
+        : [...previous, id]
+    );
+  };
 
   return (
     <form className="space-y-4" onSubmit={(event) => event.preventDefault()}>
-      <Accordion
-        type="single"
-        collapsible
-        defaultValue={defaultGroupId}
-        className="space-y-2"
-      >
-        {groups.map((group) => (
-          <AccordionItem key={group.id} value={group.id} className="border-none">
-            <AccordionTrigger className="rounded-xl border border-gray-800 bg-gray-950/40 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500 hover:text-slate-200">
-              <div className="flex w-full items-center justify-between">
-                <span>{group.label}</span>
-                <span className="text-[10px] font-normal tracking-[0.3em] text-slate-600">
-                  {group.fields.length} fields
-                </span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="space-y-4 rounded-b-xl border border-t-0 border-gray-800 bg-gray-950/20 p-4">
-              {group.fields.map((field) => (
-                <Fragment key={field.key}>
-                  {renderField(field, values[field.key], onChange)}
-                </Fragment>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+      <div className="space-y-4">
+        {groups.map((group, index) => {
+          const isOpen = openSections.includes(group.id);
+          const gradientClass = pastelGradients[index % pastelGradients.length];
+
+          return (
+            <motion.section
+              key={group.id}
+              layout
+              transition={{ type: "spring", stiffness: 260, damping: 30 }}
+              className="rounded-2xl border border-white/5 bg-gray-950/70 shadow-lg shadow-black/20"
+            >
+              <button
+                type="button"
+                onClick={() => toggleSection(group.id)}
+                className={`flex w-full items-center justify-between gap-4 rounded-2xl border border-white/5 bg-gradient-to-br ${gradientClass} px-5 py-4 text-left transition hover:border-white/20`}
+              >
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-300">
+                    {group.label}
+                  </p>
+                  <p className="text-xs text-slate-500">{group.fields.length} fields</p>
+                </div>
+                <motion.span
+                  animate={{ rotate: isOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="rounded-full bg-white/5 p-1 text-slate-300"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </motion.span>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {isOpen ? (
+                  <motion.div
+                    key="content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-4 px-5 pb-5 pt-4">
+                      {group.fields.map((field) => (
+                        <Fragment key={field.key}>
+                          {renderField(field, values[field.key], onChange)}
+                        </Fragment>
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </motion.section>
+          );
+        })}
+      </div>
     </form>
   );
 }
@@ -75,7 +134,7 @@ function renderField(
     const stringValue = toTextValue(resolvedValue);
     return (
       <label className="flex flex-col gap-2">
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</span>
         <textarea
           value={stringValue}
           onChange={(event) => onChange(key, event.target.value)}
@@ -181,7 +240,7 @@ function renderField(
 
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</span>
       <input
         type={inputType}
         value={stringValue}
@@ -338,7 +397,7 @@ function ImageField({ label, description, value, onUpload, onClear }: ImageField
   return (
     <div className="space-y-2">
       {label ? (
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</span>
       ) : null}
 
       {hasImage && !isReplacing ? (
