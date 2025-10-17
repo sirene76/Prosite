@@ -63,3 +63,19 @@ export const Smartphone = createLucideIcon(
     <line x1="12" y1="18" x2="12.01" y2="18" />
   </>
 );
+
+export const CheckCircle2 = createLucideIcon(
+  "check-circle-2",
+  <>
+    <path d="M12 22a10 10 0 1 1 10-10 10 10 0 0 1-10 10" />
+    <path d="m9 12 2 2 4-4" />
+  </>
+);
+
+export const Clock3 = createLucideIcon(
+  "clock-3",
+  <>
+    <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0" />
+    <path d="M12 7v5h5" />
+  </>
+);
