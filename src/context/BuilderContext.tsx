@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { templates, type TemplateDefinition } from "@/lib/templateDefinitions";
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -18,9 +18,6 @@ type BuilderContextValue = {
   updateTheme: (changes: Record<string, string>) => void;
   content: Record<string, string>;
   updateContent: (changes: Record<string, string>) => void;
-  openContentSection: string | null;
-  setOpenContentSection: (sectionId: string | null) => void;
-  scrollPreviewToSection: (sectionId: string | null) => void;
   isPreviewReady: boolean;
   updatePreviewDocument: (html: string) => void;
   openPreview: () => void;
@@ -36,51 +33,28 @@ const defaultTheme = {
   textColor: "#e2e8f0",
 };
 
-const defaultTemplate = templates[0];
-
-function getTemplateContentDefaults(template: TemplateDefinition | undefined) {
-  if (!template?.meta?.content) {
-    return {} as Record<string, string>;
-  }
-
-  return Object.entries(template.meta.content).reduce<Record<string, string>>(
-    (accumulator, [key, field]) => {
-      accumulator[key] = field.default ?? "";
-      return accumulator;
-    },
-    {}
-  );
-}
-
-function getFirstSectionId(template: TemplateDefinition | undefined) {
-  if (!template?.meta?.content) {
-    return null;
-  }
-
-  const keys = Object.keys(template.meta.content);
-  for (const key of keys) {
-    const [section] = key.split(".");
-    if (section) {
-      return section;
-    }
-  }
-
-  return null;
-}
+const defaultContent = {
+  name: "Avery Johnson",
+  tagline: "Product Designer & Art Director",
+  about:
+    "I craft immersive digital experiences and lead cross-functional teams to deliver design systems that scale.",
+  resumeTitle: "Experience",
+  resumeSummary: "Previously at Pixelwave Studio, Dataloom, and Nova Labs.",
+  portfolioHeading: "Selected Work",
+  testimonialQuote: "Working with Avery elevated our brand presence tenfold.",
+  testimonialAuthor: "Jordan Smith, CEO at Nova Labs",
+  contactHeadline: "Let’s build something iconic.",
+  contactEmail: "hello@averyjohnson.design",
+};
 
 export function BuilderProvider({ children }: { children: React.ReactNode }) {
   const [device, setDevice] = useState<Device>("desktop");
   const [previewFrame, setPreviewFrame] = useState<HTMLIFrameElement | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(defaultTemplate?.id ?? "");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(templates[0]?.id ?? "");
   const [theme, setTheme] = useState<Record<string, string>>(defaultTheme);
-  const [content, setContent] = useState<Record<string, string>>(() =>
-    getTemplateContentDefaults(defaultTemplate)
-  );
+  const [content, setContent] = useState<Record<string, string>>(defaultContent);
   const [previewDocument, setPreviewDocument] = useState("");
-  const [openContentSection, setOpenContentSectionState] = useState<string | null>(
-    getFirstSectionId(defaultTemplate)
-  );
 
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId) ?? templates[0],
@@ -96,34 +70,6 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
   const updateContent = useCallback((changes: Record<string, string>) => {
     setContent((prev) => ({ ...prev, ...changes }));
   }, []);
-
-  const scrollPreviewToSection = useCallback(
-    (sectionId: string | null) => {
-      if (!sectionId) {
-        return;
-      }
-
-      const frameWindow = previewFrame?.contentWindow;
-      frameWindow?.postMessage(
-        {
-          type: "scroll-to",
-          section: sectionId,
-        },
-        "*"
-      );
-    },
-    [previewFrame]
-  );
-
-  const setOpenContentSection = useCallback(
-    (sectionId: string | null) => {
-      setOpenContentSectionState(sectionId);
-      if (sectionId) {
-        scrollPreviewToSection(sectionId);
-      }
-    },
-    [scrollPreviewToSection]
-  );
 
   const selectTemplate = useCallback((templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -155,18 +101,6 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
 
   const isPreviewReady = Boolean(previewDocument);
 
-  useEffect(() => {
-    const template = templates.find((item) => item.id === selectedTemplateId) ?? templates[0];
-    setContent(getTemplateContentDefaults(template));
-    setOpenContentSectionState(getFirstSectionId(template));
-  }, [selectedTemplateId]);
-
-  useEffect(() => {
-    if (openContentSection) {
-      scrollPreviewToSection(openContentSection);
-    }
-  }, [openContentSection, scrollPreviewToSection, previewFrame]);
-
   const value = useMemo<BuilderContextValue>(
     () => ({
       device,
@@ -181,9 +115,6 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       updateTheme,
       content,
       updateContent,
-      openContentSection,
-      setOpenContentSection,
-      scrollPreviewToSection,
       isPreviewReady,
       updatePreviewDocument,
       openPreview,
@@ -201,9 +132,6 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       updateTheme,
       content,
       updateContent,
-      openContentSection,
-      setOpenContentSection,
-      scrollPreviewToSection,
       isPreviewReady,
       updatePreviewDocument,
       openPreview,
