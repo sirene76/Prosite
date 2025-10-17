@@ -1,21 +1,61 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { CheckCircle2, ChevronDown, Clock3 } from "lucide-react";
 
 import { useBuilder } from "@/hooks/use-builder";
 
 import { ContentForm } from "./ContentForm";
 import { ensureColorValue, formatModuleType, formatTokenLabel, normalizeSectionAnchor } from "./utils";
 
-const sectionGradients = [
-  "from-builder-accent/20 via-builder-accent/10 to-transparent",
-  "from-emerald-500/15 via-emerald-400/10 to-transparent",
-  "from-sky-500/15 via-sky-400/10 to-transparent",
-  "from-amber-500/15 via-amber-400/10 to-transparent",
-  "from-purple-500/15 via-purple-400/10 to-transparent",
+type SectionAccent = {
+  header: string;
+  shadow: string;
+};
+
+const sectionAccents: SectionAccent[] = [
+  {
+    header: "from-builder-accent/25 via-builder-accent/10 to-transparent",
+    shadow: "shadow-[0_18px_48px_-28px_rgba(56,189,248,0.55)]",
+  },
+  {
+    header: "from-emerald-500/25 via-emerald-400/10 to-transparent",
+    shadow: "shadow-[0_18px_48px_-28px_rgba(16,185,129,0.45)]",
+  },
+  {
+    header: "from-sky-500/25 via-sky-400/10 to-transparent",
+    shadow: "shadow-[0_18px_48px_-28px_rgba(14,165,233,0.45)]",
+  },
+  {
+    header: "from-amber-500/25 via-amber-400/10 to-transparent",
+    shadow: "shadow-[0_18px_48px_-28px_rgba(245,158,11,0.45)]",
+  },
+  {
+    header: "from-purple-500/25 via-purple-400/10 to-transparent",
+    shadow: "shadow-[0_18px_48px_-28px_rgba(168,85,247,0.45)]",
+  },
 ];
+
+function isValueFilled(value: unknown) {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    return value.trim().length > 0;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === "object") {
+    return Object.keys(value).length > 0;
+  }
+
+  return true;
+}
 
 export function ContentPanel() {
   const {
@@ -81,7 +121,7 @@ export function ContentPanel() {
 
   if (!contentSections.length) {
     return (
-      <div className="space-y-3 rounded-2xl border border-gray-800/60 bg-gray-950/60 p-4 text-sm text-slate-400">
+      <div className="space-y-3 rounded-2xl border border-gray-800/60 bg-gray-950/60 p-5 text-sm text-slate-400">
         <p>No editable fields found for this template.</p>
         <p className="text-xs text-slate-500">
           Add <code>{"{{ placeholder }}"}</code> tokens to the HTML or define fields inside <code>meta.json</code> to manage the
@@ -105,42 +145,73 @@ export function ContentPanel() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Sections</p>
-        <div className="space-y-3">
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Sections</p>
+          <p className="text-[11px] text-slate-500">
+            Manage your content by opening each tag card and updating the fields.
+          </p>
+        </div>
+        <div className="space-y-4">
           {contentSections.map((section, index) => {
             const isOpen = expandedSections.includes(section.id);
-            const gradient = sectionGradients[index % sectionGradients.length];
+            const accent = sectionAccents[index % sectionAccents.length];
+
+            const totalFields = section.fields.length;
+            const filledFields = section.fields.reduce((count, field) => {
+              if (isValueFilled(content[field.key])) {
+                return count + 1;
+              }
+              return count;
+            }, 0);
+
+            const isComplete = totalFields > 0 && filledFields === totalFields;
+            const statusLabel = isComplete ? "Success" : "Pending";
+            const statusClasses = isComplete
+              ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-200"
+              : "border-amber-400/40 bg-amber-500/15 text-amber-200";
+            const StatusIcon = isComplete ? CheckCircle2 : Clock3;
 
             return (
               <motion.section
                 key={section.id}
                 layout
-                transition={{ type: "spring", stiffness: 260, damping: 30 }}
-                className="overflow-hidden rounded-3xl border border-white/5 bg-gray-950/60 shadow-lg shadow-black/20"
+                transition={{ type: "spring", stiffness: 220, damping: 30 }}
+                className={`relative overflow-hidden rounded-3xl border border-white/5 bg-gray-950/70 ${accent.shadow}`}
               >
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/5 to-transparent" />
                 <button
                   type="button"
                   onClick={() => toggleSection(section.id)}
-                  className={`flex w-full items-center justify-between gap-4 rounded-3xl border border-white/5 bg-gradient-to-br ${gradient} px-5 py-4 text-left transition hover:border-white/20`}
+                  className={`relative flex w-full items-center justify-between gap-6 rounded-3xl border border-white/5 bg-gradient-to-br ${accent.header} px-5 py-4 text-left transition hover:border-white/20`}
                 >
                   <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-300">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-200">
                       {section.label}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-slate-500">
-                      <span>{section.fields.length} fields</span>
-                      {section.description ? <span className="hidden text-[11px] sm:inline">• {section.description}</span> : null}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                      <span>
+                        {filledFields}/{totalFields} fields ready
+                      </span>
+                      {section.description ? (
+                        <span className="hidden text-[11px] sm:inline">• {section.description}</span>
+                      ) : null}
                     </div>
                   </div>
-                  <motion.span
-                    animate={{ rotate: isOpen ? 180 : 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="rounded-full bg-white/5 p-1 text-slate-300"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </motion.span>
+                  <div className="flex items-center gap-3">
+                    <motion.span layout className={`flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] ${statusClasses}`}>
+                      <StatusIcon className="h-3.5 w-3.5" />
+                      {statusLabel}
+                    </motion.span>
+                    <motion.span
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="rounded-full bg-white/5 p-1 text-slate-300"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </motion.span>
+                  </div>
                 </button>
 
                 <AnimatePresence initial={false}>
@@ -167,7 +238,10 @@ export function ContentPanel() {
 
       {colors.length ? (
         <div className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Theme colors</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Theme colors</p>
+            <span className="text-[11px] text-slate-500">Adjust accent tokens for this template</span>
+          </div>
           <div className="space-y-3">
             {colors.map((color) => {
               const key = color.id;
@@ -175,7 +249,7 @@ export function ContentPanel() {
               return (
                 <div
                   key={key}
-                  className="flex items-center gap-3 rounded-2xl border border-gray-800 bg-gray-950/60 p-3"
+                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-800 bg-gray-950/60 p-4"
                 >
                   <div
                     className="h-10 w-10 flex-shrink-0 rounded-lg border border-white/10"
@@ -185,7 +259,7 @@ export function ContentPanel() {
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                       {color.label ?? formatTokenLabel(key)}
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <input
                         type="color"
                         value={ensureColorValue(theme.colors[key] ?? themeDefaults.colors[key] ?? color.default)}
@@ -197,7 +271,7 @@ export function ContentPanel() {
                         value={theme.colors[key] ?? ""}
                         placeholder={themeDefaults.colors[key] ?? color.default ?? "#000000"}
                         onChange={(event) => updateTheme({ colors: { [key]: event.target.value } })}
-                        className="flex-1 rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
+                        className="min-w-[140px] flex-1 rounded-lg border border-gray-800 bg-gray-950/60 px-3 py-2 text-xs text-slate-100 focus:border-builder-accent focus:outline-none"
                       />
                       <button
                         type="button"
