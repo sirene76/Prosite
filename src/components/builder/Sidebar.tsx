@@ -9,9 +9,8 @@ import { DEFAULT_BUILDER_PAGES, useBuilderStore } from "@/store/builderStore";
 import { DynamicPanelRenderer } from "./panels/DynamicPanels";
 import { PageList } from "./PageList";
 import { ThemePanel, normaliseThemeOptions, type ThemeOption } from "./ThemePanel";
-import { ContentEditor } from "./ContentEditor";
 import { ContentPanel } from "./ContentPanel";
-import { formatTokenLabel } from "./utils";
+import { buildSectionsFromMetaFields, formatTokenLabel } from "./utils";
 
 const safeSchedule = (cb: () => void) =>
   typeof queueMicrotask === "function" ? queueMicrotask(cb) : Promise.resolve().then(cb);
@@ -65,6 +64,8 @@ export function Sidebar() {
   const setStorePages = useBuilderStore((state) => state.setPages);
   const selectedThemeName = useBuilderStore((state) => state.selectedTheme);
   const setSelectedThemeName = useBuilderStore((state) => state.setSelectedTheme);
+  const builderValues = useBuilderStore((state) => state.values);
+  const updateBuilderValue = useBuilderStore((state) => state.updateValue);
   const [activeTab, setActiveTab] = useState<TabId>("pages");
   const seededForTemplateRef = useRef<string | null>(null);
   const seededContentDefaultsRef = useRef<string | null>(null);
@@ -126,6 +127,12 @@ export function Sidebar() {
   }, [selectedTemplate.modules]);
 
   const pagesForSidebar = metaPages.length > 0 ? metaPages : modulePages;
+
+  const metaContentSections = useMemo(() => {
+    return buildSectionsFromMetaFields(meta?.fields);
+  }, [meta?.fields]);
+
+  const isMetaDriven = metaContentSections.length > 0;
 
   useEffect(() => {
     if (baseTabs.some((tab) => tab.id === activeTab)) {
@@ -296,7 +303,11 @@ export function Sidebar() {
                 {activeTab === "theme" ? <ThemePanel themes={themeOptions} /> : null}
 
                 {activeTab === "content" ? (
-                  meta?.fields?.length ? <ContentEditor fields={meta.fields} /> : <ContentPanel />
+                  <ContentPanel
+                    sections={isMetaDriven ? metaContentSections : undefined}
+                    values={isMetaDriven ? builderValues : undefined}
+                    onChange={isMetaDriven ? updateBuilderValue : undefined}
+                  />
                 ) : null}
 
                 {customPanels.map((panel) =>
