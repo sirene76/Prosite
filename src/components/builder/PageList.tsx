@@ -35,10 +35,15 @@ export function PageList({ pages }: { pages?: PageDefinition[] }) {
   );
 }
 
+const PLAIN_ANCHOR_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 function normaliseAnchor(anchor?: string) {
   if (!anchor) return "#";
   const trimmed = anchor.trim();
   if (!trimmed) return "#";
-  return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+  if (trimmed.startsWith("#")) {
+    return trimmed;
+  }
+  return PLAIN_ANCHOR_PATTERN.test(trimmed) ? `#${trimmed}` : trimmed;
 }
 
