@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useBuilder } from "@/context/BuilderContext";
 import { TemplateCard } from "./TemplateCard";
 import { TemplateGalleryModal } from "@/components/ui/TemplateGalleryModal";
+import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
 
 function classNames(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -28,7 +29,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
         id: template.id,
         name: template.name,
         description: template.description,
-        previewUrl: template.previewUrl ?? template.image ?? "/placeholder-template.svg",
+        previewUrl: template.previewUrl ?? template.image ?? DEFAULT_TEMPLATE_THUMBNAIL,
         previewVideo: template.previewVideo,
       })),
     [templates]
