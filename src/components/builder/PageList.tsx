@@ -44,6 +44,19 @@ function normaliseAnchor(anchor?: string) {
   if (trimmed.startsWith("#")) {
     return trimmed;
   }
-  return PLAIN_ANCHOR_PATTERN.test(trimmed) ? `#${trimmed}` : trimmed;
+  if (PLAIN_ANCHOR_PATTERN.test(trimmed)) {
+    return `#${trimmed}`;
+  }
+
+  const slug = trimmed
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s_-]/g, "")
+    .trim()
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug ? `#${slug}` : "#";
 }
 
