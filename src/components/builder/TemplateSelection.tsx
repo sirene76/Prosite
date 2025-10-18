@@ -29,7 +29,8 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
         id: template.id,
         name: template.name,
         description: template.description,
-        previewUrl: template.previewUrl ?? template.image ?? DEFAULT_TEMPLATE_THUMBNAIL,
+        previewUrl:
+          template.previewUrl ?? template.image ?? template.thumbnail ?? DEFAULT_TEMPLATE_THUMBNAIL,
         previewVideo: template.previewVideo,
       })),
     [templates]
@@ -87,7 +88,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
               <TemplateCard
                 template={{
                   ...template,
-                  preview: template.previewUrl ?? template.image,
+                  preview: template.previewUrl ?? template.image ?? template.thumbnail,
                   video: template.previewVideo,
                 }}
                 className="rounded-none"

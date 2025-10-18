@@ -14,7 +14,8 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
       return <TemplateNotFound />;
     }
 
-    const previewSrc = template.previewUrl ?? template.image ?? DEFAULT_TEMPLATE_THUMBNAIL;
+    const previewSrc =
+      template.previewUrl ?? template.image ?? template.thumbnail ?? DEFAULT_TEMPLATE_THUMBNAIL;
 
     return (
       <main className="min-h-screen bg-[#0f172a] text-white flex flex-col items-center py-16 px-4">
