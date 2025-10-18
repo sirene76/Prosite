@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/icons/lucide-react";
 
 import type { TemplateContentField, TemplateContentSection } from "@/context/BuilderContext";
 import ImageDropInput from "@/components/ui/ImageDropInput";
