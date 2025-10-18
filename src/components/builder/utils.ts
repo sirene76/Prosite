@@ -22,6 +22,8 @@ const SUPPORTED_FIELD_TYPES = new Set<TemplateContentField["type"]>([
   "color",
 ]);
 
+const PLAIN_ANCHOR_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 export function normalizeSectionAnchor(id?: string | null) {
   if (typeof id !== "string") {
     return null;
@@ -32,7 +34,11 @@ export function normalizeSectionAnchor(id?: string | null) {
     return null;
   }
 
-  return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+  if (trimmed.startsWith("#")) {
+    return trimmed;
+  }
+
+  return PLAIN_ANCHOR_PATTERN.test(trimmed) ? `#${trimmed}` : trimmed;
 }
 
 export function ensureColorValue(value: string | undefined) {
