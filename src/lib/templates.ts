@@ -102,6 +102,44 @@ export type TemplateDefinition = TemplateRecord & {
   activeVersion: TemplateVersion;
 };
 
+function resolvePreviewUrlFromRecord(
+  record: {
+    previewUrl?: string | null;
+    image?: string | null;
+    meta?: TemplateMeta;
+    id: string;
+    _id: string;
+  } & Partial<{ imageId?: string | null }>
+): string | undefined {
+  const normalise = (value: unknown) => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+    return undefined;
+  };
+
+  const directPreview = normalise(record.previewUrl);
+  if (directPreview) {
+    return directPreview;
+  }
+
+  const imagePreview = normalise(record.image);
+  if (imagePreview) {
+    return imagePreview;
+  }
+
+  const metaId = normalise(record.meta?.id);
+  const metaObjectId = normalise((record.meta as { _id?: string })?._id);
+  const imageId = normalise((record as { imageId?: string | null }).imageId);
+
+  const fallbackId = imageId ?? metaId ?? metaObjectId ?? normalise(record.id) ?? normalise(record._id);
+
+  return fallbackId ? `/templates/${fallbackId}/preview.png` : undefined;
+}
+
 function normaliseId(template: TemplateLeanDocument): TemplateRecord {
   const { _id, ...rest } = template;
   const id = _id.toString();
@@ -266,6 +304,11 @@ export async function getTemplateById(id: string): Promise<TemplateRecord | null
     record.meta = {} as TemplateMeta;
   }
 
+  const resolvedPreview = resolvePreviewUrlFromRecord(record);
+  if (resolvedPreview) {
+    record.previewUrl = resolvedPreview;
+  }
+
   return record;
 }
 
@@ -318,6 +361,11 @@ export async function getTemplateAssets(id: string) {
     previewVideo: template.previewVideo ?? version.previewVideo ?? undefined,
     activeVersion: version,
   };
+
+  const definitionPreview = resolvePreviewUrlFromRecord(definition);
+  if (definitionPreview) {
+    definition.previewUrl = definitionPreview;
+  }
 
   return { template: definition, html, css, meta };
 }
