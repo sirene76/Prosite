@@ -29,6 +29,7 @@ export default async function BuilderRoot({ children }: BuilderRootProps) {
       }
       const html = typeof template.html === "string" ? template.html : "";
       const css = typeof template.css === "string" ? template.css : "";
+      const js = typeof template.js === "string" ? template.js : "";
       let meta: TemplateMeta = {};
       if (template.meta) {
         if (typeof template.meta === "string") {
