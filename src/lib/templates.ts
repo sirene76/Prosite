@@ -106,6 +106,7 @@ function resolvePreviewUrlFromRecord(
   record: {
     previewUrl?: string | null;
     image?: string | null;
+    thumbnail?: string | null;
     meta?: TemplateMeta;
     id: string;
     _id: string;
@@ -129,6 +130,11 @@ function resolvePreviewUrlFromRecord(
   const imagePreview = normalise(record.image);
   if (imagePreview) {
     return imagePreview;
+  }
+
+  const thumbnailPreview = normalise(record.thumbnail);
+  if (thumbnailPreview) {
+    return thumbnailPreview;
   }
 
   const metaId = normalise(record.meta?.id);
