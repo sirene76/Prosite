@@ -72,6 +72,14 @@ export const CheckCircle2 = createLucideIcon(
   </>
 );
 
+export const ChevronDown = createLucideIcon(
+  "chevron-down",
+  <>
+    <polyline points="6 9 12 15 18 9" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </>
+);
+
 export const Clock3 = createLucideIcon(
   "clock-3",
   <>

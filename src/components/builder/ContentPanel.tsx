@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, Clock3 } from "@/icons/lucide-react";
-import { ChevronDown } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock3 } from "@/icons/lucide-react";
 
 import { useBuilder } from "@/hooks/use-builder";
 
