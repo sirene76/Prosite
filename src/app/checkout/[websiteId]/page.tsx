@@ -4,8 +4,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Website } from "@/models/website";
 import { getTemplateById } from "@/lib/templates";
 import { isValidObjectId } from "mongoose";
-
-const FALLBACK_IMAGE = "/placeholder-template.svg";
+import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
 
 type CheckoutPageProps = {
   params: Promise<{ websiteId: string }>;
@@ -42,7 +41,8 @@ async function loadWebsite(websiteId: string) {
     name: website.name ?? "Untitled Website",
     templateName: template?.name ?? "Custom",
     themeName: website.theme?.name ?? website.theme?.label ?? "Default",
-    previewImage: website.previewImage || website.thumbnailUrl || template?.previewUrl || FALLBACK_IMAGE,
+    previewImage:
+      website.previewImage || website.thumbnailUrl || template?.previewUrl || DEFAULT_TEMPLATE_THUMBNAIL,
   };
 }
 
