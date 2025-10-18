@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getTemplateById } from "@/lib/templates";
+import { getTemplateAssets, getTemplateById } from "@/lib/templates";
 
 export async function GET(
   req: Request,
@@ -12,6 +12,8 @@ export async function GET(
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
+  const assets = await getTemplateAssets(templateId);
+
   let meta: unknown = template.meta ?? {};
   if (typeof template.meta === "string") {
     try {
@@ -22,11 +24,20 @@ export async function GET(
     }
   }
 
+  const resolvedTemplate = assets?.template ?? template;
+  const html = assets?.html ?? resolvedTemplate.html ?? null;
+  const css = assets?.css ?? resolvedTemplate.css ?? null;
+  const js = resolvedTemplate.js ?? null;
+  const resolvedMeta = (resolvedTemplate.meta ?? meta ?? {}) as Record<string, unknown>;
+
   return NextResponse.json({
-    htmlUrl: template.htmlUrl ?? null,
-    cssUrl: template.cssUrl ?? null,
-    jsUrl: template.jsUrl ?? null,
-    metaUrl: template.metaUrl ?? null,
-    meta,
+    htmlUrl: resolvedTemplate.htmlUrl ?? null,
+    cssUrl: resolvedTemplate.cssUrl ?? null,
+    jsUrl: resolvedTemplate.jsUrl ?? null,
+    metaUrl: resolvedTemplate.metaUrl ?? null,
+    html,
+    css,
+    js,
+    meta: resolvedMeta,
   });
 }

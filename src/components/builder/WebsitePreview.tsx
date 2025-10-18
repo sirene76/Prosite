@@ -72,11 +72,12 @@ export function WebsitePreview() {
   useEffect(() => {
     let isMounted = true;
 
-    const fetchText = async (url?: string | null) => {
+    const fetchLocalAsset = async (url?: string | null) => {
       if (!url) return null;
-      if (!isRemoteUrl(url)) {
+      if (isRemoteUrl(url)) {
         return null;
       }
+
       try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -87,6 +88,17 @@ export function WebsitePreview() {
         console.error(error);
         return null;
       }
+    };
+
+    const pickInlineAsset = (
+      ...sources: Array<string | null | undefined>
+    ): string | null => {
+      for (const source of sources) {
+        if (typeof source === "string" && source.trim().length > 0) {
+          return source;
+        }
+      }
+      return null;
     };
 
     const fetchTemplate = async () => {
@@ -101,29 +113,39 @@ export function WebsitePreview() {
           htmlUrl?: string | null;
           cssUrl?: string | null;
           jsUrl?: string | null;
+          html?: string | null;
+          css?: string | null;
+          js?: string | null;
         };
 
-        const [htmlFromUrl, cssFromUrl, jsFromUrl] = await Promise.all([
-          fetchText(data.htmlUrl ?? selectedTemplate.htmlUrl ?? null),
-          fetchText(data.cssUrl ?? selectedTemplate.cssUrl ?? null),
-          fetchText(data.jsUrl ?? selectedTemplate.jsUrl ?? null),
-        ]);
+        const remoteBase =
+          resolveAssetBase([
+            data.htmlUrl,
+            data.cssUrl,
+            data.jsUrl,
+            selectedTemplate.htmlUrl,
+            selectedTemplate.cssUrl,
+            selectedTemplate.jsUrl,
+          ]) ?? null;
+
+        let html =
+          pickInlineAsset(data.html, selectedTemplate.html) ??
+          (await fetchLocalAsset(data.htmlUrl ?? selectedTemplate.htmlUrl ?? null)) ??
+          "";
+        html = normaliseDocument(html, remoteBase);
+
+        let css =
+          pickInlineAsset(data.css, selectedTemplate.css) ??
+          (await fetchLocalAsset(data.cssUrl ?? selectedTemplate.cssUrl ?? null)) ??
+          "";
+        css = normaliseStylesheet(css, remoteBase);
+
+        const js =
+          pickInlineAsset(data.js, selectedTemplate.js) ??
+          (await fetchLocalAsset(data.jsUrl ?? selectedTemplate.jsUrl ?? null)) ??
+          "";
 
         if (isMounted) {
-          const remoteBase =
-            resolveAssetBase([
-              data.htmlUrl,
-              data.cssUrl,
-              data.jsUrl,
-              selectedTemplate.htmlUrl,
-              selectedTemplate.cssUrl,
-              selectedTemplate.jsUrl,
-            ]) ?? null;
-
-          const html = normaliseDocument(htmlFromUrl ?? selectedTemplate.html ?? "", remoteBase);
-          const css = normaliseStylesheet(cssFromUrl ?? selectedTemplate.css ?? "", remoteBase);
-          const js = jsFromUrl ?? selectedTemplate.js ?? "";
-
           const placeholders = extractPlaceholders(html);
           const colorDefaults = extractColorDefaults(
             css,
