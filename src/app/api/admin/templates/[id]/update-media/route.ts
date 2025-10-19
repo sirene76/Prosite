@@ -98,6 +98,10 @@ export async function PATCH(
       revalidatePath(`/templates/${updated.slug}`);
     }
 
+    revalidatePath("/");
+    revalidatePath("/templates");
+    revalidatePath(`/templates/${id}`);
+
     return NextResponse.json(updated);
   } catch (error) {
     if (isCastError(error)) {
