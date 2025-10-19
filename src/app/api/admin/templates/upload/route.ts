@@ -333,15 +333,6 @@ export async function POST(req: Request) {
     meta.fields = ensureTemplateFieldIds(meta.fields);
 
     const stageId = randomUUID();
-    if (imageUrl) {
-      meta.image = imageUrl;
-    }
-    if (thumbnailUrl) {
-      (meta as UploadedTemplateMeta & { thumbnail?: string }).thumbnail = thumbnailUrl;
-    }
-    if (videoUrl) {
-      meta.previewVideo = videoUrl;
-    }
     const assetMap: AssetMap = {};
     const nonCoreEntries = Array.from(fileBuffers.entries()).filter(
       ([entryName]) =>
@@ -457,7 +448,7 @@ export async function POST(req: Request) {
       previewUrl,
       previewHtml: previewDocument,
       assets: assetMap,
-      image: resolvedImage,
+      image: imageUrl ?? meta.image ?? null,
       thumbnail: thumbnailUrl ?? null,
       previewVideo: videoUrl ?? null,
     };
