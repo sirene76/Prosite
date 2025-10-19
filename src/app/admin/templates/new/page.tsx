@@ -196,7 +196,15 @@ export default function AddTemplatePage() {
 
     try {
       const result = await startTemplateMediaUpload([file]);
-      const uploadedUrl = result?.[0]?.ufsUrl ?? result?.[0]?.url ?? null;
+      console.log("UploadThing result:", result);
+
+      const serverData = (result?.[0] as { serverData?: { url?: string; ufsUrl?: string } } | undefined)?.serverData;
+      const uploadedUrl =
+        result?.[0]?.ufsUrl ??
+        result?.[0]?.url ??
+        serverData?.ufsUrl ??
+        serverData?.url ??
+        null;
 
       if (!uploadedUrl) {
         throw new Error("UploadThing did not return a file URL");
