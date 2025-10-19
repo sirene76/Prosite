@@ -84,15 +84,6 @@ function disableExternalScripts(html: string): string {
   );
 }
 
-function resolveTemplateImage(meta: StageInfo["meta"]) {
-  const providedImage = typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : "";
-  if (providedImage) {
-    return providedImage;
-  }
-
-  return DEFAULT_TEMPLATE_THUMBNAIL;
-}
-
 function normaliseString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -139,32 +130,25 @@ export async function POST(req: Request) {
     const category = typeof info.meta?.category === "string" ? info.meta.category : "Uncategorized";
     const description = typeof info.meta?.description === "string" ? info.meta.description : "";
 
-    const stagedImage = typeof info.image === "string" && info.image.trim() ? info.image.trim() : undefined;
-    if (stagedImage) {
-      info.meta.image = stagedImage;
-    }
-
-    const image = resolveTemplateImage(info.meta);
+    const stagedImage = normaliseString(info.image);
+    const metaImage = normaliseString(info.meta?.image);
+    const resolvedImage = stagedImage ?? metaImage ?? DEFAULT_TEMPLATE_THUMBNAIL;
 
     const stagedMeta = info.meta as StageInfo["meta"] & { thumbnail?: string | null };
     const stagedThumbnailFromInfo = normaliseString(info.thumbnail);
     const stagedThumbnailFromMeta = normaliseString(stagedMeta.thumbnail);
     const resolvedThumbnail =
-      stagedThumbnailFromInfo ?? stagedThumbnailFromMeta ?? DEFAULT_TEMPLATE_THUMBNAIL;
+      stagedThumbnailFromInfo ?? stagedThumbnailFromMeta ?? resolvedImage ?? DEFAULT_TEMPLATE_THUMBNAIL;
     const resolvedPreviewUrl =
-      normaliseString(stagedMeta.previewUrl) ?? normaliseString(stagedMeta.image) ?? resolvedThumbnail;
+      stagedImage ??
+      normaliseString(stagedMeta.previewUrl) ??
+      metaImage ??
+      resolvedThumbnail ??
+      DEFAULT_TEMPLATE_THUMBNAIL;
 
-    if (!info.meta.image && image) {
-      info.meta.image = image;
-    }
-
-    if (!stagedMeta.thumbnail && resolvedThumbnail) {
-      stagedMeta.thumbnail = resolvedThumbnail;
-    }
-
-    if (!stagedMeta.previewUrl && resolvedPreviewUrl) {
-      stagedMeta.previewUrl = resolvedPreviewUrl;
-    }
+    info.meta.image = resolvedImage;
+    stagedMeta.thumbnail = resolvedThumbnail;
+    stagedMeta.previewUrl = resolvedPreviewUrl;
 
     const stagedPreviewVideo =
       typeof info.previewVideo === "string" && info.previewVideo.trim() ? info.previewVideo.trim() : undefined;
@@ -199,7 +183,7 @@ export async function POST(req: Request) {
         slug: templateSlug,
         category,
         description,
-        image,
+        image: resolvedImage,
         previewVideo,
         thumbnail: resolvedThumbnail,
         published: true,
@@ -230,7 +214,7 @@ export async function POST(req: Request) {
         basePath,
         previewPath: info.previewUrl,
         previewVideo: previewVideo ?? null,
-        image,
+        image: resolvedImage,
         thumbnail: resolvedThumbnail,
       },
     };
