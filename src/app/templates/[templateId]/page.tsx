@@ -14,8 +14,8 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
       return <TemplateNotFound />;
     }
 
-    const previewSrc =
-      template.previewUrl ?? template.image ?? DEFAULT_TEMPLATE_THUMBNAIL ;
+    const previewVideo = template.previewVideo && template.previewVideo.trim() ? template.previewVideo : null;
+    const previewImage = template.previewUrl ?? template.image ?? DEFAULT_TEMPLATE_THUMBNAIL;
 
     return (
       <main className="min-h-screen bg-[#0f172a] text-white flex flex-col items-center py-16 px-4">
@@ -23,15 +23,25 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
           <h1 className="text-4xl font-bold mb-4">{template.name}</h1>
           <p className="text-slate-400 mb-8">{template.description}</p>
 
-          {previewSrc ? (
+          {previewVideo || previewImage ? (
             <div className="relative w-full h-[420px] mb-10 rounded-xl overflow-hidden border border-slate-700">
-              <Image
-                src={previewSrc}
-                alt={`${template.name} preview`}
-                fill
-                sizes="(min-width: 1024px) 896px, 100vw"
-                className="object-cover"
-              />
+              {previewVideo ? (
+                <video
+                  src={previewVideo}
+                  controls
+                  playsInline
+                  poster={previewImage}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={previewImage}
+                  alt={`${template.name} preview`}
+                  fill
+                  sizes="(min-width: 1024px) 896px, 100vw"
+                  className="object-cover"
+                />
+              )}
             </div>
           ) : null}
 

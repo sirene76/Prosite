@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import clsx from "clsx";
 
+import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
+
 export type TemplateCardTemplate = {
   id: string;
   name: string;
@@ -13,6 +15,8 @@ export type TemplateCardTemplate = {
   previewUrl?: string;
   previewVideo?: string;
   video?: string;
+  image?: string;
+  thumbnail?: string;
 };
 
 type TemplateCardProps = {
@@ -27,6 +31,8 @@ export function TemplateCard({ template, className, onPreview }: TemplateCardPro
 
   const previewSrc = template.preview ?? template.previewUrl;
   const videoSrc = template.video ?? template.previewVideo;
+  const previewImage =
+    previewSrc ?? template.image ?? template.thumbnail ?? DEFAULT_TEMPLATE_THUMBNAIL;
 
   useEffect(() => {
     const node = videoRef.current;
@@ -79,12 +85,12 @@ export function TemplateCard({ template, className, onPreview }: TemplateCardPro
             loop
             playsInline
             preload="metadata"
-            poster={previewSrc}
+            poster={previewImage}
             className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
           />
-        ) : previewSrc ? (
+        ) : previewImage ? (
           <Image
-            src={previewSrc}
+            src={previewImage}
             alt={template.name}
             fill
             sizes="(min-width: 1280px) 360px, (min-width: 768px) 300px, 100vw"

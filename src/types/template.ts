@@ -6,6 +6,9 @@ export type TemplateMeta = {
   id?: string;
   name?: string;
   slug?: string;
+  image?: string;
+  previewUrl?: string;
+  previewVideo?: string;
   themes?: Array<{
     name: string;
     colors: Record<string, string>;

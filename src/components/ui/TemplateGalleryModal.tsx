@@ -7,12 +7,15 @@ import { AnimatePresence, PanInfo, motion } from "framer-motion";
 
 import { ChevronLeft, ChevronRight, X as CloseIcon } from "lucide-react/icons";
 
+import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
+
 export type TemplateGalleryModalTemplate = {
   id: string;
   name: string;
   description: string;
   previewUrl: string;
   previewVideo?: string;
+  image?: string;
 };
 
 type TemplateGalleryModalProps = {
@@ -154,27 +157,30 @@ export function TemplateGalleryModal({
             ) : null}
 
             <div className="relative h-[65vh] w-full bg-black">
-              {template.previewVideo ? (
-                <video
-                  ref={videoRef}
-                  key={template.previewVideo}
-                  src={template.previewVideo}
-                  muted
-                  playsInline
-                  poster={template.previewUrl}
-                  className="h-full w-full object-cover"
-                  controls={false}
-                />
-              ) : (
-                <Image
-                  src={template.previewUrl}
-                  alt={template.name}
-                  fill
-                  sizes="(min-width: 1024px) 896px, 100vw"
-                  className="object-cover"
-                  priority={false}
-                />
-              )}
+              {(() => {
+                const previewImage = template.previewUrl || template.image || DEFAULT_TEMPLATE_THUMBNAIL;
+                return template.previewVideo ? (
+                  <video
+                    ref={videoRef}
+                    key={template.previewVideo}
+                    src={template.previewVideo}
+                    muted
+                    playsInline
+                    poster={previewImage}
+                    className="h-full w-full object-cover"
+                    controls={false}
+                  />
+                ) : (
+                  <Image
+                    src={previewImage}
+                    alt={template.name}
+                    fill
+                    sizes="(min-width: 1024px) 896px, 100vw"
+                    className="object-cover"
+                    priority={false}
+                  />
+                );
+              })()}
             </div>
 
             <div className="space-y-3 p-6 text-center">

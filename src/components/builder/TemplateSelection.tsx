@@ -32,6 +32,7 @@ export function TemplateSelection({ initialTemplateId }: TemplateSelectionProps)
         previewUrl:
           template.previewUrl ?? template.image ?? template.thumbnail ?? DEFAULT_TEMPLATE_THUMBNAIL,
         previewVideo: template.previewVideo,
+        image: template.image ?? template.thumbnail ?? DEFAULT_TEMPLATE_THUMBNAIL,
       })),
     [templates]
   );

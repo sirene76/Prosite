@@ -39,48 +39,49 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {templates.map((tpl) => (
-          <div
-            key={tpl._id}
-            className="group relative overflow-hidden rounded-lg border border-slate-800 bg-slate-900 transition-all hover:shadow-lg hover:shadow-blue-900/30"
-          >
-            <div className="relative w-full h-48 bg-slate-800">
-              {tpl.previewVideo ? (
-                <video
-                  src={tpl.previewVideo}
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+        {templates.map((tpl) => {
+          const previewImage = tpl.previewUrl ?? tpl.image ?? `/templates/${tpl._id}/preview.png`;
+
+          return (
+            <div
+              key={tpl._id}
+              className="group relative overflow-hidden rounded-lg border border-slate-800 bg-slate-900 transition-all hover:shadow-lg hover:shadow-blue-900/30"
+            >
+              <div className="relative w-full h-48 bg-slate-800">
+                {tpl.previewVideo ? (
+                  <video
+                    src={tpl.previewVideo}
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    poster={previewImage}
+                    className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  />
+                ) : null}
+
+                <img
+                  src={previewImage}
+                  alt={tpl.name}
+                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+                    tpl.previewVideo ? "opacity-100 group-hover:opacity-0" : ""
+                  }`}
                 />
-              ) : null}
+              </div>
 
-              <img
-                src={
-                  tpl.image && tpl.image.startsWith("http")
-                    ? tpl.image
-                    : `/templates/${tpl._id}/preview.png`
-                }
-                alt={tpl.name}
-                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
-                  tpl.previewVideo ? "opacity-100 group-hover:opacity-0" : ""
-                }`}
-              />
+              <div className="p-4 z-10 relative bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+                <h2 className="font-semibold text-lg text-white mb-1">{tpl.name}</h2>
+                <p className="text-sm text-slate-300 line-clamp-2">{tpl.description}</p>
+                <a
+                  href={`/templates/${tpl._id}`}
+                  className="mt-2 inline-block rounded-md bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition"
+                >
+                  Select
+                </a>
+              </div>
             </div>
-
-            <div className="p-4 z-10 relative bg-gradient-to-t from-black/60 via-black/20 to-transparent">
-              <h2 className="font-semibold text-lg text-white mb-1">{tpl.name}</h2>
-              <p className="text-sm text-slate-300 line-clamp-2">{tpl.description}</p>
-              <a
-                href={`/templates/${tpl._id}`}
-                className="mt-2 inline-block rounded-md bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition"
-              >
-                Select
-              </a>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </main>
   );

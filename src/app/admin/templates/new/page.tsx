@@ -65,11 +65,16 @@ type TemplatePreview = {
   basePath?: string | null;
   previewPath?: string | null;
   previewHtml?: string | null;
+  image?: string | null;
+  previewUrl?: string | null;
+  previewVideo?: string | null;
   stageId?: string | null;
 };
 
 export default function AddTemplatePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [template, setTemplate] = useState<TemplatePreview | null>(null);
   const [supportsSrcDoc, setSupportsSrcDoc] = useState(true);
@@ -154,6 +159,12 @@ export default function AddTemplatePage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+    if (videoInputRef.current) {
+      videoInputRef.current.value = "";
+    }
   }
 
   async function handleUpload(e: ChangeEvent<HTMLInputElement>) {
@@ -170,6 +181,16 @@ export default function AddTemplatePage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      const imageFile = imageInputRef.current?.files?.[0];
+      const videoFile = videoInputRef.current?.files?.[0];
+
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
+
+      if (videoFile) {
+        formData.append("video", videoFile);
+      }
       const res = await fetch("/api/admin/templates/upload", { method: "POST", body: formData });
       const data: { success?: boolean; template?: TemplatePreview; error?: string } = await res.json();
 
@@ -262,6 +283,30 @@ export default function AddTemplatePage() {
             onChange={handleUpload}
             className="block w-full text-sm border border-gray-300 rounded-md p-2"
           />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block font-medium mb-2">Preview Image (optional)</label>
+            <input
+              type="file"
+              name="image"
+              accept="image/*"
+              ref={imageInputRef}
+              className="block w-full text-sm border border-gray-300 rounded-md p-2"
+            />
+            <p className="mt-1 text-xs text-gray-500">This image is used when no preview video is provided.</p>
+          </div>
+          <div>
+            <label className="block font-medium mb-2">Preview Video (optional)</label>
+            <input
+              type="file"
+              name="video"
+              accept="video/mp4,video/webm"
+              ref={videoInputRef}
+              className="block w-full text-sm border border-gray-300 rounded-md p-2"
+            />
+            <p className="mt-1 text-xs text-gray-500">Supports MP4 or WebM formats.</p>
+          </div>
         </div>
         {loading && <p className="text-gray-600">Processing upload...</p>}
         {status && !error && <p className="text-green-600">{status}</p>}
