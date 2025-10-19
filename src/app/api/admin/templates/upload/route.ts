@@ -44,6 +44,7 @@ type StageInfo = {
   previewHtml: string;
   assets: AssetMap;
   image?: string;
+  thumbnail?: string;
   previewVideo?: string;
 };
 
@@ -59,6 +60,7 @@ type UploadSuccessResponse = {
     description?: string | null;
     meta?: UploadedTemplateMeta;
     image?: string | null;
+    thumbnail?: string | null;
     previewUrl?: string | null;
     previewVideo?: string | null;
   };
@@ -267,12 +269,18 @@ export async function POST(req: Request) {
   try {
     const data = await req.formData();
     const file = data.get("file") as File | null;
-    const imageUpload = data.get("image");
-    const videoUpload = data.get("video");
+    const rawImageUrl = data.get("imageUrl");
+    const rawThumbnailUrl = data.get("thumbnailUrl");
+    const rawVideoUrl = data.get("videoUrl");
 
     if (!file) {
       return NextResponse.json<ErrorResponse>({ error: "Missing file" }, { status: 400 });
     }
+
+    const imageUrl = typeof rawImageUrl === "string" && rawImageUrl.trim() ? rawImageUrl.trim() : null;
+    const thumbnailUrl =
+      typeof rawThumbnailUrl === "string" && rawThumbnailUrl.trim() ? rawThumbnailUrl.trim() : null;
+    const videoUrl = typeof rawVideoUrl === "string" && rawVideoUrl.trim() ? rawVideoUrl.trim() : null;
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const zip = new AdmZip(buffer);
@@ -325,30 +333,14 @@ export async function POST(req: Request) {
     meta.fields = ensureTemplateFieldIds(meta.fields);
 
     const stageId = randomUUID();
-    if (imageUpload instanceof File && imageUpload.size > 0) {
-      const imageBuffer = Buffer.from(await imageUpload.arrayBuffer());
-      const imageName = imageUpload.name || "preview-image";
-      const uploadedImageUrl = await uploadFile({
-        buffer: imageBuffer,
-        fileName: sanitizeUploadFileName(stageId, imageName),
-        contentType: imageUpload.type || detectContentType(imageName),
-      });
-      if (uploadedImageUrl) {
-        meta.image = uploadedImageUrl;
-      }
+    if (imageUrl) {
+      meta.image = imageUrl;
     }
-
-    if (videoUpload instanceof File && videoUpload.size > 0) {
-      const videoBuffer = Buffer.from(await videoUpload.arrayBuffer());
-      const videoName = videoUpload.name || "preview-video";
-      const uploadedVideoUrl = await uploadFile({
-        buffer: videoBuffer,
-        fileName: sanitizeUploadFileName(stageId, videoName),
-        contentType: videoUpload.type || detectContentType(videoName),
-      });
-      if (uploadedVideoUrl) {
-        meta.previewVideo = uploadedVideoUrl;
-      }
+    if (thumbnailUrl) {
+      (meta as UploadedTemplateMeta & { thumbnail?: string }).thumbnail = thumbnailUrl;
+    }
+    if (videoUrl) {
+      meta.previewVideo = videoUrl;
     }
     const assetMap: AssetMap = {};
     const nonCoreEntries = Array.from(fileBuffers.entries()).filter(
@@ -428,8 +420,22 @@ export async function POST(req: Request) {
     });
 
     const resolvedImage = typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : undefined;
+    const resolvedThumbnail =
+      typeof (meta as UploadedTemplateMeta & { thumbnail?: unknown }).thumbnail === "string" &&
+      ((meta as UploadedTemplateMeta & { thumbnail?: string }).thumbnail ?? "").trim()
+        ? (meta as UploadedTemplateMeta & { thumbnail: string }).thumbnail.trim()
+        : undefined;
     const resolvedPreviewVideo =
       typeof meta.previewVideo === "string" && meta.previewVideo.trim() ? meta.previewVideo.trim() : undefined;
+    const resolvedPreviewAsset =
+      (typeof meta.previewUrl === "string" && meta.previewUrl.trim() ? meta.previewUrl.trim() : null) ||
+      resolvedImage ||
+      resolvedThumbnail ||
+      null;
+
+    if (!meta.previewUrl && resolvedPreviewAsset) {
+      meta.previewUrl = resolvedPreviewAsset;
+    }
 
     const stageInfo: StageInfo = {
       stageId,
@@ -448,6 +454,7 @@ export async function POST(req: Request) {
       previewHtml: previewDocument,
       assets: assetMap,
       image: resolvedImage,
+      thumbnail: resolvedThumbnail,
       previewVideo: resolvedPreviewVideo,
     };
 
@@ -471,7 +478,8 @@ export async function POST(req: Request) {
         description,
         meta,
         image: resolvedImage ?? null,
-        previewUrl,
+        thumbnail: resolvedThumbnail ?? null,
+        previewUrl: resolvedPreviewAsset,
         previewVideo: resolvedPreviewVideo ?? null,
       },
     };

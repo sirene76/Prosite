@@ -28,6 +28,7 @@ type StageInfo = {
   previewHtml: string;
   assets: Record<string, string>;
   image?: string;
+  thumbnail?: string;
   previewVideo?: string;
 };
 
@@ -51,6 +52,7 @@ type TemplateResponse = {
     previewPath?: string | null;
     previewVideo?: string | null;
     image?: string | null;
+    thumbnail?: string | null;
   };
 };
 
@@ -145,16 +147,19 @@ export async function POST(req: Request) {
     const image = resolveTemplateImage(info.meta);
 
     const stagedMeta = info.meta as StageInfo["meta"] & { thumbnail?: string | null };
-    const stagedThumbnail = normaliseString(stagedMeta.thumbnail);
+    const stagedThumbnailFromInfo = normaliseString(info.thumbnail);
+    const stagedThumbnailFromMeta = normaliseString(stagedMeta.thumbnail);
+    const resolvedThumbnail =
+      stagedThumbnailFromInfo ?? stagedThumbnailFromMeta ?? DEFAULT_TEMPLATE_THUMBNAIL;
     const resolvedPreviewUrl =
-      normaliseString(info.previewUrl) ??
-      normaliseString(stagedMeta.previewUrl) ??
-      normaliseString(stagedMeta.image) ??
-      stagedThumbnail ??
-      DEFAULT_TEMPLATE_THUMBNAIL;
+      normaliseString(stagedMeta.previewUrl) ?? normaliseString(stagedMeta.image) ?? resolvedThumbnail;
 
     if (!info.meta.image && image) {
       info.meta.image = image;
+    }
+
+    if (!stagedMeta.thumbnail && resolvedThumbnail) {
+      stagedMeta.thumbnail = resolvedThumbnail;
     }
 
     if (!stagedMeta.previewUrl && resolvedPreviewUrl) {
@@ -196,7 +201,7 @@ export async function POST(req: Request) {
         description,
         image,
         previewVideo,
-        thumbnail: stagedThumbnail,
+        thumbnail: resolvedThumbnail,
         published: true,
         html: sanitizedHtml,
         css: info.css,
@@ -226,6 +231,7 @@ export async function POST(req: Request) {
         previewPath: info.previewUrl,
         previewVideo: previewVideo ?? null,
         image,
+        thumbnail: resolvedThumbnail,
       },
     };
 

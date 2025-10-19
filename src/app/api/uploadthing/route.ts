@@ -17,6 +17,16 @@ export const ourFileRouter = {
     console.log("✅ Uploaded template file:", file.ufsUrl);
     return { url: file.ufsUrl };
   }),
+  templateMedia: f({
+    "image/*": { maxFileSize: "10MB" },
+    "video/*": { maxFileSize: "80MB" },
+  }).onUploadComplete(({ file }) => {
+    if (!file.ufsUrl) {
+      throw new Error("UploadThing did not return a file URL for media upload");
+    }
+    console.log("✅ Uploaded template media:", file.ufsUrl);
+    return { url: file.ufsUrl };
+  }),
   // For template thumbnail or image fields
   templateImage: f({ image: { maxFileSize: "8MB" } })
     .onUploadComplete(({ file }) => {

@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { applyThemeToIframe } from "@/lib/applyThemeToIframe";
 import type { TemplateMeta } from "@/types/template";
+import { useUploadThing } from "@/utils/uploadthing";
 
 type ThemeOption = {
   name: string;
@@ -66,6 +68,7 @@ type TemplatePreview = {
   previewPath?: string | null;
   previewHtml?: string | null;
   image?: string | null;
+  thumbnail?: string | null;
   previewUrl?: string | null;
   previewVideo?: string | null;
   stageId?: string | null;
@@ -74,6 +77,7 @@ type TemplatePreview = {
 export default function AddTemplatePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [template, setTemplate] = useState<TemplatePreview | null>(null);
@@ -85,7 +89,12 @@ export default function AddTemplatePage() {
   const [status, setStatus] = useState("");
   const [themes, setThemes] = useState<ThemeOption[]>([]);
   const [activeThemeId, setActiveTheme] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const router = useRouter();
+  const { startUpload: startTemplateMediaUpload, isUploading: isUploadingTemplateMedia } =
+    useUploadThing("templateMedia");
 
   const activeTheme = useMemo(
     () => themes.find((theme) => theme.name === activeThemeId) ?? (themes.length ? themes[0] : null),
@@ -156,14 +165,65 @@ export default function AddTemplatePage() {
     setStatus("");
     setThemes([]);
     setActiveTheme(null);
+    setImageUrl(null);
+    setThumbnailUrl(null);
+    setVideoUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
     if (imageInputRef.current) {
       imageInputRef.current.value = "";
     }
+    if (thumbnailInputRef.current) {
+      thumbnailInputRef.current.value = "";
+    }
     if (videoInputRef.current) {
       videoInputRef.current.value = "";
+    }
+  }
+
+  async function handleMediaUpload(
+    e: ChangeEvent<HTMLInputElement>,
+    type: "image" | "thumbnail" | "video",
+  ) {
+    const file = e.target.files?.[0];
+    if (!file || !startTemplateMediaUpload) {
+      return;
+    }
+
+    setError("");
+    setStatus("");
+
+    try {
+      const result = await startTemplateMediaUpload([file]);
+      const uploadedUrl = result?.[0]?.ufsUrl ?? result?.[0]?.url ?? null;
+
+      if (!uploadedUrl) {
+        throw new Error("UploadThing did not return a file URL");
+      }
+
+      if (type === "image") {
+        setImageUrl(uploadedUrl);
+        setTemplate((prev) => (prev ? { ...prev, image: uploadedUrl } : prev));
+      } else if (type === "thumbnail") {
+        setThumbnailUrl(uploadedUrl);
+        setTemplate((prev) => (prev ? { ...prev, thumbnail: uploadedUrl } : prev));
+      } else if (type === "video") {
+        setVideoUrl(uploadedUrl);
+        setTemplate((prev) => (prev ? { ...prev, previewVideo: uploadedUrl } : prev));
+      }
+
+      e.target.value = "";
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Media upload failed";
+      setError(message);
+      if (type === "image") {
+        setImageUrl(null);
+      } else if (type === "thumbnail") {
+        setThumbnailUrl(null);
+      } else {
+        setVideoUrl(null);
+      }
     }
   }
 
@@ -181,21 +241,23 @@ export default function AddTemplatePage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const imageFile = imageInputRef.current?.files?.[0];
-      const videoFile = videoInputRef.current?.files?.[0];
-
-      if (imageFile) {
-        formData.append("image", imageFile);
+      if (imageUrl) {
+        formData.append("imageUrl", imageUrl);
       }
-
-      if (videoFile) {
-        formData.append("video", videoFile);
+      if (thumbnailUrl) {
+        formData.append("thumbnailUrl", thumbnailUrl);
+      }
+      if (videoUrl) {
+        formData.append("videoUrl", videoUrl);
       }
       const res = await fetch("/api/admin/templates/upload", { method: "POST", body: formData });
       const data: { success?: boolean; template?: TemplatePreview; error?: string } = await res.json();
 
       if (res.ok && data.success && data.template) {
         setTemplate(data.template);
+        setImageUrl(data.template.image ?? imageUrl ?? null);
+        setThumbnailUrl(data.template.thumbnail ?? thumbnailUrl ?? null);
+        setVideoUrl(data.template.previewVideo ?? videoUrl ?? null);
         const themeOptions = normaliseThemes(data.template.meta ?? null);
         setThemes(themeOptions);
         setActiveTheme(themeOptions.length ? themeOptions[0].name : null);
@@ -270,6 +332,10 @@ export default function AddTemplatePage() {
     }
   }
 
+  const currentImage = template?.image ?? imageUrl;
+  const currentThumbnail = template?.thumbnail ?? thumbnailUrl ?? currentImage ?? null;
+  const currentVideo = template?.previewVideo ?? videoUrl;
+
   return (
     <div className="p-6 space-y-8">
       <h1 className="text-2xl font-semibold">Add New Template</h1>
@@ -284,7 +350,7 @@ export default function AddTemplatePage() {
             className="block w-full text-sm border border-gray-300 rounded-md p-2"
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className="block font-medium mb-2">Preview Image (optional)</label>
             <input
@@ -292,9 +358,50 @@ export default function AddTemplatePage() {
               name="image"
               accept="image/*"
               ref={imageInputRef}
-              className="block w-full text-sm border border-gray-300 rounded-md p-2"
+              onChange={(event) => {
+                void handleMediaUpload(event, "image");
+              }}
+              disabled={isUploadingTemplateMedia}
+              className="block w-full text-sm border border-gray-300 rounded-md p-2 disabled:cursor-not-allowed"
             />
             <p className="mt-1 text-xs text-gray-500">This image is used when no preview video is provided.</p>
+            {currentImage && (
+              <div className="relative mt-3 h-40 w-full overflow-hidden rounded-md border">
+                <Image
+                  src={currentImage}
+                  alt="Template preview"
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                />
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block font-medium mb-2">Thumbnail (optional)</label>
+            <input
+              type="file"
+              name="thumbnail"
+              accept="image/*"
+              ref={thumbnailInputRef}
+              onChange={(event) => {
+                void handleMediaUpload(event, "thumbnail");
+              }}
+              disabled={isUploadingTemplateMedia}
+              className="block w-full text-sm border border-gray-300 rounded-md p-2 disabled:cursor-not-allowed"
+            />
+            <p className="mt-1 text-xs text-gray-500">Used in template listings when available.</p>
+            {currentThumbnail && (
+              <div className="relative mt-3 h-32 w-full overflow-hidden rounded-md border">
+                <Image
+                  src={currentThumbnail}
+                  alt="Template thumbnail"
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                />
+              </div>
+            )}
           </div>
           <div>
             <label className="block font-medium mb-2">Preview Video (optional)</label>
@@ -303,11 +410,23 @@ export default function AddTemplatePage() {
               name="video"
               accept="video/mp4,video/webm"
               ref={videoInputRef}
-              className="block w-full text-sm border border-gray-300 rounded-md p-2"
+              onChange={(event) => {
+                void handleMediaUpload(event, "video");
+              }}
+              disabled={isUploadingTemplateMedia}
+              className="block w-full text-sm border border-gray-300 rounded-md p-2 disabled:cursor-not-allowed"
             />
             <p className="mt-1 text-xs text-gray-500">Supports MP4 or WebM formats.</p>
+            {currentVideo && (
+              <video
+                src={currentVideo}
+                controls
+                className="mt-3 h-40 w-full rounded-md border object-cover"
+              />
+            )}
           </div>
         </div>
+        {isUploadingTemplateMedia && <p className="text-gray-600">Uploading media...</p>}
         {loading && <p className="text-gray-600">Processing upload...</p>}
         {status && !error && <p className="text-green-600">{status}</p>}
         {error && <p className="text-red-500">{error}</p>}
