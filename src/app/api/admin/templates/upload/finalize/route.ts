@@ -27,9 +27,9 @@ type StageInfo = {
   previewUrl: string;
   previewHtml: string;
   assets: Record<string, string>;
-  image?: string;
-  thumbnail?: string;
-  previewVideo?: string;
+  image?: string | null;
+  thumbnail?: string | null;
+  previewVideo?: string | null;
 };
 
 type FinalizeRequest = {
@@ -134,17 +134,16 @@ export async function POST(req: Request) {
     const metaImage = normaliseString(info.meta?.image);
     const resolvedImage = stagedImage ?? metaImage ?? DEFAULT_TEMPLATE_THUMBNAIL;
 
-    const stagedMeta = info.meta as StageInfo["meta"] & { thumbnail?: string | null };
+    const stagedMeta = info.meta as StageInfo["meta"] & {
+      thumbnail?: string | null;
+      previewUrl?: string | null;
+    };
     const stagedThumbnailFromInfo = normaliseString(info.thumbnail);
-    const stagedThumbnailFromMeta = normaliseString(stagedMeta.thumbnail);
-    const resolvedThumbnail =
-      stagedThumbnailFromInfo ?? stagedThumbnailFromMeta ?? resolvedImage ?? DEFAULT_TEMPLATE_THUMBNAIL;
-    const resolvedPreviewUrl =
-      stagedImage ??
-      normaliseString(stagedMeta.previewUrl) ??
-      metaImage ??
-      resolvedThumbnail ??
-      DEFAULT_TEMPLATE_THUMBNAIL;
+    const metaThumbnail = normaliseString(stagedMeta.thumbnail);
+    const resolvedThumbnail = stagedThumbnailFromInfo ?? metaThumbnail ?? DEFAULT_TEMPLATE_THUMBNAIL;
+    const stagedPreviewUrl = normaliseString(stagedMeta.previewUrl);
+    const metaPreviewUrl = normaliseString(info.meta?.previewUrl);
+    const resolvedPreviewUrl = stagedPreviewUrl ?? metaPreviewUrl ?? DEFAULT_TEMPLATE_THUMBNAIL;
 
     info.meta.image = resolvedImage;
     stagedMeta.thumbnail = resolvedThumbnail;
