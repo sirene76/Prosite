@@ -1,33 +1,57 @@
-import TemplateEditorForm from "@/components/admin/TemplateEditorForm";
+import { notFound } from "next/navigation";
 
-export default async function EditTemplatePage({
+import { TemplateMediaEditor } from "./TemplateMediaEditor";
+
+const fallbackBaseUrl = "http://localhost:3000";
+
+type TemplateResponse = {
+  _id: string;
+  name?: string;
+  image?: string | null;
+  thumbnail?: string | null;
+  previewUrl?: string | null;
+  previewVideo?: string | null;
+};
+
+function getBaseUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL;
+  if (!fromEnv) {
+    return fallbackBaseUrl;
+  }
+
+  return fromEnv.startsWith("http") ? fromEnv : `https://${fromEnv}`;
+}
+
+async function getTemplate(id: string): Promise<TemplateResponse | null> {
+  const baseUrl = getBaseUrl();
+  const response = await fetch(`${baseUrl}/api/admin/templates/${id}`, { cache: "no-store" });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch template");
+  }
+
+  return (await response.json()) as TemplateResponse;
+}
+
+export default async function EditTemplateMediaPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  // ✅ Await params per Next.js 15 requirement
-  const resolvedParams = await params;
-  const templateId = resolvedParams?.id;
+  const { id } = await params;
+  const template = await getTemplate(id);
 
-  if (!templateId) {
-    throw new Error("Missing template ID in route parameters.");
+  if (!template) {
+    notFound();
   }
-
-  // ✅ Fetch template data
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL}/api/admin/templates/${templateId}`,
-    { cache: "no-store" }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch template details.");
-  }
-
-  const template = await response.json();
 
   return (
     <div className="p-8">
-      <TemplateEditorForm initialData={template} isEdit />
+      <TemplateMediaEditor template={template} />
     </div>
   );
 }
