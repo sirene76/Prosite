@@ -43,9 +43,9 @@ type StageInfo = {
   previewUrl: string;
   previewHtml: string;
   assets: AssetMap;
-  image?: string;
-  thumbnail?: string;
-  previewVideo?: string;
+  image?: string | null;
+  thumbnail?: string | null;
+  previewVideo?: string | null;
 };
 
 type UploadSuccessResponse = {
@@ -419,14 +419,18 @@ export async function POST(req: Request) {
       contentType: "text/html",
     });
 
-    const resolvedImage = typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : undefined;
-    const resolvedThumbnail =
+    const metaImageValue =
+      typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : null;
+    const resolvedImage = imageUrl ?? metaImageValue ?? null;
+    const metaThumbnailValue =
       typeof (meta as UploadedTemplateMeta & { thumbnail?: unknown }).thumbnail === "string" &&
       ((meta as UploadedTemplateMeta & { thumbnail?: string }).thumbnail ?? "").trim()
         ? (meta as UploadedTemplateMeta & { thumbnail: string }).thumbnail.trim()
-        : undefined;
-    const resolvedPreviewVideo =
-      typeof meta.previewVideo === "string" && meta.previewVideo.trim() ? meta.previewVideo.trim() : undefined;
+        : null;
+    const resolvedThumbnail = thumbnailUrl ?? metaThumbnailValue ?? resolvedImage ?? null;
+    const metaPreviewVideoValue =
+      typeof meta.previewVideo === "string" && meta.previewVideo.trim() ? meta.previewVideo.trim() : null;
+    const resolvedPreviewVideo = videoUrl ?? metaPreviewVideoValue ?? null;
     const resolvedPreviewAsset =
       (typeof meta.previewUrl === "string" && meta.previewUrl.trim() ? meta.previewUrl.trim() : null) ||
       resolvedImage ||
@@ -454,8 +458,8 @@ export async function POST(req: Request) {
       previewHtml: previewDocument,
       assets: assetMap,
       image: resolvedImage,
-      thumbnail: resolvedThumbnail,
-      previewVideo: resolvedPreviewVideo,
+      thumbnail: thumbnailUrl ?? null,
+      previewVideo: videoUrl ?? null,
     };
 
     ensureStagingRoot();
