@@ -7,6 +7,7 @@ import {
 } from "@/models/template";
 import { connectDB } from "@/lib/mongodb";
 import { ensureTemplateFieldIds, normaliseTemplateFields } from "@/lib/templateFieldUtils";
+import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
 
 export type TemplateFieldType = "text" | "textarea" | "image" | "gallery" | "color" | "email";
 
@@ -143,7 +144,11 @@ function resolvePreviewUrlFromRecord(
 
   const fallbackId = imageId ?? metaId ?? metaObjectId ?? normalise(record.id) ?? normalise(record._id);
 
-  return fallbackId ? `/templates/${fallbackId}/preview.png` : undefined;
+  if (fallbackId) {
+    return `/templates/${fallbackId}/preview.png`;
+  }
+
+  return DEFAULT_TEMPLATE_THUMBNAIL;
 }
 
 function normaliseId(template: TemplateLeanDocument): TemplateRecord {

@@ -7,6 +7,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Template } from "@/models/template";
 import { createSlug } from "@/app/api/admin/templates/utils";
 import { ensureTemplateFieldIds } from "@/lib/templateFieldUtils";
+import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
 
 import type { TemplateMeta } from "@/types/template";
 
@@ -54,7 +55,6 @@ type TemplateResponse = {
 };
 
 const STAGING_ROOT = path.join(process.cwd(), ".upload-staging");
-const DEFAULT_PREVIEW_IMAGE = "/templates/default-template-preview.svg";
 
 function stageInfoPath(stageId: string) {
   return path.join(STAGING_ROOT, `${stageId}.json`);
@@ -88,7 +88,11 @@ function resolveTemplateImage(meta: StageInfo["meta"]) {
     return providedImage;
   }
 
-  return DEFAULT_PREVIEW_IMAGE;
+  return DEFAULT_TEMPLATE_THUMBNAIL;
+}
+
+function normaliseString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function deriveRemoteBase(url: string | null | undefined) {
@@ -140,8 +144,21 @@ export async function POST(req: Request) {
 
     const image = resolveTemplateImage(info.meta);
 
+    const stagedMeta = info.meta as StageInfo["meta"] & { thumbnail?: string | null };
+    const stagedThumbnail = normaliseString(stagedMeta.thumbnail);
+    const resolvedPreviewUrl =
+      normaliseString(info.previewUrl) ??
+      normaliseString(stagedMeta.previewUrl) ??
+      normaliseString(stagedMeta.image) ??
+      stagedThumbnail ??
+      DEFAULT_TEMPLATE_THUMBNAIL;
+
     if (!info.meta.image && image) {
       info.meta.image = image;
+    }
+
+    if (!stagedMeta.previewUrl && resolvedPreviewUrl) {
+      stagedMeta.previewUrl = resolvedPreviewUrl;
     }
 
     const stagedPreviewVideo =
@@ -179,6 +196,7 @@ export async function POST(req: Request) {
         description,
         image,
         previewVideo,
+        thumbnail: stagedThumbnail,
         published: true,
         html: sanitizedHtml,
         css: info.css,
@@ -188,7 +206,7 @@ export async function POST(req: Request) {
         cssUrl: info.cssUrl,
         jsUrl: info.jsUrl,
         metaUrl: info.metaUrl,
-        previewUrl: info.previewUrl,
+        previewUrl: resolvedPreviewUrl,
       },
       { new: true, upsert: true }
     );
