@@ -325,6 +325,7 @@ export async function POST(req: Request) {
     meta.fields = ensureTemplateFieldIds(meta.fields);
 
     const stageId = randomUUID();
+    let imageUrl: string | undefined;
     if (imageUpload instanceof File && imageUpload.size > 0) {
       const imageBuffer = Buffer.from(await imageUpload.arrayBuffer());
       const imageName = imageUpload.name || "preview-image";
@@ -334,10 +335,11 @@ export async function POST(req: Request) {
         contentType: imageUpload.type || detectContentType(imageName),
       });
       if (uploadedImageUrl) {
-        meta.image = uploadedImageUrl;
+        imageUrl = uploadedImageUrl;
       }
     }
 
+    let videoUrl: string | undefined;
     if (videoUpload instanceof File && videoUpload.size > 0) {
       const videoBuffer = Buffer.from(await videoUpload.arrayBuffer());
       const videoName = videoUpload.name || "preview-video";
@@ -347,8 +349,24 @@ export async function POST(req: Request) {
         contentType: videoUpload.type || detectContentType(videoName),
       });
       if (uploadedVideoUrl) {
-        meta.previewVideo = uploadedVideoUrl;
+        videoUrl = uploadedVideoUrl;
       }
+    }
+
+    const stagedMeta: TemplateMeta = { ...meta };
+    const resolvedImage = stringOrUndefined(imageUrl ?? meta.image);
+    stagedMeta.image = resolvedImage ?? null;
+
+    const resolvedPreviewUrl = stringOrUndefined(meta.previewUrl);
+    stagedMeta.previewUrl = resolvedPreviewUrl ?? null;
+
+    const resolvedPreviewVideo = stringOrUndefined(videoUrl ?? meta.previewVideo);
+    stagedMeta.previewVideo = resolvedPreviewVideo ?? null;
+
+    const defaultPreview = `/templates/${slug}/preview.png`;
+
+    if (!stagedMeta.previewUrl && !stagedMeta.image) {
+      stagedMeta.previewUrl = defaultPreview;
     }
     const assetMap: AssetMap = {};
     const nonCoreEntries = Array.from(fileBuffers.entries()).filter(
@@ -388,7 +406,7 @@ export async function POST(req: Request) {
       assetMap[normaliseAssetKey(scriptEntryPath)] = jsUrl;
     }
 
-    const metaString = JSON.stringify(meta, null, 2);
+    const metaString = JSON.stringify(stagedMeta, null, 2);
     const metaUrl = await uploadFile({
       buffer: Buffer.from(metaString, "utf-8"),
       fileName: sanitizeUploadFileName(stageId, metaEntryPath),
@@ -404,18 +422,18 @@ export async function POST(req: Request) {
     });
     assetMap[normaliseAssetKey(htmlEntryPath)] = htmlUrl;
 
-    const defaults = buildFieldDefaults(normaliseTemplateFields(meta.fields));
+    const defaults = buildFieldDefaults(normaliseTemplateFields(stagedMeta.fields));
     const renderedHtml = renderTemplate({
       html: processedHtml,
       values: defaults,
-      modules: meta?.modules || [],
+      modules: stagedMeta?.modules || [],
     });
 
     const previewDocument = await renderPreview({
       html: processedHtml,
       css: processedCss,
       js,
-      meta,
+      meta: stagedMeta,
       htmlUrl,
       cssUrl,
       jsUrl,
@@ -427,9 +445,12 @@ export async function POST(req: Request) {
       contentType: "text/html",
     });
 
-    const resolvedImage = typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : undefined;
+    const resolvedImage =
+      typeof stagedMeta.image === "string" && stagedMeta.image.trim() ? stagedMeta.image.trim() : undefined;
     const resolvedPreviewVideo =
-      typeof meta.previewVideo === "string" && meta.previewVideo.trim() ? meta.previewVideo.trim() : undefined;
+      typeof stagedMeta.previewVideo === "string" && stagedMeta.previewVideo.trim()
+        ? stagedMeta.previewVideo.trim()
+        : undefined;
 
     const stageInfo: StageInfo = {
       stageId,
@@ -439,7 +460,7 @@ export async function POST(req: Request) {
       renderedHtml,
       css: processedCss,
       js,
-      meta,
+      meta: stagedMeta,
       htmlUrl,
       cssUrl,
       jsUrl,
@@ -469,7 +490,7 @@ export async function POST(req: Request) {
         name,
         category,
         description,
-        meta,
+        meta: stagedMeta,
         image: resolvedImage ?? null,
         previewUrl,
         previewVideo: resolvedPreviewVideo ?? null,

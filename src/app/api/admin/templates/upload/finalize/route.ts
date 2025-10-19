@@ -169,6 +169,20 @@ export async function POST(req: Request) {
       (typeof info.meta.previewVideo === "string" && info.meta.previewVideo.trim()
         ? info.meta.previewVideo.trim()
         : undefined);
+    const resolvedPreviewVideo = previewVideo ?? null;
+    info.meta.previewVideo = resolvedPreviewVideo;
+    const previewUrl =
+      typeof info.meta.previewUrl === "string" && info.meta.previewUrl.trim()
+        ? info.meta.previewUrl.trim()
+        : null;
+    const defaultPreview = `/templates/${templateSlug}/preview.png`;
+    const resolvedPreviewUrl = previewUrl ?? image ?? defaultPreview;
+
+    if (previewUrl) {
+      info.meta.previewUrl = previewUrl;
+    } else {
+      info.meta.previewUrl = resolvedPreviewUrl;
+    }
 
     const templateDoc = await Template.findOneAndUpdate(
       { name: templateName },
@@ -178,7 +192,8 @@ export async function POST(req: Request) {
         category,
         description,
         image,
-        previewVideo,
+        previewVideo: resolvedPreviewVideo,
+        previewUrl: resolvedPreviewUrl,
         published: true,
         html: sanitizedHtml,
         css: info.css,
@@ -188,7 +203,6 @@ export async function POST(req: Request) {
         cssUrl: info.cssUrl,
         jsUrl: info.jsUrl,
         metaUrl: info.metaUrl,
-        previewUrl: info.previewUrl,
       },
       { new: true, upsert: true }
     );
@@ -206,7 +220,7 @@ export async function POST(req: Request) {
         meta: info.meta,
         basePath,
         previewPath: info.previewUrl,
-        previewVideo: previewVideo ?? null,
+        previewVideo: resolvedPreviewVideo,
         image,
       },
     };
