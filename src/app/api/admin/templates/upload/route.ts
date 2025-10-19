@@ -15,6 +15,7 @@ import {
   normaliseTemplateFields,
 } from "@/lib/templateFieldUtils";
 import { uploadFile } from "@/lib/uploadFile";
+import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
 
 import type { TemplateMeta } from "@/types/template";
 
@@ -328,6 +329,23 @@ export async function POST(req: Request) {
     const js = scriptEntryPath ? fileBuffers.get(scriptEntryPath)?.toString("utf-8") ?? "" : "";
     const meta = parseMeta(fileBuffers.get(metaEntryPath)?.toString("utf-8") ?? "{}");
 
+    const adminImage = imageUrl && imageUrl.trim() ? imageUrl.trim() : null;
+    const metaImage = typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : null;
+    const resolvedImage = adminImage ?? metaImage ?? DEFAULT_TEMPLATE_THUMBNAIL;
+
+    const metaThumbnail =
+      typeof (meta as UploadedTemplateMeta & { thumbnail?: unknown }).thumbnail === "string" &&
+      ((meta as UploadedTemplateMeta & { thumbnail?: string }).thumbnail ?? "").trim()
+        ? (meta as UploadedTemplateMeta & { thumbnail: string }).thumbnail.trim()
+        : null;
+    const resolvedThumbnail =
+      thumbnailUrl ?? metaThumbnail ?? resolvedImage ?? DEFAULT_TEMPLATE_THUMBNAIL;
+    const previewUrl =
+      (typeof meta.previewUrl === "string" && meta.previewUrl.trim() ? meta.previewUrl.trim() : null) ||
+      resolvedImage ||
+      resolvedThumbnail ||
+      DEFAULT_TEMPLATE_THUMBNAIL;
+
     const slug = resolveSlug(meta);
     meta.slug = slug;
     meta.fields = ensureTemplateFieldIds(meta.fields);
@@ -404,32 +422,17 @@ export async function POST(req: Request) {
       jsUrl,
     });
 
-    const previewUrl = await uploadFile({
+    const previewHtmlUrl = await uploadFile({
       buffer: Buffer.from(previewDocument, "utf-8"),
       fileName: `${stageId}-preview.html`,
       contentType: "text/html",
     });
 
-    const metaImageValue =
-      typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : null;
-    const resolvedImage = imageUrl ?? metaImageValue ?? null;
-    const metaThumbnailValue =
-      typeof (meta as UploadedTemplateMeta & { thumbnail?: unknown }).thumbnail === "string" &&
-      ((meta as UploadedTemplateMeta & { thumbnail?: string }).thumbnail ?? "").trim()
-        ? (meta as UploadedTemplateMeta & { thumbnail: string }).thumbnail.trim()
-        : null;
-    const resolvedThumbnail = thumbnailUrl ?? metaThumbnailValue ?? resolvedImage ?? null;
     const metaPreviewVideoValue =
       typeof meta.previewVideo === "string" && meta.previewVideo.trim() ? meta.previewVideo.trim() : null;
     const resolvedPreviewVideo = videoUrl ?? metaPreviewVideoValue ?? null;
-    const resolvedPreviewAsset =
-      (typeof meta.previewUrl === "string" && meta.previewUrl.trim() ? meta.previewUrl.trim() : null) ||
-      resolvedImage ||
-      resolvedThumbnail ||
-      null;
-
-    if (!meta.previewUrl && resolvedPreviewAsset) {
-      meta.previewUrl = resolvedPreviewAsset;
+    if (!meta.previewUrl && previewUrl) {
+      meta.previewUrl = previewUrl;
     }
 
     const stageInfo: StageInfo = {
@@ -445,12 +448,12 @@ export async function POST(req: Request) {
       cssUrl,
       jsUrl,
       metaUrl,
-      previewUrl,
+      previewUrl: previewHtmlUrl,
       previewHtml: previewDocument,
       assets: assetMap,
-      image: imageUrl ?? meta.image ?? null,
-      thumbnail: thumbnailUrl ?? null,
-      previewVideo: videoUrl ?? null,
+      image: resolvedImage,
+      thumbnail: resolvedThumbnail,
+      previewVideo: resolvedPreviewVideo,
     };
 
     ensureStagingRoot();
@@ -466,7 +469,7 @@ export async function POST(req: Request) {
       template: {
         stageId,
         basePath,
-        previewPath: previewUrl,
+        previewPath: previewHtmlUrl,
         previewHtml: previewDocument,
         name,
         category,
@@ -474,7 +477,7 @@ export async function POST(req: Request) {
         meta,
         image: resolvedImage ?? null,
         thumbnail: resolvedThumbnail ?? null,
-        previewUrl: resolvedPreviewAsset,
+        previewUrl,
         previewVideo: resolvedPreviewVideo ?? null,
       },
     };
