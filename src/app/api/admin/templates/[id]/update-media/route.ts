@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
@@ -54,6 +55,10 @@ export async function PATCH(
     if (!updated) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
+
+    revalidatePath("/");
+    revalidatePath("/templates");
+    revalidatePath(`/templates/${id}`);
 
     return NextResponse.json(updated);
   } catch (error) {
