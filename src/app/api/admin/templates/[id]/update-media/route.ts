@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
@@ -19,40 +20,82 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
   }
 
-  const imageUrl = formData.get("imageUrl");
-  const thumbnailUrl = formData.get("thumbnailUrl");
-  const videoUrl = formData.get("videoUrl");
-
-  const updates: Record<string, string | undefined> = {};
-  let shouldUpdatePreview = false;
-
-  if (typeof imageUrl === "string") {
-    const trimmed = imageUrl.trim();
-    updates.image = trimmed || undefined;
-    shouldUpdatePreview = true;
-  }
-
-  if (typeof thumbnailUrl === "string") {
-    const trimmed = thumbnailUrl.trim();
-    updates.thumbnail = trimmed || undefined;
-    shouldUpdatePreview = true;
-  }
-
-  if (typeof videoUrl === "string") {
-    const trimmed = videoUrl.trim();
-    updates.previewVideo = trimmed || undefined;
-  }
-
-  if (shouldUpdatePreview) {
-    const previewSource = updates.thumbnail ?? updates.image ?? DEFAULT_TEMPLATE_THUMBNAIL;
-    updates.previewUrl = previewSource;
-  }
-
   try {
-    const updated = await Template.findByIdAndUpdate(id, updates, { new: true });
+    const template = await Template.findById(id);
 
-    if (!updated) {
+    if (!template) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
+
+    const imageEntry = formData.get("imageUrl");
+    const thumbnailEntry = formData.get("thumbnailUrl");
+    const videoEntry = formData.get("videoUrl");
+
+    const hasImageUpdate = typeof imageEntry === "string";
+    const hasThumbnailUpdate = typeof thumbnailEntry === "string";
+    const hasVideoUpdate = typeof videoEntry === "string";
+
+    const rawImage = hasImageUpdate ? (imageEntry as string).trim() : null;
+    const rawThumbnail = hasThumbnailUpdate ? (thumbnailEntry as string).trim() : null;
+    const rawVideo = hasVideoUpdate ? (videoEntry as string).trim() : null;
+
+    const nextImage = rawImage ? rawImage : undefined;
+    const nextThumbnail = rawThumbnail ? rawThumbnail : undefined;
+    const nextVideo = rawVideo ? rawVideo : undefined;
+
+    if (hasImageUpdate) {
+      template.image = nextImage;
+    }
+
+    if (hasThumbnailUpdate) {
+      template.thumbnail = nextThumbnail;
+    }
+
+    if (hasVideoUpdate) {
+      template.previewVideo = nextVideo;
+    }
+
+    let previewSource: string | undefined;
+    if (hasImageUpdate || hasThumbnailUpdate) {
+      previewSource = nextThumbnail ?? nextImage ?? DEFAULT_TEMPLATE_THUMBNAIL;
+      template.previewUrl = previewSource;
+    }
+
+    const versions = template.versions ?? [];
+    const currentVersion =
+      (template.currentVersion && versions.find((version) => version.number === template.currentVersion)) ??
+      versions[versions.length - 1];
+
+    let versionsMutated = false;
+
+    if (currentVersion) {
+      if (previewSource !== undefined) {
+        currentVersion.previewUrl = previewSource;
+        versionsMutated = true;
+      }
+
+      if (hasVideoUpdate) {
+        currentVersion.previewVideo = nextVideo;
+        versionsMutated = true;
+      }
+    }
+
+    if (versionsMutated) {
+      template.markModified("versions");
+    }
+
+    await template.save();
+
+    const updated = template.toObject();
+    const stringId = template._id.toString();
+    updated._id = stringId;
+    updated.id = stringId;
+
+    revalidatePath("/");
+    revalidatePath("/templates");
+    revalidatePath(`/templates/${stringId}`);
+    if (typeof updated.slug === "string" && updated.slug.trim()) {
+      revalidatePath(`/templates/${updated.slug}`);
     }
 
     return NextResponse.json(updated);
