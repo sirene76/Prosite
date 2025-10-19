@@ -35,9 +35,7 @@ type StageInfo = {
   renderedHtml: string;
   css: string;
   js: string;
-  meta: TemplateMeta & {
-    image?: string;
-  };
+  meta: TemplateMeta;
   htmlUrl: string;
   cssUrl: string;
   jsUrl?: string;
@@ -45,6 +43,8 @@ type StageInfo = {
   previewUrl: string;
   previewHtml: string;
   assets: AssetMap;
+  image?: string;
+  previewVideo?: string;
 };
 
 type UploadSuccessResponse = {
@@ -58,6 +58,9 @@ type UploadSuccessResponse = {
     category?: string | null;
     description?: string | null;
     meta?: UploadedTemplateMeta;
+    image?: string | null;
+    previewUrl?: string | null;
+    previewVideo?: string | null;
   };
 };
 
@@ -264,6 +267,8 @@ export async function POST(req: Request) {
   try {
     const data = await req.formData();
     const file = data.get("file") as File | null;
+    const imageUpload = data.get("image");
+    const videoUpload = data.get("video");
 
     if (!file) {
       return NextResponse.json<ErrorResponse>({ error: "Missing file" }, { status: 400 });
@@ -320,6 +325,31 @@ export async function POST(req: Request) {
     meta.fields = ensureTemplateFieldIds(meta.fields);
 
     const stageId = randomUUID();
+    if (imageUpload instanceof File && imageUpload.size > 0) {
+      const imageBuffer = Buffer.from(await imageUpload.arrayBuffer());
+      const imageName = imageUpload.name || "preview-image";
+      const uploadedImageUrl = await uploadFile({
+        buffer: imageBuffer,
+        fileName: sanitizeUploadFileName(stageId, imageName),
+        contentType: imageUpload.type || detectContentType(imageName),
+      });
+      if (uploadedImageUrl) {
+        meta.image = uploadedImageUrl;
+      }
+    }
+
+    if (videoUpload instanceof File && videoUpload.size > 0) {
+      const videoBuffer = Buffer.from(await videoUpload.arrayBuffer());
+      const videoName = videoUpload.name || "preview-video";
+      const uploadedVideoUrl = await uploadFile({
+        buffer: videoBuffer,
+        fileName: sanitizeUploadFileName(stageId, videoName),
+        contentType: videoUpload.type || detectContentType(videoName),
+      });
+      if (uploadedVideoUrl) {
+        meta.previewVideo = uploadedVideoUrl;
+      }
+    }
     const assetMap: AssetMap = {};
     const nonCoreEntries = Array.from(fileBuffers.entries()).filter(
       ([entryName]) =>
@@ -397,6 +427,10 @@ export async function POST(req: Request) {
       contentType: "text/html",
     });
 
+    const resolvedImage = typeof meta.image === "string" && meta.image.trim() ? meta.image.trim() : undefined;
+    const resolvedPreviewVideo =
+      typeof meta.previewVideo === "string" && meta.previewVideo.trim() ? meta.previewVideo.trim() : undefined;
+
     const stageInfo: StageInfo = {
       stageId,
       folderName: slug,
@@ -413,6 +447,8 @@ export async function POST(req: Request) {
       previewUrl,
       previewHtml: previewDocument,
       assets: assetMap,
+      image: resolvedImage,
+      previewVideo: resolvedPreviewVideo,
     };
 
     ensureStagingRoot();
@@ -434,6 +470,9 @@ export async function POST(req: Request) {
         category,
         description,
         meta,
+        image: resolvedImage ?? null,
+        previewUrl,
+        previewVideo: resolvedPreviewVideo ?? null,
       },
     };
 

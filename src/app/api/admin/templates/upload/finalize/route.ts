@@ -18,9 +18,7 @@ type StageInfo = {
   renderedHtml: string;
   css: string;
   js: string;
-  meta: TemplateMeta & {
-    image?: string;
-  };
+  meta: TemplateMeta;
   htmlUrl: string;
   cssUrl: string;
   jsUrl?: string;
@@ -28,6 +26,8 @@ type StageInfo = {
   previewUrl: string;
   previewHtml: string;
   assets: Record<string, string>;
+  image?: string;
+  previewVideo?: string;
 };
 
 type FinalizeRequest = {
@@ -48,6 +48,8 @@ type TemplateResponse = {
     meta?: TemplateMeta | null;
     basePath?: string | null;
     previewPath?: string | null;
+    previewVideo?: string | null;
+    image?: string | null;
   };
 };
 
@@ -130,10 +132,22 @@ export async function POST(req: Request) {
     const templateName = normalizeTemplateName(info, body.nameOverride ?? null);
     const category = typeof info.meta?.category === "string" ? info.meta.category : "Uncategorized";
     const description = typeof info.meta?.description === "string" ? info.meta.description : "";
+
+    const stagedImage = typeof info.image === "string" && info.image.trim() ? info.image.trim() : undefined;
+    if (stagedImage) {
+      info.meta.image = stagedImage;
+    }
+
     const image = resolveTemplateImage(info.meta);
 
-    if (!info.meta.image) {
+    if (!info.meta.image && image) {
       info.meta.image = image;
+    }
+
+    const stagedPreviewVideo =
+      typeof info.previewVideo === "string" && info.previewVideo.trim() ? info.previewVideo.trim() : undefined;
+    if (stagedPreviewVideo) {
+      info.meta.previewVideo = stagedPreviewVideo;
     }
 
     const slugFromMeta =
@@ -150,6 +164,11 @@ export async function POST(req: Request) {
 
     const sanitizedHtml = disableExternalScripts(info.processedHtml);
     const basePath = deriveRemoteBase(info.htmlUrl) ?? deriveRemoteBase(info.cssUrl) ?? null;
+    const previewVideo =
+      stagedPreviewVideo ||
+      (typeof info.meta.previewVideo === "string" && info.meta.previewVideo.trim()
+        ? info.meta.previewVideo.trim()
+        : undefined);
 
     const templateDoc = await Template.findOneAndUpdate(
       { name: templateName },
@@ -159,6 +178,7 @@ export async function POST(req: Request) {
         category,
         description,
         image,
+        previewVideo,
         published: true,
         html: sanitizedHtml,
         css: info.css,
@@ -186,6 +206,8 @@ export async function POST(req: Request) {
         meta: info.meta,
         basePath,
         previewPath: info.previewUrl,
+        previewVideo: previewVideo ?? null,
+        image,
       },
     };
 
