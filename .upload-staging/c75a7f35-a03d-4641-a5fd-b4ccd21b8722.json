@@ -1,0 +1,176 @@
+{
+  "stageId": "c75a7f35-a03d-4641-a5fd-b4ccd21b8722",
+  "folderName": "strategic-studio",
+  "originalHtml": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head>\r\n  <meta charset=\"UTF-8\" />\r\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\r\n  <title>{{ site.title }}</title>\r\n  <link href=\"https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap\" rel=\"stylesheet\">\r\n  <link rel=\"stylesheet\" href=\"style.css\" />\r\n</head>\r\n<body>\r\n  <div class=\"container\">\r\n    <header>\r\n      <h1>{{ hero.title }}</h1>\r\n      <p class=\"tagline\">{{ hero.subtitle }}</p>\r\n      <p class=\"services\">{{ hero.text }}</p>\r\n    </header>\r\n\r\n    <hr />\r\n\r\n    <section id=\"work\">\r\n      <h2>{{ work.title }}</h2>\r\n      <p class=\"section-intro\">{{ work.subtitle }}</p>\r\n\r\n      <div class=\"work-grid\">\r\n        <div class=\"work-item\">\r\n          <h3>{{ work.card1.title }}</h3>\r\n          <a href=\"#\" class=\"work-link\">{{ work.card1.button }}</a>\r\n        </div>\r\n\r\n        <div class=\"work-item\">\r\n          <h3>{{ work.card2.title }}</h3>\r\n          <a href=\"#\" class=\"work-link\">{{ work.card2.button }}</a>\r\n        </div>\r\n\r\n        <div class=\"work-item\">\r\n          <h3>{{ work.card3.title }}</h3>\r\n          <a href=\"#\" class=\"work-link\">{{ work.card3.button }}</a>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <hr />\r\n\r\n    <section id=\"method\">\r\n      <h2>{{ method.title }}</h2>\r\n      <p class=\"method-intro\">{{ method.subtitle }}</p>\r\n\r\n      <div class=\"method-grid\">\r\n        <div class=\"method-item\">\r\n          <h3>{{ method.point1.title }}</h3>\r\n          <p>{{ method.point1.text }}</p>\r\n        </div>\r\n\r\n        <div class=\"method-item\">\r\n          <h3>{{ method.point2.title }}</h3>\r\n          <p>{{ method.point2.text }}</p>\r\n        </div>\r\n\r\n        <div class=\"method-item\">\r\n          <h3>{{ method.point3.title }}</h3>\r\n          <p>{{ method.point3.text }}</p>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <footer>\r\n      <p>{{ footer.text }}</p>\r\n    </footer>\r\n  </div>\r\n</body>\r\n</html>\r\n",
+  "processedHtml": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head>\r\n  <meta charset=\"UTF-8\" />\r\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\r\n  <title>{{ site.title }}</title>\r\n  <link href=\"https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap\" rel=\"stylesheet\">\r\n  <link rel=\"stylesheet\" href=\"https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSeyyBggH8We0B4QDG76dVYtXrNwnE8cHFLkZf\" />\r\n</head>\r\n<body>\r\n  <div class=\"container\">\r\n    <header>\r\n      <h1>{{ hero.title }}</h1>\r\n      <p class=\"tagline\">{{ hero.subtitle }}</p>\r\n      <p class=\"services\">{{ hero.text }}</p>\r\n    </header>\r\n\r\n    <hr />\r\n\r\n    <section id=\"work\">\r\n      <h2>{{ work.title }}</h2>\r\n      <p class=\"section-intro\">{{ work.subtitle }}</p>\r\n\r\n      <div class=\"work-grid\">\r\n        <div class=\"work-item\">\r\n          <h3>{{ work.card1.title }}</h3>\r\n          <a href=\"#\" class=\"work-link\">{{ work.card1.button }}</a>\r\n        </div>\r\n\r\n        <div class=\"work-item\">\r\n          <h3>{{ work.card2.title }}</h3>\r\n          <a href=\"#\" class=\"work-link\">{{ work.card2.button }}</a>\r\n        </div>\r\n\r\n        <div class=\"work-item\">\r\n          <h3>{{ work.card3.title }}</h3>\r\n          <a href=\"#\" class=\"work-link\">{{ work.card3.button }}</a>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <hr />\r\n\r\n    <section id=\"method\">\r\n      <h2>{{ method.title }}</h2>\r\n      <p class=\"method-intro\">{{ method.subtitle }}</p>\r\n\r\n      <div class=\"method-grid\">\r\n        <div class=\"method-item\">\r\n          <h3>{{ method.point1.title }}</h3>\r\n          <p>{{ method.point1.text }}</p>\r\n        </div>\r\n\r\n        <div class=\"method-item\">\r\n          <h3>{{ method.point2.title }}</h3>\r\n          <p>{{ method.point2.text }}</p>\r\n        </div>\r\n\r\n        <div class=\"method-item\">\r\n          <h3>{{ method.point3.title }}</h3>\r\n          <p>{{ method.point3.text }}</p>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <footer>\r\n      <p>{{ footer.text }}</p>\r\n    </footer>\r\n  </div>\r\n</body>\r\n</html>\r\n",
+  "renderedHtml": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head>\r\n  <meta charset=\"UTF-8\" />\r\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\r\n  <title>Strategic Studio</title>\r\n  <link href=\"https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap\" rel=\"stylesheet\">\r\n  <link rel=\"stylesheet\" href=\"https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSeyyBggH8We0B4QDG76dVYtXrNwnE8cHFLkZf\" />\r\n</head>\r\n<body>\r\n  <div class=\"container\">\r\n    <header>\r\n      <h1>Strategic creative.</h1>\r\n      <p class=\"tagline\">Design + copywriting services to grow your brand.</p>\r\n      <p class=\"services\">Print + Digital. Branding. Packaging. Editorial. Websites. Campaigns. Swag, too.</p>\r\n    </header>\r\n\r\n    <hr />\r\n\r\n    <section id=\"work\" data-module-id=\"work\">\r\n      <h2>The Work.</h2>\r\n      <p class=\"section-intro\">One great thing about creative is that the work speaks for itself.</p>\r\n\r\n      <div class=\"work-grid\">\r\n        <div class=\"work-item\">\r\n          <h3>Graphic Design</h3>\r\n          <a href=\"#\" class=\"work-link\">See more →</a>\r\n        </div>\r\n\r\n        <div class=\"work-item\">\r\n          <h3>Art + Creative Direction</h3>\r\n          <a href=\"#\" class=\"work-link\">Portfolio →</a>\r\n        </div>\r\n\r\n        <div class=\"work-item\">\r\n          <h3>Copywriting</h3>\r\n          <a href=\"#\" class=\"work-link\">Read more →</a>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <hr />\r\n\r\n    <section id=\"method\" data-module-id=\"method\">\r\n      <h2>The Method.</h2>\r\n      <p class=\"method-intro\">Bespoke design + copywriting for a select global clientele.</p>\r\n\r\n      <div class=\"method-grid\">\r\n        <div class=\"method-item\">\r\n          <h3>Strategic</h3>\r\n          <p>Less talk, more action.</p>\r\n        </div>\r\n\r\n        <div class=\"method-item\">\r\n          <h3>Design-centric</h3>\r\n          <p>Mindset.</p>\r\n        </div>\r\n\r\n        <div class=\"method-item\">\r\n          <h3>Location independent</h3>\r\n          <p>Global perspective.</p>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <footer>\r\n      <p>© Strategic Studio. All rights reserved.</p>\r\n    </footer>\r\n  </div>\r\n</body>\r\n</html>\r\n",
+  "css": ":root {\r\n  --primary: #1a1a1a;\r\n  --secondary: #666;\r\n  --accent: #d4af37;\r\n  --light: #f8f8f8;\r\n  --spacing-sm: 0.5rem;\r\n  --spacing-md: 1rem;\r\n  --spacing-lg: 2rem;\r\n  --spacing-xl: 4rem;\r\n}\r\n\r\nbody {\r\n  font-family: 'Montserrat', sans-serif;\r\n  color: var(--primary);\r\n  line-height: 1.6;\r\n  background-color: var(--light);\r\n  margin: 0;\r\n  padding: 0;\r\n}\r\n\r\n.container {\r\n  max-width: 1200px;\r\n  margin: 0 auto;\r\n  padding: 0 var(--spacing-md);\r\n}\r\n\r\n/* Header */\r\nheader {\r\n  padding: var(--spacing-xl) 0;\r\n  text-align: center;\r\n  animation: fadeIn 1.2s ease;\r\n}\r\n\r\nh1 {\r\n  font-family: 'Playfair Display', serif;\r\n  font-size: 3.5rem;\r\n  font-weight: 600;\r\n  letter-spacing: -0.02em;\r\n  margin-bottom: var(--spacing-sm);\r\n}\r\n\r\n.tagline {\r\n  font-size: 1.25rem;\r\n  color: var(--secondary);\r\n  margin-bottom: var(--spacing-lg);\r\n  font-weight: 500;\r\n}\r\n\r\n.services {\r\n  font-size: 1.1rem;\r\n  color: var(--secondary);\r\n  max-width: 600px;\r\n  margin: 0 auto;\r\n  line-height: 1.8;\r\n}\r\n\r\nhr {\r\n  border: none;\r\n  height: 1px;\r\n  background-color: #ddd;\r\n  margin: var(--spacing-xl) 0;\r\n}\r\n\r\n/* Sections */\r\nsection {\r\n  margin-bottom: var(--spacing-xl);\r\n}\r\n\r\nh2 {\r\n  font-family: 'Playfair Display', serif;\r\n  font-size: 2.5rem;\r\n  font-weight: 500;\r\n  margin-bottom: var(--spacing-lg);\r\n  text-align: center;\r\n}\r\n\r\n.section-intro {\r\n  text-align: center;\r\n  max-width: 700px;\r\n  margin: 0 auto var(--spacing-lg);\r\n  color: var(--secondary);\r\n  font-size: 1.1rem;\r\n}\r\n\r\n/* Work */\r\n.work-grid {\r\n  display: grid;\r\n  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));\r\n  gap: var(--spacing-lg);\r\n}\r\n\r\n.work-item {\r\n  text-align: center;\r\n  padding: var(--spacing-lg);\r\n  border-radius: 8px;\r\n  transition: transform 0.3s ease, box-shadow 0.3s ease;\r\n  background: rgba(255, 255, 255, 0.6);\r\n}\r\n\r\n.work-item:hover {\r\n  transform: translateY(-5px);\r\n  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);\r\n}\r\n\r\n.work-item h3 {\r\n  font-size: 1.5rem;\r\n  font-weight: 600;\r\n  margin-bottom: var(--spacing-md);\r\n}\r\n\r\n.work-link {\r\n  display: inline-block;\r\n  margin-top: var(--spacing-md);\r\n  color: var(--accent);\r\n  text-decoration: none;\r\n  font-weight: 500;\r\n  position: relative;\r\n}\r\n\r\n.work-link::after {\r\n  content: '';\r\n  position: absolute;\r\n  width: 0;\r\n  height: 1px;\r\n  bottom: -2px;\r\n  left: 0;\r\n  background-color: var(--accent);\r\n  transition: width 0.3s ease;\r\n}\r\n\r\n.work-link:hover::after {\r\n  width: 100%;\r\n}\r\n\r\n/* Method */\r\n.method-intro {\r\n  text-align: center;\r\n  max-width: 600px;\r\n  margin: 0 auto var(--spacing-xl);\r\n  font-size: 1.1rem;\r\n  color: var(--secondary);\r\n}\r\n\r\n.method-grid {\r\n  display: grid;\r\n  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\r\n  gap: var(--spacing-md);\r\n}\r\n\r\n.method-item {\r\n  padding: var(--spacing-lg);\r\n  text-align: center;\r\n  border-left: 1px solid #eee;\r\n  background: rgba(255, 255, 255, 0.6);\r\n  transition: background 0.3s ease;\r\n}\r\n\r\n.method-item:hover {\r\n  background: rgba(255, 255, 255, 0.9);\r\n}\r\n\r\n.method-item:first-child {\r\n  border-left: none;\r\n}\r\n\r\n.method-item h3 {\r\n  font-size: 1.3rem;\r\n  font-weight: 600;\r\n  margin-bottom: var(--spacing-sm);\r\n}\r\n\r\n.method-item p {\r\n  color: var(--secondary);\r\n}\r\n\r\n/* Footer */\r\nfooter {\r\n  text-align: center;\r\n  padding: var(--spacing-xl) 0;\r\n  color: var(--secondary);\r\n  border-top: 1px solid #eee;\r\n  margin-top: var(--spacing-xl);\r\n}\r\n\r\n/* Animations */\r\n@keyframes fadeIn {\r\n  from { opacity: 0; transform: translateY(20px); }\r\n  to { opacity: 1; transform: translateY(0); }\r\n}\r\n\r\n/* Responsive */\r\n@media (max-width: 768px) {\r\n  h1 {\r\n    font-size: 2.5rem;\r\n  }\r\n\r\n  h2 {\r\n    font-size: 2rem;\r\n  }\r\n\r\n  .method-item {\r\n    border-left: none;\r\n    border-top: 1px solid #eee;\r\n    padding: var(--spacing-md) 0;\r\n  }\r\n\r\n  .method-item:first-child {\r\n    border-top: none;\r\n  }\r\n}\r\n",
+  "js": "",
+  "meta": {
+    "id": "strategic-studio",
+    "name": "Strategic Studio",
+    "category": "Agency",
+    "description": "Elegant, serif-based minimalist creative agency page inspired by Strategic Creative.",
+    "image": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobS5H6Ta86esnR3qgtLNIUWl7v4oryf2uHxTm8z",
+    "modules": [
+      {
+        "id": "hero",
+        "label": "Hero Section"
+      },
+      {
+        "id": "work",
+        "label": "Work Section"
+      },
+      {
+        "id": "method",
+        "label": "Method Section"
+      },
+      {
+        "id": "footer",
+        "label": "Footer"
+      }
+    ],
+    "fields": [
+      {
+        "id": "site.title",
+        "label": "Site Title",
+        "default": "Strategic Studio"
+      },
+      {
+        "id": "hero.title",
+        "label": "Hero Title",
+        "default": "Strategic creative."
+      },
+      {
+        "id": "hero.subtitle",
+        "label": "Hero Subtitle",
+        "default": "Design + copywriting services to grow your brand."
+      },
+      {
+        "id": "hero.text",
+        "label": "Hero Description",
+        "default": "Print + Digital. Branding. Packaging. Editorial. Websites. Campaigns. Swag, too."
+      },
+      {
+        "id": "work.title",
+        "label": "Work Title",
+        "default": "The Work."
+      },
+      {
+        "id": "work.subtitle",
+        "label": "Work Subtitle",
+        "default": "One great thing about creative is that the work speaks for itself."
+      },
+      {
+        "id": "work.card1.title",
+        "label": "Card 1 Title",
+        "default": "Graphic Design"
+      },
+      {
+        "id": "work.card1.button",
+        "label": "Card 1 Button",
+        "default": "See more →"
+      },
+      {
+        "id": "work.card2.title",
+        "label": "Card 2 Title",
+        "default": "Art + Creative Direction"
+      },
+      {
+        "id": "work.card2.button",
+        "label": "Card 2 Button",
+        "default": "Portfolio →"
+      },
+      {
+        "id": "work.card3.title",
+        "label": "Card 3 Title",
+        "default": "Copywriting"
+      },
+      {
+        "id": "work.card3.button",
+        "label": "Card 3 Button",
+        "default": "Read more →"
+      },
+      {
+        "id": "method.title",
+        "label": "Method Title",
+        "default": "The Method."
+      },
+      {
+        "id": "method.subtitle",
+        "label": "Method Subtitle",
+        "default": "Bespoke design + copywriting for a select global clientele."
+      },
+      {
+        "id": "method.point1.title",
+        "label": "Point 1 Title",
+        "default": "Strategic"
+      },
+      {
+        "id": "method.point1.text",
+        "label": "Point 1 Text",
+        "default": "Less talk, more action."
+      },
+      {
+        "id": "method.point2.title",
+        "label": "Point 2 Title",
+        "default": "Design-centric"
+      },
+      {
+        "id": "method.point2.text",
+        "label": "Point 2 Text",
+        "default": "Mindset."
+      },
+      {
+        "id": "method.point3.title",
+        "label": "Point 3 Title",
+        "default": "Location independent"
+      },
+      {
+        "id": "method.point3.text",
+        "label": "Point 3 Text",
+        "default": "Global perspective."
+      },
+      {
+        "id": "footer.text",
+        "label": "Footer Text",
+        "default": "© Strategic Studio. All rights reserved."
+      }
+    ],
+    "themes": [
+      {
+        "id": "classic-gold",
+        "name": "Classic Gold",
+        "colors": {
+          "--primary": "#1a1a1a",
+          "--secondary": "#666",
+          "--accent": "#d4af37",
+          "--light": "#f8f8f8"
+        }
+      },
+      {
+        "id": "onyx",
+        "name": "Onyx",
+        "colors": {
+          "--primary": "#f8f8f8",
+          "--secondary": "#bbb",
+          "--accent": "#ffcc33",
+          "--light": "#1a1a1a"
+        }
+      }
+    ],
+    "slug": "strategic-studio",
+    "previewUrl": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobS5H6Ta86esnR3qgtLNIUWl7v4oryf2uHxTm8z"
+  },
+  "htmlUrl": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSpwahWi27GobSHYyZFlip2NDECMvxdeQjPkTW",
+  "cssUrl": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSeyyBggH8We0B4QDG76dVYtXrNwnE8cHFLkZf",
+  "metaUrl": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSaAZBUuSB1X6AxvhsUpmzCwoW4uOI2eYMRck9",
+  "previewUrl": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobS5l4EFaesnR3qgtLNIUWl7v4oryf2uHxTm8zO",
+  "previewHtml": "<!DOCTYPE html>\n<html>\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <style>:root {\r\n  --primary: #1a1a1a;\r\n  --secondary: #666;\r\n  --accent: #d4af37;\r\n  --light: #f8f8f8;\r\n  --spacing-sm: 0.5rem;\r\n  --spacing-md: 1rem;\r\n  --spacing-lg: 2rem;\r\n  --spacing-xl: 4rem;\r\n}\r\n\r\nbody {\r\n  font-family: 'Montserrat', sans-serif;\r\n  color: var(--primary);\r\n  line-height: 1.6;\r\n  background-color: var(--light);\r\n  margin: 0;\r\n  padding: 0;\r\n}\r\n\r\n.container {\r\n  max-width: 1200px;\r\n  margin: 0 auto;\r\n  padding: 0 var(--spacing-md);\r\n}\r\n\r\n/* Header */\r\nheader {\r\n  padding: var(--spacing-xl) 0;\r\n  text-align: center;\r\n  animation: fadeIn 1.2s ease;\r\n}\r\n\r\nh1 {\r\n  font-family: 'Playfair Display', serif;\r\n  font-size: 3.5rem;\r\n  font-weight: 600;\r\n  letter-spacing: -0.02em;\r\n  margin-bottom: var(--spacing-sm);\r\n}\r\n\r\n.tagline {\r\n  font-size: 1.25rem;\r\n  color: var(--secondary);\r\n  margin-bottom: var(--spacing-lg);\r\n  font-weight: 500;\r\n}\r\n\r\n.services {\r\n  font-size: 1.1rem;\r\n  color: var(--secondary);\r\n  max-width: 600px;\r\n  margin: 0 auto;\r\n  line-height: 1.8;\r\n}\r\n\r\nhr {\r\n  border: none;\r\n  height: 1px;\r\n  background-color: #ddd;\r\n  margin: var(--spacing-xl) 0;\r\n}\r\n\r\n/* Sections */\r\nsection {\r\n  margin-bottom: var(--spacing-xl);\r\n}\r\n\r\nh2 {\r\n  font-family: 'Playfair Display', serif;\r\n  font-size: 2.5rem;\r\n  font-weight: 500;\r\n  margin-bottom: var(--spacing-lg);\r\n  text-align: center;\r\n}\r\n\r\n.section-intro {\r\n  text-align: center;\r\n  max-width: 700px;\r\n  margin: 0 auto var(--spacing-lg);\r\n  color: var(--secondary);\r\n  font-size: 1.1rem;\r\n}\r\n\r\n/* Work */\r\n.work-grid {\r\n  display: grid;\r\n  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));\r\n  gap: var(--spacing-lg);\r\n}\r\n\r\n.work-item {\r\n  text-align: center;\r\n  padding: var(--spacing-lg);\r\n  border-radius: 8px;\r\n  transition: transform 0.3s ease, box-shadow 0.3s ease;\r\n  background: rgba(255, 255, 255, 0.6);\r\n}\r\n\r\n.work-item:hover {\r\n  transform: translateY(-5px);\r\n  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);\r\n}\r\n\r\n.work-item h3 {\r\n  font-size: 1.5rem;\r\n  font-weight: 600;\r\n  margin-bottom: var(--spacing-md);\r\n}\r\n\r\n.work-link {\r\n  display: inline-block;\r\n  margin-top: var(--spacing-md);\r\n  color: var(--accent);\r\n  text-decoration: none;\r\n  font-weight: 500;\r\n  position: relative;\r\n}\r\n\r\n.work-link::after {\r\n  content: '';\r\n  position: absolute;\r\n  width: 0;\r\n  height: 1px;\r\n  bottom: -2px;\r\n  left: 0;\r\n  background-color: var(--accent);\r\n  transition: width 0.3s ease;\r\n}\r\n\r\n.work-link:hover::after {\r\n  width: 100%;\r\n}\r\n\r\n/* Method */\r\n.method-intro {\r\n  text-align: center;\r\n  max-width: 600px;\r\n  margin: 0 auto var(--spacing-xl);\r\n  font-size: 1.1rem;\r\n  color: var(--secondary);\r\n}\r\n\r\n.method-grid {\r\n  display: grid;\r\n  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\r\n  gap: var(--spacing-md);\r\n}\r\n\r\n.method-item {\r\n  padding: var(--spacing-lg);\r\n  text-align: center;\r\n  border-left: 1px solid #eee;\r\n  background: rgba(255, 255, 255, 0.6);\r\n  transition: background 0.3s ease;\r\n}\r\n\r\n.method-item:hover {\r\n  background: rgba(255, 255, 255, 0.9);\r\n}\r\n\r\n.method-item:first-child {\r\n  border-left: none;\r\n}\r\n\r\n.method-item h3 {\r\n  font-size: 1.3rem;\r\n  font-weight: 600;\r\n  margin-bottom: var(--spacing-sm);\r\n}\r\n\r\n.method-item p {\r\n  color: var(--secondary);\r\n}\r\n\r\n/* Footer */\r\nfooter {\r\n  text-align: center;\r\n  padding: var(--spacing-xl) 0;\r\n  color: var(--secondary);\r\n  border-top: 1px solid #eee;\r\n  margin-top: var(--spacing-xl);\r\n}\r\n\r\n/* Animations */\r\n@keyframes fadeIn {\r\n  from { opacity: 0; transform: translateY(20px); }\r\n  to { opacity: 1; transform: translateY(0); }\r\n}\r\n\r\n/* Responsive */\r\n@media (max-width: 768px) {\r\n  h1 {\r\n    font-size: 2.5rem;\r\n  }\r\n\r\n  h2 {\r\n    font-size: 2rem;\r\n  }\r\n\r\n  .method-item {\r\n    border-left: none;\r\n    border-top: 1px solid #eee;\r\n    padding: var(--spacing-md) 0;\r\n  }\r\n\r\n  .method-item:first-child {\r\n    border-top: none;\r\n  }\r\n}\r\n</style>\n  </head>\n  <body>\n    <!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head>\r\n  <meta charset=\"UTF-8\" />\r\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\r\n  <title>Strategic Studio</title>\r\n  <link href=\"https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap\" rel=\"stylesheet\">\r\n  <link rel=\"stylesheet\" href=\"https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSeyyBggH8We0B4QDG76dVYtXrNwnE8cHFLkZf\" />\r\n</head>\r\n<body>\r\n  <div class=\"container\">\r\n    <header>\r\n      <h1>Strategic creative.</h1>\r\n      <p class=\"tagline\">Design + copywriting services to grow your brand.</p>\r\n      <p class=\"services\">Print + Digital. Branding. Packaging. Editorial. Websites. Campaigns. Swag, too.</p>\r\n    </header>\r\n\r\n    <hr />\r\n\r\n    <section id=\"work\" data-module-id=\"work\">\r\n      <h2>The Work.</h2>\r\n      <p class=\"section-intro\">One great thing about creative is that the work speaks for itself.</p>\r\n\r\n      <div class=\"work-grid\">\r\n        <div class=\"work-item\">\r\n          <h3>Graphic Design</h3>\r\n          <a href=\"#\" class=\"work-link\">See more →</a>\r\n        </div>\r\n\r\n        <div class=\"work-item\">\r\n          <h3>Art + Creative Direction</h3>\r\n          <a href=\"#\" class=\"work-link\">Portfolio →</a>\r\n        </div>\r\n\r\n        <div class=\"work-item\">\r\n          <h3>Copywriting</h3>\r\n          <a href=\"#\" class=\"work-link\">Read more →</a>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <hr />\r\n\r\n    <section id=\"method\" data-module-id=\"method\">\r\n      <h2>The Method.</h2>\r\n      <p class=\"method-intro\">Bespoke design + copywriting for a select global clientele.</p>\r\n\r\n      <div class=\"method-grid\">\r\n        <div class=\"method-item\">\r\n          <h3>Strategic</h3>\r\n          <p>Less talk, more action.</p>\r\n        </div>\r\n\r\n        <div class=\"method-item\">\r\n          <h3>Design-centric</h3>\r\n          <p>Mindset.</p>\r\n        </div>\r\n\r\n        <div class=\"method-item\">\r\n          <h3>Location independent</h3>\r\n          <p>Global perspective.</p>\r\n        </div>\r\n      </div>\r\n    </section>\r\n\r\n    <footer>\r\n      <p>© Strategic Studio. All rights reserved.</p>\r\n    </footer>\r\n  </div>\r\n</body>\r\n</html>\r\n\n    <script></script>\n  </body>\n</html>",
+  "assets": {
+    "strategic-studio/style.css": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSeyyBggH8We0B4QDG76dVYtXrNwnE8cHFLkZf",
+    "strategic-studio/meta.json": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSaAZBUuSB1X6AxvhsUpmzCwoW4uOI2eYMRck9",
+    "strategic-studio/index.html": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobSpwahWi27GobSHYyZFlip2NDECMvxdeQjPkTW"
+  },
+  "image": "https://sj516b8jo4.ufs.sh/f/pFV1pg27GobS5H6Ta86esnR3qgtLNIUWl7v4oryf2uHxTm8z"
+}
