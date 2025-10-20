@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { CheckoutClient } from "./CheckoutClient";
 import { connectDB } from "@/lib/mongodb";
-import { Website } from "@/models/website";
+import Website from "@/models/Website";
 import { getTemplateById } from "@/lib/templates";
 import { isValidObjectId } from "mongoose";
 import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";

@@ -1,4 +1,10 @@
-import { Schema, model, models, type HydratedDocument, type InferSchemaType } from "mongoose";
+import {
+  Schema,
+  model,
+  models,
+  type HydratedDocument,
+  type InferSchemaType,
+} from "mongoose";
 
 const WebsiteSchema = new Schema(
   {
@@ -8,7 +14,7 @@ const WebsiteSchema = new Schema(
     user: { type: String },
     status: {
       type: String,
-      enum: ["draft", "active", "published"],
+      enum: ["draft", "deploying", "active", "published"],
       default: "draft",
     },
     plan: {
@@ -19,7 +25,21 @@ const WebsiteSchema = new Schema(
     theme: {
       colors: { type: Object, default: {} },
       fonts: { type: Object, default: {} },
+      name: { type: String },
+      label: { type: String },
     },
+    values: { type: Schema.Types.Mixed },
+    content: { type: Schema.Types.Mixed },
+    pages: { type: [String], default: [] },
+    html: { type: String },
+    css: { type: String },
+    meta: { type: Schema.Types.Mixed },
+    previewImage: { type: String },
+    thumbnailUrl: { type: String },
+    stripeSessionId: { type: String },
+    stripeCustomerId: { type: String },
+    stripeSubscriptionId: { type: String },
+    deployment: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
 );
@@ -28,3 +48,5 @@ export const Website = models.Website || model("Website", WebsiteSchema);
 
 export type WebsiteModel = InferSchemaType<typeof WebsiteSchema>;
 export type WebsiteDocument = HydratedDocument<WebsiteModel>;
+
+export default Website;
