@@ -28,41 +28,40 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const priceMap: Record<string, string | undefined> = {
+      free: undefined,
+      pro: process.env.STRIPE_PRICE_PRO,
+      agency: process.env.STRIPE_PRICE_AGENCY,
+    };
+
+    const priceId = priceMap[plan as keyof typeof priceMap];
+
+    if (!priceId && plan !== "free") {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    }
+
     if (plan === "free") {
       await Website.findByIdAndUpdate(websiteId, {
         status: "active",
         plan: "free",
       });
 
-      return NextResponse.json({ url: `/checkout/success?websiteId=${websiteId}` });
-    }
-
-    let lineItemPrice = "";
-    let mode: "payment" | "subscription" = "payment";
-
-    if (plan === "pro") {
-      lineItemPrice = process.env.STRIPE_PRICE_PRO ?? "";
-      mode = "payment";
-    } else if (plan === "agency") {
-      lineItemPrice = process.env.STRIPE_PRICE_AGENCY ?? "";
-      mode = "subscription";
-    }
-
-    if (!lineItemPrice) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+      return NextResponse.json({
+        url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${websiteId}?success=true`,
+      });
     }
 
     const stripeSession = await stripe.checkout.sessions.create({
-      mode,
+      mode: "subscription",
       payment_method_types: ["card"],
       line_items: [
         {
-          price: lineItemPrice,
+          price: priceId!,
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?websiteId=${websiteId}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/cancel?websiteId=${websiteId}`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${websiteId}?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${websiteId}?canceled=true`,
       metadata: { websiteId, plan },
       customer_email: session.user.email!,
     });
