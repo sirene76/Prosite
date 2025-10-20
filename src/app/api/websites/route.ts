@@ -4,9 +4,8 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
-import { Website } from "@/models/website";
+import Website, { type WebsiteModel } from "@/models/Website";
 import { getTemplateAssets } from "@/lib/templates";
-import type { WebsiteModel } from "@/models/website";
 import type { DashboardWebsite } from "@/types/website";
 
 function isRecord(value: unknown): value is Record<string, unknown> {

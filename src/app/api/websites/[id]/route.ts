@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
-import { Website } from "@/models/website";
+import Website from "@/models/Website";
 import { isValidObjectId } from "mongoose";
 
 export async function GET(
