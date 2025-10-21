@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CheckoutClient } from "./CheckoutClient";
 import { connectDB } from "@/lib/mongodb";
 import Website from "@/models/Website";
@@ -8,7 +8,7 @@ import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
 
 type CheckoutPageProps = {
   params: Promise<{ websiteId: string }>;
-  searchParams?: Promise<{ canceled?: string }>;
+  searchParams?: Promise<{ canceled?: string; success?: string }>;
 };
 
 async function loadWebsite(websiteId: string) {
@@ -35,27 +35,40 @@ async function loadWebsite(websiteId: string) {
     return null;
   }
 
-  const template = await getTemplateById(website.templateId);
+  // ✅ Guard templateId before calling getTemplateById (fixes TS error)
+  const template = website.templateId
+    ? await getTemplateById(website.templateId)
+    : null;
 
   return {
     name: website.name ?? "Untitled Website",
     templateName: template?.name ?? "Custom",
     themeName: website.theme?.name ?? website.theme?.label ?? "Default",
     previewImage:
-      website.previewImage || website.thumbnailUrl || template?.previewUrl || DEFAULT_TEMPLATE_THUMBNAIL,
+      website.previewImage ||
+      website.thumbnailUrl ||
+      template?.previewUrl ||
+      DEFAULT_TEMPLATE_THUMBNAIL,
   };
 }
 
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const { websiteId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const details = await loadWebsite(websiteId);
 
+  // ✅ Redirect to dashboard when payment succeeded
+  if (resolvedSearchParams?.success) {
+    redirect("/dashboard");
+  }
+
+  const details = await loadWebsite(websiteId);
   if (!details) {
     notFound();
   }
 
-  const initialError = resolvedSearchParams?.canceled ? "Checkout canceled. You can try again when you're ready." : null;
+  const initialError = resolvedSearchParams?.canceled
+    ? "Checkout canceled. You can try again when you're ready."
+    : null;
 
   return (
     <main className="min-h-screen bg-slate-950 pb-16 pt-20 text-white">
