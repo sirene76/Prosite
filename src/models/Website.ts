@@ -40,6 +40,9 @@ const WebsiteSchema = new Schema(
     stripeCustomerId: { type: String },
     stripeSubscriptionId: { type: String },
     deployment: { type: Schema.Types.Mixed },
+    analytics: {
+      views: { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );
