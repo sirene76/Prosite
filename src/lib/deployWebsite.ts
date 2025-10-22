@@ -22,6 +22,25 @@ type TemplateModules = {
   description?: string;
 }[];
 
+function copyDir(src: string, dest: string) {
+  if (!fs.existsSync(src)) {
+    return;
+  }
+
+  fs.mkdirSync(dest, { recursive: true });
+
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 function normaliseValues(values: WebsiteValues): Record<string, string> {
   if (!values || typeof values !== "object") {
     return {};
@@ -165,6 +184,26 @@ export async function deployWebsite(websiteId: string) {
   fs.writeFileSync(path.join(tmpDir, "index.html"), htmlOutput, "utf8");
   fs.writeFileSync(path.join(tmpDir, "style.css"), themedCSS, "utf8");
   fs.writeFileSync(path.join(tmpDir, "robots.txt"), robots, "utf8");
+
+  const templateId = typeof template._id === "string" ? template._id : template._id?.toString();
+  if (templateId) {
+    const templateAssetsDir = path.join(
+      process.cwd(),
+      "public",
+      "templates",
+      templateId
+    );
+    const assetsDir = path.join(templateAssetsDir, "assets");
+    const jsFile = path.join(templateAssetsDir, "script.js");
+
+    if (fs.existsSync(assetsDir)) {
+      copyDir(assetsDir, path.join(tmpDir, "assets"));
+    }
+
+    if (fs.existsSync(jsFile)) {
+      fs.copyFileSync(jsFile, path.join(tmpDir, "script.js"));
+    }
+  }
 
   const publicIndex = await uploadDeployment(tmpDir, websiteId);
   const provider =
