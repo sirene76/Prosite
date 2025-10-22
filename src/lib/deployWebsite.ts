@@ -3,6 +3,7 @@ import path from "path";
 import { connectDB } from "@/lib/mongodb";
 import { renderTemplate } from "@/lib/renderTemplate";
 import { injectThemeTokens } from "@/lib/themes";
+import { uploadDeployment } from "@/lib/storage";
 import Website from "@/models/Website";
 import { Template } from "@/models/template";
 
@@ -153,25 +154,27 @@ export async function deployWebsite(websiteId: string) {
 
   const robots = "User-agent: *\nAllow: /\nSitemap: /sitemap.xml";
 
-  const deployDir = path.join(process.cwd(), "public", "deployments", websiteId);
-  fs.mkdirSync(deployDir, { recursive: true });
+  const tmpDir = path.join(process.cwd(), "tmp", "deploy", websiteId);
+  fs.mkdirSync(tmpDir, { recursive: true });
 
   const htmlOutput = buildHtmlDocument({
     title: website.name ?? "Prosite",
     body: renderedHtml,
   });
 
-  fs.writeFileSync(path.join(deployDir, "index.html"), htmlOutput, "utf8");
-  fs.writeFileSync(path.join(deployDir, "style.css"), themedCSS, "utf8");
-  fs.writeFileSync(path.join(deployDir, "robots.txt"), robots, "utf8");
+  fs.writeFileSync(path.join(tmpDir, "index.html"), htmlOutput, "utf8");
+  fs.writeFileSync(path.join(tmpDir, "style.css"), themedCSS, "utf8");
+  fs.writeFileSync(path.join(tmpDir, "robots.txt"), robots, "utf8");
 
-  const localUrl = `/deployments/${websiteId}/index.html`;
+  const publicIndex = await uploadDeployment(tmpDir, websiteId);
+  const provider =
+    process.env.CF_ACCOUNT_ID && process.env.CF_R2_BUCKET ? "cloudflare" : "local";
 
   await Website.findByIdAndUpdate(websiteId, {
     status: "active",
-    deployment: { url: localUrl, provider: "local" },
+    deployment: { url: publicIndex, provider },
   });
 
-  console.log(`✅ Website ${websiteId} deployed → ${localUrl}`);
-  return localUrl;
+  console.log(`✅ Website ${websiteId} deployed → ${publicIndex}`);
+  return publicIndex;
 }
