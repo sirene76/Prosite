@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, use } from "react";
-import CheckoutClient from "@/components/checkout/CheckoutClient";
+import { CheckoutClient } from "./CheckoutClient"; // ✅ correct import
 
 export default function CheckoutPage({
   params,
@@ -8,7 +8,6 @@ export default function CheckoutPage({
   params: Promise<{ websiteId: string }>;
 }) {
   const { websiteId } = use(params);
-
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("Starting SEO optimization...");
   const [done, setDone] = useState(false);
@@ -63,13 +62,17 @@ export default function CheckoutPage({
     );
   }
 
+  // ✅ When SEO is done, show checkout
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="max-w-3xl w-full bg-white shadow-lg rounded-2xl p-8">
-        <h2 className="text-3xl font-bold mb-6 text-center">
-          Choose your payment plan
-        </h2>
-        <CheckoutClient websiteId={websiteId} />
+      <div className="max-w-6xl w-full">
+        <CheckoutClient
+          websiteId={websiteId}
+          websiteName="My Website"
+          templateName="Template"
+          themeName="Default"
+          previewImage="/default-og.png"
+        />
       </div>
     </div>
   );
