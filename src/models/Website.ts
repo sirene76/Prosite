@@ -34,6 +34,10 @@ const WebsiteSchema = new Schema(
     html: { type: String },
     css: { type: String },
     meta: { type: Schema.Types.Mixed },
+    seo: {
+      type: Object,
+      default: {},
+    },
     previewImage: { type: String },
     thumbnailUrl: { type: String },
     stripeSessionId: { type: String },
