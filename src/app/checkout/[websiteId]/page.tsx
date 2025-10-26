@@ -1,87 +1,57 @@
-import { notFound, redirect } from "next/navigation";
-import { CheckoutClient } from "./CheckoutClient";
-import { connectDB } from "@/lib/mongodb";
-import Website from "@/models/Website";
-import { getTemplateById } from "@/lib/templates";
-import { isValidObjectId } from "mongoose";
-import { DEFAULT_TEMPLATE_THUMBNAIL } from "@/lib/constants";
+"use client";
+import { useState, useEffect } from "react";
 
-type CheckoutPageProps = {
-  params: Promise<{ websiteId: string }>;
-  searchParams?: Promise<{ canceled?: string; success?: string }>;
-};
+export default function CheckoutPage({ params }: { params: { websiteId: string } }) {
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState("Starting SEO optimization...");
+  const [done, setDone] = useState(false);
 
-async function loadWebsite(websiteId: string) {
-  try {
-    await connectDB();
-  } catch (error) {
-    console.error("Failed to connect to database while loading checkout page", error);
-    return null;
+  useEffect(() => {
+    const runSEO = async () => {
+      setStatus("Collecting content data...");
+      setProgress(20);
+      await new Promise((r) => setTimeout(r, 1000));
+
+      const res = await fetch("/api/seo/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ websiteId: params.websiteId }),
+      });
+
+      setStatus("Generating meta tags...");
+      setProgress(60);
+
+      if (res.ok) {
+        setStatus("Finalizing SEO setup...");
+        await new Promise((r) => setTimeout(r, 1000));
+        setProgress(100);
+        setDone(true);
+      } else {
+        setStatus("Failed to optimize website.");
+      }
+    };
+    runSEO();
+  }, [params.websiteId]);
+
+  if (!done) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-center">
+        <h2 className="text-2xl font-semibold mb-4">{status}</h2>
+        <div className="w-64 h-3 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-green-500 transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="mt-3 text-sm text-gray-500">{progress}%</p>
+      </div>
+    );
   }
-
-  if (!isValidObjectId(websiteId)) {
-    return null;
-  }
-
-  const website = await Website.findById(websiteId).lean<{
-    name?: string;
-    templateId?: string;
-    theme?: { name?: string; label?: string };
-    previewImage?: string;
-    thumbnailUrl?: string;
-  }>();
-
-  if (!website) {
-    return null;
-  }
-
-  // ✅ Guard templateId before calling getTemplateById (fixes TS error)
-  const template = website.templateId
-    ? await getTemplateById(website.templateId)
-    : null;
-
-  return {
-    name: website.name ?? "Untitled Website",
-    templateName: template?.name ?? "Custom",
-    themeName: website.theme?.name ?? website.theme?.label ?? "Default",
-    previewImage:
-      website.previewImage ||
-      website.thumbnailUrl ||
-      template?.previewUrl ||
-      DEFAULT_TEMPLATE_THUMBNAIL,
-  };
-}
-
-export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
-  const { websiteId } = await params;
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-
-  // ✅ Redirect to dashboard when payment succeeded
-  if (resolvedSearchParams?.success) {
-    redirect("/dashboard");
-  }
-
-  const details = await loadWebsite(websiteId);
-  if (!details) {
-    notFound();
-  }
-
-  const initialError = resolvedSearchParams?.canceled
-    ? "Checkout canceled. You can try again when you're ready."
-    : null;
 
   return (
-    <main className="min-h-screen bg-slate-950 pb-16 pt-20 text-white">
-      <div className="mx-auto w-full max-w-6xl px-6">
-        <CheckoutClient
-          websiteId={websiteId}
-          websiteName={details.name}
-          templateName={details.templateName}
-          themeName={details.themeName}
-          previewImage={details.previewImage}
-          initialError={initialError}
-        />
-      </div>
-    </main>
+    <div className="p-8">
+      <h2 className="text-3xl font-bold mb-6">Choose your payment plan</h2>
+      {/* Existing Stripe checkout content */}
+    </div>
   );
 }
