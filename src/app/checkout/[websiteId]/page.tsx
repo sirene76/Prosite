@@ -1,12 +1,12 @@
 "use client";
 import React, { useState, useEffect, use } from "react";
+import CheckoutClient from "@/components/checkout/CheckoutClient";
 
 export default function CheckoutPage({
   params,
 }: {
   params: Promise<{ websiteId: string }>;
 }) {
-  // ✅ unwrap the async params Promise (Next.js 15 change)
   const { websiteId } = use(params);
 
   const [progress, setProgress] = useState(0);
@@ -18,7 +18,7 @@ export default function CheckoutPage({
       try {
         setStatus("Collecting content data...");
         setProgress(20);
-        await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 800));
 
         const res = await fetch("/api/seo/generate", {
           method: "POST",
@@ -26,12 +26,12 @@ export default function CheckoutPage({
           body: JSON.stringify({ websiteId }),
         });
 
-        setStatus("Generating meta tags...");
+        setStatus("Generating meta tags and sitemap...");
         setProgress(60);
 
         if (res.ok) {
           setStatus("Finalizing SEO setup...");
-          await new Promise((r) => setTimeout(r, 1000));
+          await new Promise((r) => setTimeout(r, 800));
           setProgress(100);
           setDone(true);
         } else {
@@ -64,9 +64,13 @@ export default function CheckoutPage({
   }
 
   return (
-    <div className="p-8">
-      <h2 className="text-3xl font-bold mb-6">Choose your payment plan</h2>
-      {/* Existing Stripe checkout code here */}
+    <div className="min-h-screen flex flex-col items-center justify-center p-8">
+      <div className="max-w-3xl w-full bg-white shadow-lg rounded-2xl p-8">
+        <h2 className="text-3xl font-bold mb-6 text-center">
+          Choose your payment plan
+        </h2>
+        <CheckoutClient websiteId={websiteId} />
+      </div>
     </div>
   );
 }
