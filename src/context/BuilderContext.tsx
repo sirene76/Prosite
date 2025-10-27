@@ -354,6 +354,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function buildValuesSnapshot(source: Record<string, unknown>): Record<string, unknown> {
+  const entries = Object.entries(source).map(([key, value]) => [key, toPlainValue(value)] as const);
+  return Object.fromEntries(entries);
+}
+
 function getValueAtPath(source: Record<string, unknown>, path: string): unknown {
   if (!path) {
     return undefined;
@@ -812,7 +817,8 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         const next = { ...prev, [resolvedKey]: nextValue };
 
         if (websiteId) {
-          void saveWebsiteChanges(websiteId, { content: next });
+          const valuesSnapshot = buildValuesSnapshot(next);
+          void saveWebsiteChanges(websiteId, { content: next, values: valuesSnapshot });
         }
 
         return next;
@@ -978,6 +984,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         }
 
         const websiteContent = normaliseWebsiteContent(data?.content);
+        const websiteValues = normaliseWebsiteContent(data?.values);
         const websiteTheme = normaliseWebsiteTheme(data?.theme);
 
         const metaSources = [
@@ -987,6 +994,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         const metaContent = flattenContentSources(metaSources);
         const mergedContent = {
           ...metaContent,
+          ...(websiteValues ?? {}),
           ...(websiteContent ?? {}),
         };
 
