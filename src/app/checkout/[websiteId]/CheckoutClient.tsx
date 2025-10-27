@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const PLAN_PRICING: Record<PlanId, { price: string; description: string }> = {
   free: { price: "$0/mo", description: "Basic hosting with limited features" },
@@ -28,10 +29,57 @@ export function CheckoutClient({
   previewImage,
   initialError = null,
 }: CheckoutClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const success = searchParams?.get("success") === "true";
+  const canceled = searchParams?.get("canceled") === "true";
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("pro");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
+  const [status, setStatus] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const resolvedThemeName = themeName?.trim() ? themeName : "Default";
+
+  useEffect(() => {
+    if (!success) return;
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let isMounted = true;
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(`/api/websites/${websiteId}`, { cache: "no-store" });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!isMounted) return;
+
+        setStatus(data.status ?? null);
+
+        if (data.status === "active") {
+          setIsLoading(false);
+          if (intervalId) {
+            clearInterval(intervalId);
+          }
+          router.push("/dashboard");
+        }
+      } catch (err) {
+        console.error("Error checking website status:", err);
+      }
+    };
+
+    setIsLoading(true);
+    setStatus(null);
+    checkStatus();
+    intervalId = setInterval(checkStatus, 4000);
+
+    return () => {
+      isMounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [success, websiteId, router]);
 
   const handleProceed = async () => {
     if (isSubmitting) return;
@@ -61,8 +109,63 @@ export function CheckoutClient({
     }
   };
 
+  if (canceled) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center text-white">
+        <h2 className="mb-2 text-xl">Payment canceled</h2>
+        <p>You can return to your dashboard anytime to complete the purchase.</p>
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="mt-6 rounded bg-white px-4 py-2 text-black"
+        >
+          Go to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  if (success && status !== "active") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center text-center text-white">
+        <h2 className="mb-3 text-2xl font-semibold">✅ Payment received!</h2>
+        <p className="mb-1 text-gray-300">Your website is now being deployed...</p>
+        <p className="mb-8 text-sm text-gray-500">This may take around 10–20 seconds.</p>
+
+        <div className="h-2 w-56 overflow-hidden rounded-full bg-gray-700">
+          <div
+            className="h-full animate-pulse bg-emerald-400"
+            style={{
+              width: isLoading ? "60%" : "100%",
+              transition: "width 2s ease-in-out",
+            }}
+          />
+        </div>
+
+        <p className="mt-3 text-xs text-gray-400">
+          You’ll be redirected automatically once it’s ready.
+        </p>
+      </div>
+    );
+  }
+
+  if (initialError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center text-red-400">
+        <p>{initialError}</p>
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="mt-4 rounded bg-white px-4 py-2 text-black"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 rounded-3xl bg-white/5 p-10 text-white shadow-xl shadow-blue-950/30 lg:flex-row">
+    <div
+      className="mx-auto flex w-full max-w-6xl flex-col gap-8 rounded-3xl bg-white/5 p-10 text-white shadow-xl shadow-blue-950/30 lg:flex-row"
+    >
       <section className="flex-1 space-y-8">
         <div className="flex flex-col gap-6 rounded-2xl bg-white/5 p-6 backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
