@@ -55,7 +55,8 @@ export async function PATCH(
     }
     const updates = (await req.json()) as {
       theme?: ThemeUpdatePayload;
-      content?: Record<string, string> | Map<string, string>;
+      content?: Record<string, unknown> | Map<string, unknown>;
+      values?: Record<string, unknown> | Map<string, unknown>;
       name?: string;
       [key: string]: unknown;
     };
@@ -115,14 +116,26 @@ export async function PATCH(
     }
     if (updates.content && typeof updates.content === "object") {
       const currentContent = website.content instanceof Map
-        ? Object.fromEntries(website.content)
-        : (website.content as Record<string, string> | undefined) ?? {};
+        ? Object.fromEntries(website.content as Map<string, unknown>)
+        : (website.content as Record<string, unknown> | undefined) ?? {};
       const incomingContent = updates.content instanceof Map
-        ? Object.fromEntries(updates.content as Map<string, string>)
-        : (updates.content as Record<string, string>);
+        ? Object.fromEntries(updates.content as Map<string, unknown>)
+        : (updates.content as Record<string, unknown>);
       website.content = {
         ...currentContent,
         ...incomingContent,
+      };
+    }
+    if (updates.values && typeof updates.values === "object") {
+      const currentValues = website.values instanceof Map
+        ? Object.fromEntries(website.values as Map<string, unknown>)
+        : (website.values as Record<string, unknown> | undefined) ?? {};
+      const incomingValues = updates.values instanceof Map
+        ? Object.fromEntries(updates.values as Map<string, unknown>)
+        : (updates.values as Record<string, unknown>);
+      website.values = {
+        ...currentValues,
+        ...incomingValues,
       };
     }
     if (Object.prototype.hasOwnProperty.call(updates, "name")) {
