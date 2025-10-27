@@ -37,7 +37,9 @@ export function CheckoutClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
   const [status, setStatus] = useState<string | null>(null);
+  const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
   const resolvedThemeName = themeName?.trim() ? themeName : "Default";
 
   useEffect(() => {
@@ -55,13 +57,14 @@ export function CheckoutClient({
         if (!isMounted) return;
 
         setStatus(data.status ?? null);
+        setDeploymentUrl(data.deployment?.url ?? null);
 
         if (data.status === "active") {
           setIsLoading(false);
+          setIsComplete(true);
           if (intervalId) {
             clearInterval(intervalId);
           }
-          router.push("/dashboard");
         }
       } catch (err) {
         console.error("Error checking website status:", err);
@@ -69,7 +72,9 @@ export function CheckoutClient({
     };
 
     setIsLoading(true);
+    setIsComplete(false);
     setStatus(null);
+    setDeploymentUrl(null);
     checkStatus();
     intervalId = setInterval(checkStatus, 4000);
 
@@ -79,7 +84,7 @@ export function CheckoutClient({
         clearInterval(intervalId);
       }
     };
-  }, [success, websiteId, router]);
+  }, [success, websiteId]);
 
   const handleProceed = async () => {
     if (isSubmitting) return;
@@ -124,7 +129,53 @@ export function CheckoutClient({
     );
   }
 
-  if (success && status !== "active") {
+  if (success && isComplete) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center text-center text-white">
+        <h2 className="mb-3 text-3xl font-semibold">🎉 Your website is live!</h2>
+        <p className="mb-6 text-gray-300">{websiteName} has been successfully deployed.</p>
+
+        <div className="flex gap-4">
+          {deploymentUrl ? (
+            <a
+              href={deploymentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded bg-emerald-500 px-6 py-3 font-medium text-black transition hover:bg-emerald-400"
+            >
+              🌐 View Live Site
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed rounded bg-emerald-500/40 px-6 py-3 font-medium text-black/60"
+            >
+              🌐 View Live Site
+            </button>
+          )}
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="rounded bg-white px-6 py-3 font-medium text-black transition hover:bg-gray-200"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+
+        {!deploymentUrl ? (
+          <p className="mt-4 text-xs text-emerald-200/80">
+            We’ll add your live site link here the moment it’s ready.
+          </p>
+        ) : null}
+
+        <p className="mt-8 text-sm text-gray-500">
+          You can manage and edit your website anytime from your dashboard.
+        </p>
+      </div>
+    );
+  }
+
+  if (success && !isComplete) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center text-center text-white">
         <h2 className="mb-3 text-2xl font-semibold">✅ Payment received!</h2>
@@ -141,8 +192,14 @@ export function CheckoutClient({
           />
         </div>
 
+        {status && status !== "active" ? (
+          <p className="mt-3 text-xs uppercase tracking-wide text-emerald-200/80">
+            Current status: {status}
+          </p>
+        ) : null}
+
         <p className="mt-3 text-xs text-gray-400">
-          You’ll be redirected automatically once it’s ready.
+          This page will update automatically once it’s ready.
         </p>
       </div>
     );
