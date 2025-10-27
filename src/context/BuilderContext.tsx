@@ -818,7 +818,7 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
 
         if (websiteId) {
           const valuesSnapshot = buildValuesSnapshot(next);
-          void saveWebsiteChanges(websiteId, { content: next, values: valuesSnapshot });
+          void saveWebsiteChanges(websiteId, { values: valuesSnapshot });
         }
 
         return next;
