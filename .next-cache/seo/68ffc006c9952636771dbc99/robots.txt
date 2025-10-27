@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://53a692310ed06c6a317c56f847b4d391.r2.dev/websites/68ffc006c9952636771dbc99/index.html/sitemap.xml
