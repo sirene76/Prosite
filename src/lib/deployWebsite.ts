@@ -6,6 +6,7 @@ import { injectThemeTokens } from "@/lib/themes";
 import { uploadDeployment } from "@/lib/storage";
 import Website from "@/models/Website";
 import { Template } from "@/models/template";
+import { deriveTemplateValues } from "@/lib/templateValues";
 
 type ThemeInput = {
   colors?: Record<string, unknown> | null;
@@ -13,8 +14,6 @@ type ThemeInput = {
   name?: string | null;
   label?: string | null;
 } | null;
-
-type WebsiteValues = Record<string, unknown> | null | undefined;
 
 type TemplateModules = {
   id?: string;
@@ -41,48 +40,6 @@ function copyDir(src: string, dest: string) {
   }
 }
 
-function normaliseValues(values: WebsiteValues): Record<string, string> {
-  if (!values || typeof values !== "object") {
-    return {};
-  }
-
-  const result = new Map<string, string>();
-
-  const walk = (prefix: string, value: unknown) => {
-    if (value == null) {
-      return;
-    }
-
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-      result.set(prefix, String(value));
-      return;
-    }
-
-    if (Array.isArray(value)) {
-      result.set(
-        prefix,
-        value
-          .map((item) => (typeof item === "string" ? item : String(item)))
-          .join("\n")
-      );
-      return;
-    }
-
-    if (typeof value === "object") {
-      Object.entries(value as Record<string, unknown>).forEach(([childKey, childValue]) => {
-        const key = prefix ? `${prefix}.${childKey}` : childKey;
-        walk(key, childValue);
-      });
-      return;
-    }
-  };
-
-  Object.entries(values).forEach(([key, value]) => {
-    walk(key, value);
-  });
-
-  return Object.fromEntries(result.entries());
-}
 
 function ensureTemplateHtml(html?: string | null) {
   if (typeof html === "string" && html.trim().length > 0) {
@@ -159,7 +116,7 @@ export async function deployWebsite(websiteId: string) {
       : undefined) ?? (template as Record<string, unknown>).modules
   );
 
-  const values = normaliseValues(website.values);
+  const values = deriveTemplateValues(website.content, website.values);
 
   const renderedHtml = renderTemplate({
     html: templateHtml,
