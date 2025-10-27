@@ -577,7 +577,11 @@ export function BuilderProvider({ children, templates }: BuilderProviderProps) {
         const res = await fetch(`/api/websites/${targetWebsiteId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updates),
+          body: JSON.stringify({
+            values: updates.values || updates.content || updates,
+            theme: updates.theme || undefined,
+            name: updates.name || undefined,
+          }),
         });
 
         if (!res.ok) {
