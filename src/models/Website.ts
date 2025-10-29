@@ -14,14 +14,38 @@ const WebsiteSchema = new Schema(
     user: { type: String },
     status: {
       type: String,
-      enum: ["draft", "deploying", "active", "published"],
-      default: "draft",
+      enum: ["preview", "active"],
+      default: "preview",
+      set: (value: string) => {
+        if (typeof value !== "string") {
+          return "preview";
+        }
+        const normalized = value.toLowerCase();
+        if (normalized === "active") {
+          return "active";
+        }
+        return "preview";
+      },
     },
     plan: {
       type: String,
-      enum: ["free", "pro", "agency"],
-      default: "free",
+      enum: ["Free", "Pro", "Agency"],
+      default: "Free",
+      set: (value: string) => {
+        if (typeof value !== "string") {
+          return "Free";
+        }
+        const normalized = value.toLowerCase();
+        if (normalized === "pro") {
+          return "Pro";
+        }
+        if (normalized === "agency") {
+          return "Agency";
+        }
+        return "Free";
+      },
     },
+    subdomain: { type: String, trim: true, lowercase: true },
     theme: {
       colors: { type: Object, default: {} },
       fonts: { type: Object, default: {} },
@@ -35,15 +59,18 @@ const WebsiteSchema = new Schema(
     css: { type: String },
     meta: { type: Schema.Types.Mixed },
     seo: {
-      type: Object,
-      default: {},
+      score: { type: Number, default: 0 },
+      lastScan: { type: Date },
     },
     previewImage: { type: String },
     thumbnailUrl: { type: String },
     stripeSessionId: { type: String },
     stripeCustomerId: { type: String },
     stripeSubscriptionId: { type: String },
-    deployment: { type: Schema.Types.Mixed },
+    deployment: {
+      url: { type: String },
+      lastDeployedAt: { type: Date },
+    },
     analytics: {
       views: { type: Number, default: 0 },
     },

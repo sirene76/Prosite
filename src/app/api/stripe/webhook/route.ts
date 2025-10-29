@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { connectDB } from "@/lib/mongodb";
-import { enqueueDeployJob } from "@/lib/queue";
+import { triggerDeploy } from "@/lib/deployWorker";
 import Website from "@/models/Website";
 
 export const config = {
@@ -55,13 +55,33 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
+    const planMap: Record<string, "Free" | "Pro" | "Agency"> = {
+      free: "Free",
+      pro: "Pro",
+      agency: "Agency",
+    };
+
+    const normalizedPlan = (() => {
+      if (typeof plan !== "string") {
+        return undefined;
+      }
+      const lower = plan.toLowerCase();
+      if (planMap[lower]) {
+        return planMap[lower];
+      }
+      if (["Free", "Pro", "Agency"].includes(plan)) {
+        return plan as "Free" | "Pro" | "Agency";
+      }
+      return undefined;
+    })();
+
     const update: Record<string, unknown> = {
-      status: "deploying",
+      status: "active",
       stripeSessionId: session.id,
     };
 
-    if (plan) {
-      update.plan = plan;
+    if (normalizedPlan) {
+      update.plan = normalizedPlan;
     }
 
     const customer = session.customer;
@@ -84,11 +104,15 @@ export async function POST(req: NextRequest) {
 
     await Website.findByIdAndUpdate(websiteId, update);
 
-    await enqueueDeployJob(websiteId);
-
-    console.log(
-      `✅ Payment complete for website ${websiteId} → queued for deploy`
-    );
+    try {
+      const url = await triggerDeploy(websiteId);
+      console.log(`✅ Payment complete for website ${websiteId} → deployed ${url}`);
+    } catch (deployError) {
+      console.error(
+        `❌ Failed to deploy website ${websiteId} after checkout`,
+        deployError
+      );
+    }
   }
 
   return NextResponse.json({ received: true });
