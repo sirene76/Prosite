@@ -1,49 +1,107 @@
-"use client";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
 
-import { useEffect, useState } from "react";
+import { authOptions } from "@/lib/auth";
+import { connectDB } from "@/lib/mongodb";
+import Website from "@/models/Website";
 
-import { WebsiteCard } from "@/components/dashboard/WebsiteCard";
-import type { DashboardWebsite } from "@/types/website";
+interface DashboardSite {
+  id: string;
+  name: string;
+  plan: string;
+  status: string;
+}
 
-export default function DashboardPage() {
-  const [websites, setWebsites] = useState<DashboardWebsite[]>([]);
+function toDashboardSite(value: unknown): DashboardSite | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
 
-  useEffect(() => {
-    let isMounted = true;
+  const record = value as Record<string, unknown>;
+  const idRaw = record._id;
+  const id =
+    typeof idRaw === "string"
+      ? idRaw
+      : typeof idRaw === "object" && idRaw !== null && "toString" in idRaw
+      ? String((idRaw as { toString: () => string }).toString())
+      : "";
 
-    fetch("/api/websites")
-      .then((res) => (res.ok ? res.json() : Promise.resolve({ websites: [] })))
-      .then((data: { websites?: DashboardWebsite[] }) => {
-        if (!isMounted) return;
-        setWebsites(Array.isArray(data.websites) ? data.websites : []);
-      })
-      .catch((error) => {
-        console.error("Failed to load websites", error);
-        if (!isMounted) return;
-        setWebsites([]);
-      });
+  if (!id) {
+    return null;
+  }
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const name = typeof record.name === "string" && record.name.trim().length > 0
+    ? record.name
+    : "Untitled Website";
 
-  const handleDeleted = (id: string) => {
-    setWebsites((prev) => prev.filter((w) => w._id !== id));
-  };
+  const plan = typeof record.plan === "string" && record.plan.length > 0 ? record.plan : "Free";
+  const status = typeof record.status === "string" && record.status.length > 0 ? record.status : "preview";
+
+  return { id, name, plan, status };
+}
+
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    redirect("/auth/login");
+  }
+
+  await connectDB();
+  const websites = await Website.find({ user: session.user.email })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const dashboardSites = websites
+    .map(toDashboardSite)
+    .filter((site): site is DashboardSite => Boolean(site && site.status === "active"));
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">My Websites</h1>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {websites.map((w) => (
-          <WebsiteCard key={w._id} website={w} onDeleted={handleDeleted} />
-        ))}
+    <div className="max-w-5xl px-6 py-10 mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold text-gray-900">My Websites</h1>
+        <p className="mt-2 text-sm text-gray-500">
+          Manage and redeploy your published Prosite projects.
+        </p>
       </div>
 
-      {websites.length === 0 && (
-        <p className="text-gray-500 mt-6">No websites yet.</p>
+      {dashboardSites.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
+          <p className="text-base font-medium text-gray-700">
+            You don&apos;t have any active websites yet.
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            Upgrade a project plan or deploy a preview to see it listed here.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {dashboardSites.map((site) => (
+            <div
+              key={site.id}
+              className="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">{site.name}</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">
+                    Plan: {site.plan}
+                  </span>
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+                    Status: {site.status}
+                  </span>
+                </div>
+              </div>
+
+              <Link
+                href={`/dashboard/${site.id}`}
+                className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
+              >
+                Manage
+              </Link>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
