@@ -6,15 +6,13 @@ import {
   type InferSchemaType,
 } from "mongoose";
 
-const MessageSchema = new Schema(
-  {
-    siteId: { type: String, required: true },
-    name: { type: String },
-    email: { type: String },
-    message: { type: String },
-  },
-  { timestamps: true }
-);
+const MessageSchema = new Schema({
+  siteId: { type: String, required: true },
+  name: { type: String },
+  email: { type: String },
+  message: { type: String },
+  createdAt: { type: Date, default: Date.now },
+});
 
 export const Message = models.Message || model("Message", MessageSchema);
 
