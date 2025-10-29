@@ -61,6 +61,7 @@ const WebsiteSchema = new Schema(
     seo: {
       score: { type: Number, default: 0 },
       lastScan: { type: Date },
+      suggestions: { type: [String], default: [] },
     },
     previewImage: { type: String },
     thumbnailUrl: { type: String },
