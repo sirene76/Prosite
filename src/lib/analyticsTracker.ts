@@ -6,7 +6,11 @@ type AnalyticsPayload = Partial<{
   visits: number;
   uniqueVisitors: number;
   date: Date;
-}>;
+  path: string;
+  referrer: string;
+  userAgent: string;
+  ip: string;
+}>; 
 
 function sanitizePayload(data: AnalyticsPayload) {
   const payload: Record<string, unknown> = {};

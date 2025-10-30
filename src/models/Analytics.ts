@@ -13,6 +13,10 @@ const AnalyticsSchema = new Schema(
     seoScore: { type: Number },
     visits: { type: Number, default: 0 },
     uniqueVisitors: { type: Number, default: 0 },
+    path: { type: String },
+    referrer: { type: String },
+    userAgent: { type: String },
+    ip: { type: String },
   },
   { timestamps: false }
 );
