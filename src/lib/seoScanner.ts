@@ -1,5 +1,7 @@
 import * as cheerio from "cheerio";
 
+import { recordAnalytics } from "@/lib/analyticsTracker";
+
 export type SEOScanResult = {
   score: number;
   suggestions: string[];
@@ -34,7 +36,10 @@ function uniqueSuggestions(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
-export async function scanSEO(websiteUrl: string | undefined | null): Promise<SEOScanResult> {
+export async function scanSEO(
+  websiteUrl: string | undefined | null,
+  siteId?: string
+): Promise<SEOScanResult> {
   let html = "";
   let siteUnreachable = false;
 
@@ -134,10 +139,16 @@ export async function scanSEO(websiteUrl: string | undefined | null): Promise<SE
   const finalSuggestions = uniqueSuggestions(suggestions);
   const finalScore = clampScore(score);
 
-  return {
+  const result: SEOScanResult = {
     score: finalScore,
     suggestions: finalSuggestions.length
       ? finalSuggestions
       : ["Great job! Your core SEO signals look strong."],
   };
+
+  if (siteId) {
+    await recordAnalytics(siteId, { seoScore: result.score });
+  }
+
+  return result;
 }
