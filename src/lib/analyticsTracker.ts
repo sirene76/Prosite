@@ -1,4 +1,5 @@
 import Analytics from "@/models/Analytics";
+import { connectDB } from "@/lib/mongodb";
 
 type AnalyticsPayload = Partial<{
   seoScore: number;
@@ -21,8 +22,12 @@ function sanitizePayload(data: AnalyticsPayload) {
 
 export async function recordAnalytics(siteId: string, data: AnalyticsPayload) {
   const payload = sanitizePayload(data);
+  if (Object.keys(payload).length === 0) {
+    return;
+  }
 
   try {
+    await connectDB();
     await Analytics.create({ siteId, ...payload });
   } catch (error) {
     console.warn("Failed to record analytics", error);
