@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import InspectorPanel from "@/components/builder/InspectorPanel";
 import SidebarSteps from "@/components/builder/SidebarSteps";
+import { BUILDER_STEPS } from "@/lib/builderSteps";
 
 interface BuilderShellProps {
   websiteId: string;
@@ -16,7 +17,7 @@ export default function BuilderShell({ websiteId, children }: BuilderShellProps)
     <div className="builder-container">
       <aside className="sidebar">
         <div className="sidebar-title">Prosite</div>
-        <SidebarSteps active="Branding" />
+        <SidebarSteps steps={BUILDER_STEPS} activeStep="branding" />
       </aside>
 
       <main className="main">

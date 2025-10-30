@@ -1,23 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 
 import { useBuilder } from "@/context/BuilderContext";
-import { getBuilderStepLabel } from "@/lib/builderSteps";
+import { getBuilderStepLabel, type BuilderStep } from "@/lib/builderSteps";
 import { DeviceControls } from "@/components/builder/DeviceControls";
-import { ProgressBar } from "@/components/builder/ProgressBar";
-import { Sidebar } from "@/components/builder/Sidebar";
-import { WebsitePreview } from "@/components/builder/WebsitePreview";
 import { StepNavigation } from "@/components/builder/StepNavigation";
 import BackButton from "@/components/builder/BackButton";
-import { useParams } from "next/navigation";
+import SidebarSteps from "@/components/builder/SidebarSteps";
+import PreviewArea from "@/components/builder/PreviewArea";
+import InspectorPanel from "@/components/builder/InspectorPanel";
+
+import "@/styles/builder-dark.css";
 
 type BuilderLayoutClientProps = {
   children: ReactNode;
 };
 
 export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
-  const { isSidebarCollapsed, steps, currentStep, setWebsiteId } = useBuilder();
+  const { steps, currentStep, setWebsiteId } = useBuilder();
   const params = useParams<{ websiteId?: string }>();
   const websiteIdFromParams =
     typeof params?.websiteId === "string" && params.websiteId.trim().length > 0
@@ -30,72 +32,66 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
     }
   }, [setWebsiteId, websiteIdFromParams]);
 
-  const groupedProgressSteps = useMemo(() => {
-    return steps.map((step) => ({
-      key: step,
-      label: getBuilderStepLabel(step),
-      steps: [step],
-    }));
-  }, [steps]);
+  const activeStepKey = useMemo<BuilderStep | undefined>(() => {
+    return steps[currentStep] ?? steps[0];
+  }, [currentStep, steps]);
 
-  const progressSteps = useMemo(
-    () => groupedProgressSteps.map(({ key, label }) => ({ key, label })),
-    [groupedProgressSteps]
-  );
-
-  const activeProgressIndex = useMemo(() => {
-    const activeStepKey = steps[currentStep];
+  const activeStepIndex = useMemo(() => {
     if (!activeStepKey) {
-      return 0;
+      return -1;
     }
+    return steps.findIndex((step) => step === activeStepKey);
+  }, [activeStepKey, steps]);
 
-    const groupIndex = groupedProgressSteps.findIndex((group) =>
-      group.steps.includes(activeStepKey)
-    );
+  const activeStepLabel = useMemo(() => {
+    return activeStepKey ? getBuilderStepLabel(activeStepKey) : undefined;
+  }, [activeStepKey]);
 
-    return groupIndex >= 0 ? groupIndex : 0;
-  }, [currentStep, groupedProgressSteps, steps]);
-
-  const stepSummary = useMemo(() => {
-    const summary = progressSteps.map((step) => step.label).join(" • ");
-    return summary || "Template • Branding • Preview • Checkout";
-  }, [progressSteps]);
+  const stepSubtitle = useMemo(() => {
+    if (activeStepLabel && activeStepIndex >= 0) {
+      return `Step ${activeStepIndex + 1} of ${steps.length} · ${activeStepLabel}`;
+    }
+    return activeStepLabel ?? null;
+  }, [activeStepIndex, activeStepLabel, steps.length]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-950 text-slate-100">
-      <header className="border-b border-gray-900/70 bg-gray-950/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-3">
-          <div className="flex items-center gap-4">
-            <BackButton />
-            <div className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <div className="flex items-center gap-3">
-                <span className="text-slate-200">Prosite Builder</span>
-                <span className="hidden text-slate-600 sm:inline">{stepSummary}</span>
+    <div className="builder-container bg-gray-950 text-slate-100">
+      <aside className="sidebar">
+        <div className="sidebar-title">Prosite</div>
+        <SidebarSteps steps={steps} activeStep={activeStepKey} />
+      </aside>
+
+      <main className="main">
+        <div className="flex h-full flex-col gap-6">
+          <div className="top-nav">
+            <div className="flex items-center gap-4">
+              <BackButton />
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                  Prosite Builder
+                </span>
+                {stepSubtitle ? (
+                  <span className="text-sm text-slate-300">{stepSubtitle}</span>
+                ) : null}
               </div>
             </div>
+            <div className="flex flex-col items-end gap-3 sm:flex-row sm:items-center sm:gap-3">
+              <DeviceControls />
+              <StepNavigation />
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <DeviceControls />
-            <StepNavigation />
+          <div className="flex-1 overflow-y-auto">
+            <PreviewArea />
           </div>
         </div>
-        <ProgressBar
-          steps={progressSteps}
-          activeIndex={activeProgressIndex}
-        />
-      </header>
-      <main className="flex flex-1 overflow-hidden">
-        <section
-          className="flex flex-1 flex-col overflow-hidden transition-all duration-300"
-          style={{ flexBasis: isSidebarCollapsed ? "100%" : "auto" }}
-        >
-          <WebsitePreview />
-        </section>
-        <Sidebar />
       </main>
-      <div className="sr-only" aria-hidden>
-        {children}
-      </div>
+
+      <aside className="inspector">
+        <div className="flex h-full flex-col gap-6 overflow-hidden">
+          <InspectorPanel />
+          <div className="flex-1 overflow-y-auto pr-1">{children}</div>
+        </div>
+      </aside>
     </div>
   );
 }

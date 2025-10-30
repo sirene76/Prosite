@@ -1,19 +1,23 @@
+import { BUILDER_STEPS, getBuilderStepLabel, type BuilderStep } from "@/lib/builderSteps";
+
 interface SidebarStepsProps {
-  active?: string;
+  steps?: readonly BuilderStep[];
+  activeStep?: BuilderStep;
 }
 
-export default function SidebarSteps({ active }: SidebarStepsProps) {
-  const steps = ["Template", "Branding", "Checkout"] as const;
+export default function SidebarSteps({ steps = BUILDER_STEPS, activeStep }: SidebarStepsProps) {
+  const resolvedActive = activeStep ?? steps[0];
 
   return (
     <nav className="space-y-4">
       {steps.map((step, index) => {
-        const isActive = step === active;
+        const label = getBuilderStepLabel(step);
+        const isActive = step === resolvedActive;
 
         return (
           <div key={step} className={`step${isActive ? " active" : ""}`}>
             <span className="step-index">{index + 1}</span>
-            <span>{step}</span>
+            <span>{label}</span>
           </div>
         );
       })}
