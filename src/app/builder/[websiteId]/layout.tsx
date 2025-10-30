@@ -4,11 +4,16 @@ import BuilderShell from "./BuilderShell";
 
 interface BuilderLayoutProps {
   children: ReactNode;
-  params: {
+  params: Promise<{
     websiteId: string;
-  };
+  }>;
 }
 
-export default function BuilderLayout({ children, params }: BuilderLayoutProps) {
-  return <BuilderShell websiteId={params.websiteId}>{children}</BuilderShell>;
+export default async function BuilderLayout({
+  children,
+  params,
+}: BuilderLayoutProps) {
+  const { websiteId } = await params;
+
+  return <BuilderShell websiteId={websiteId}>{children}</BuilderShell>;
 }
