@@ -40,7 +40,7 @@ export async function GET(
     const deploymentUrl =
       deployment && typeof deployment.url === "string" ? deployment.url : undefined;
 
-    const { score, suggestions } = await scanSEO(deploymentUrl, siteId);
+    const { score, suggestions } = await scanSEO(deploymentUrl);
     const lastScan = new Date();
 
     website.seo = {
