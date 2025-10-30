@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from "recharts";
 
 type SEOTrendChartProps = {
@@ -50,7 +51,16 @@ export default function SEOTrendChart({ data }: SEOTrendChartProps) {
             formatter={(value: unknown) => value}
             labelFormatter={formatDateLabel}
           />
-          <Line type="monotone" dataKey="seoScore" stroke="#3b82f6" strokeWidth={2} />
+          <Legend />
+          <Line
+            type="monotone"
+            name="SEO score"
+            dataKey="seoScore"
+            stroke="#3b82f6"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4 }}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

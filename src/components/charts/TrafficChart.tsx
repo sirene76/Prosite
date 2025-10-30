@@ -3,17 +3,20 @@
 import {
   BarChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from "recharts";
 
 type TrafficChartProps = {
   data: Array<{
     date: string;
     visits?: number | null;
+    uniqueVisitors?: number | null;
   }>;
 };
 
@@ -34,6 +37,8 @@ export default function TrafficChart({ data }: TrafficChartProps) {
     ? data.map((entry) => ({
         ...entry,
         visits: typeof entry.visits === "number" ? entry.visits : 0,
+        uniqueVisitors:
+          typeof entry.uniqueVisitors === "number" ? entry.uniqueVisitors : 0,
       }))
     : [];
 
@@ -46,7 +51,22 @@ export default function TrafficChart({ data }: TrafficChartProps) {
           <XAxis dataKey="date" tickFormatter={formatDateLabel} />
           <YAxis allowDecimals={false} />
           <Tooltip labelFormatter={formatDateLabel} />
-          <Bar dataKey="visits" fill="#10b981" radius={[6, 6, 0, 0]} />
+          <Legend />
+          <Bar
+            name="Visits"
+            dataKey="visits"
+            fill="#10b981"
+            radius={[6, 6, 0, 0]}
+          />
+          <Line
+            type="monotone"
+            name="Unique visitors"
+            dataKey="uniqueVisitors"
+            stroke="#6366f1"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4 }}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>
