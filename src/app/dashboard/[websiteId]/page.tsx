@@ -169,12 +169,6 @@ export default async function DashboardWebsitePage({
             ) : (
               <p className="mt-2 text-sm text-gray-400">Scan not yet run</p>
             )}
-            <Link
-              href={`/dashboard/${websiteForEditor._id}/analytics`}
-              className="mt-4 inline-flex text-sm font-medium text-blue-600 hover:text-blue-500"
-            >
-              View Analytics
-            </Link>
           </div>
         </div>
 
