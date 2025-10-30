@@ -17,7 +17,7 @@ function toBrandingValues(values: unknown): BrandingValues {
   const logo = typeof record.logo === "string" ? record.logo : "";
   const color = typeof record.color === "string" && record.color.trim()
     ? record.color
-    : "#3b82f6";
+    : undefined;
 
   return {
     websiteName,
@@ -58,7 +58,15 @@ export default async function BrandingPage({ params }: BrandingPageProps) {
 
   const templateHtml = typeof template.html === "string" ? template.html : "";
   const brandingValues = toBrandingValues(website.values);
-  const initialPreviewHtml = renderTemplate({ html: templateHtml, values: brandingValues });
+  const templateValues: Record<string, unknown> = {
+    ...brandingValues,
+  };
+
+  if (!templateValues.color) {
+    templateValues.color = "#3b82f6";
+  }
+
+  const initialPreviewHtml = renderTemplate({ html: templateHtml, values: templateValues });
 
   return (
     <BrandingPageClient

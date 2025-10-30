@@ -7,11 +7,11 @@ export type BrandingValues = {
   websiteName: string;
   businessName: string;
   logo: string;
-  color: string;
+  color?: string;
 };
 
 export type BrandingFormProps = {
-  websiteId: string;
+  websiteId?: string;
   initialValues?: Partial<BrandingValues>;
   onChange?: (values: BrandingValues) => void;
 };
@@ -55,10 +55,12 @@ export default function BrandingForm({
       if (current[key] === val) {
         return current;
       }
+
       const next: BrandingValues = {
         ...current,
         [key]: val,
       };
+
       onChange?.(next);
       return next;
     });
@@ -77,70 +79,71 @@ export default function BrandingForm({
     handleChange("logo", url);
   };
 
-  const formId = useMemo(() => `branding-${websiteId}`, [websiteId]);
+  const formId = useMemo(
+    () => (websiteId ? `branding-${websiteId}` : "branding-form"),
+    [websiteId]
+  );
 
   return (
-    <div className="space-y-4" aria-live="polite">
-      <div>
-        <label className="block text-sm font-semibold text-slate-200" htmlFor={`${formId}-website`}>
-          Website Name
+    <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" aria-live="polite">
+      <div className="space-y-2">
+        <label
+          className="block text-sm font-medium text-slate-700"
+          htmlFor={`${formId}-website`}
+        >
+          Website Title
         </label>
         <input
           id={`${formId}-website`}
           value={values.websiteName}
           onChange={(event) => handleChange("websiteName", event.target.value)}
-          className="mt-1 w-full rounded border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
           placeholder="My Awesome Site"
         />
       </div>
-      <div>
-        <label className="block text-sm font-semibold text-slate-200" htmlFor={`${formId}-business`}>
+
+      <div className="space-y-2">
+        <label
+          className="block text-sm font-medium text-slate-700"
+          htmlFor={`${formId}-business`}
+        >
           Business Name
         </label>
         <input
           id={`${formId}-business`}
           value={values.businessName}
           onChange={(event) => handleChange("businessName", event.target.value)}
-          className="mt-1 w-full rounded border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          placeholder="Acme Co."
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          placeholder="e.g. John's Café"
         />
       </div>
-      <div>
-        <label className="block text-sm font-semibold text-slate-200" htmlFor={`${formId}-logo`}>
-          Logo
+
+      <div className="space-y-2">
+        <label
+          className="block text-sm font-medium text-slate-700"
+          htmlFor={`${formId}-logo`}
+        >
+          Logo (optional)
         </label>
         <input
           id={`${formId}-logo`}
           type="file"
           accept="image/*"
           onChange={handleFile}
-          className="mt-1 block w-full text-sm text-slate-200 file:mr-4 file:rounded file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-500"
+          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-500"
         />
         {values.logo ? (
-          <div className="mt-3 inline-flex min-h-[4rem] items-center rounded bg-white/5 p-2">
+          <div className="flex items-center justify-start">
             <Image
               src={values.logo}
               alt="Logo preview"
               width={160}
               height={64}
-              className="h-16 w-auto object-contain"
               unoptimized
+              className="mt-3 h-16 w-auto rounded-lg border border-slate-200 bg-slate-50 object-contain px-4"
             />
           </div>
         ) : null}
-      </div>
-      <div>
-        <label className="block text-sm font-semibold text-slate-200" htmlFor={`${formId}-color`}>
-          Primary Color
-        </label>
-        <input
-          id={`${formId}-color`}
-          type="color"
-          value={values.color}
-          onChange={(event) => handleChange("color", event.target.value)}
-          className="mt-1 h-10 w-20 cursor-pointer rounded border border-slate-800 bg-transparent"
-          aria-label="Primary brand color"
-        />
       </div>
     </div>
   );
