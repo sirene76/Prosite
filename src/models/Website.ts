@@ -46,6 +46,8 @@ const WebsiteSchema = new Schema(
         return "Free";
       },
     },
+    subscriptionId: { type: String },
+    planExpiresAt: { type: Date },
     subdomain: { type: String, trim: true, lowercase: true },
     theme: {
       colors: { type: Object, default: {} },
