@@ -12,6 +12,7 @@ const WebsiteSchema = new Schema(
     templateId: { type: String, required: true }, // slug like "agency-starter"
     userId: { type: Schema.Types.ObjectId, ref: "User" },
     user: { type: String },
+    userEmail: { type: String },
     status: {
       type: String,
       enum: ["preview", "active"],

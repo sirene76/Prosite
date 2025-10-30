@@ -101,6 +101,7 @@ export async function POST(request: Request) {
       name: template.name,
       templateId: template._id,
       user: session.user.email,
+      userEmail: session.user.email,
       status: "preview",
       plan: "Free",
       html,
