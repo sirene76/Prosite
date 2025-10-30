@@ -2,11 +2,15 @@ import type { TemplateModuleDefinition } from "@/lib/templates";
 
 export type RenderTemplateOptions = {
   html: string;
-  values: Record<string, string>;
+  values?: Record<string, unknown>;
   modules?: TemplateModuleDefinition[];
 };
 
-export function renderTemplate({ html, values, modules = [] }: RenderTemplateOptions) {
+export function renderTemplate({
+  html,
+  values = {},
+  modules = [],
+}: RenderTemplateOptions) {
   if (!html) return "";
 
   // Handle modules first
@@ -52,10 +56,14 @@ export function renderTemplate({ html, values, modules = [] }: RenderTemplateOpt
     if (moduleMap.has(key)) return moduleMap.get(key) ?? "";
 
     if (Object.prototype.hasOwnProperty.call(values, key)) {
-      return toStringValue(values[key]);
+      const directValue = values[key];
+      if (directValue === undefined || directValue === null) {
+        return "";
+      }
+      return toStringValue(directValue);
     }
 
-    const nestedValue = resolvePath(values, key);
+    const nestedValue = resolvePath(values as Record<string, unknown>, key);
     if (nestedValue !== undefined) {
       return toStringValue(nestedValue);
     }

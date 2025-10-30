@@ -1,4 +1,9 @@
-export const BUILDER_STEPS = ["templates", "theme", "content", "checkout"] as const;
+export const BUILDER_STEPS = [
+  "templates",
+  "branding",
+  "preview",
+  "checkout",
+] as const;
 
 export type BuilderStep = (typeof BUILDER_STEPS)[number];
 
