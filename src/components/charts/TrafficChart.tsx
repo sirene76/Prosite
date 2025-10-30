@@ -12,18 +12,49 @@ import {
   Legend,
 } from "recharts";
 
-type TrafficChartProps = {
-  data: Array<{
-    date: string;
-    visits?: number | null;
-    uniqueVisitors?: number | null;
-  }>;
+type TrafficChartInput = {
+  date?: string;
+  chartLabel?: string;
+  visits?: number | null;
+  uniqueVisitors?: number | null;
 };
 
-function formatDateLabel(value: string) {
-  const date = new Date(value);
+type TrafficChartDatum = {
+  date: string;
+  chartLabel: string;
+  visits: number;
+  uniqueVisitors: number;
+};
+
+type TrafficChartProps = {
+  data: TrafficChartInput[];
+};
+
+function formatTooltipLabel(dateIso: string | undefined, fallback: string) {
+  if (!dateIso) {
+    return fallback;
+  }
+
+  const date = new Date(dateIso);
   if (Number.isNaN(date.getTime())) {
-    return value;
+    return fallback;
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function ensureChartLabel(isoDate: string, existingLabel?: string) {
+  if (existingLabel && existingLabel.trim().length > 0) {
+    return existingLabel;
+  }
+
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return existingLabel ?? isoDate;
   }
 
   return date.toLocaleDateString(undefined, {
@@ -33,13 +64,21 @@ function formatDateLabel(value: string) {
 }
 
 export default function TrafficChart({ data }: TrafficChartProps) {
-  const safeData = Array.isArray(data)
-    ? data.map((entry) => ({
-        ...entry,
-        visits: typeof entry.visits === "number" ? entry.visits : 0,
-        uniqueVisitors:
-          typeof entry.uniqueVisitors === "number" ? entry.uniqueVisitors : 0,
-      }))
+  const safeData: TrafficChartDatum[] = Array.isArray(data)
+    ? data.map((entry) => {
+        const isoDate =
+          typeof entry.date === "string" && entry.date.length > 0
+            ? entry.date
+            : new Date().toISOString();
+
+        return {
+          date: isoDate,
+          chartLabel: ensureChartLabel(isoDate, entry.chartLabel),
+          visits: typeof entry.visits === "number" ? entry.visits : 0,
+          uniqueVisitors:
+            typeof entry.uniqueVisitors === "number" ? entry.uniqueVisitors : 0,
+        } satisfies TrafficChartDatum;
+      })
     : [];
 
   return (
@@ -48,9 +87,20 @@ export default function TrafficChart({ data }: TrafficChartProps) {
       <ResponsiveContainer width="100%" height={250}>
         <BarChart data={safeData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="date" tickFormatter={formatDateLabel} />
+          <XAxis dataKey="chartLabel" />
           <YAxis allowDecimals={false} />
-          <Tooltip labelFormatter={formatDateLabel} />
+          <Tooltip
+            labelFormatter={(label, payload) => {
+              const datum = payload?.[0]?.payload as
+                | TrafficChartDatum
+                | undefined;
+              const fallback =
+                typeof label === "string"
+                  ? label
+                  : datum?.chartLabel ?? "";
+              return formatTooltipLabel(datum?.date, fallback);
+            }}
+          />
           <Legend />
           <Bar
             name="Visits"
