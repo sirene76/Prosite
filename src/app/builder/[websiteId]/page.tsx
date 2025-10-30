@@ -1,28 +1,16 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useRouter, useParams } from "next/navigation";
+type BuilderWebsitePageProps = {
+  params: Promise<{
+    websiteId: string;
+  }>;
+};
 
-export default function BuilderPage() {
-  const router = useRouter();
-  const params = useParams<{ websiteId: string }>();
-  const websiteId = params.websiteId; // ✅ extract websiteId
+export default async function BuilderWebsitePage({ params }: BuilderWebsitePageProps) {
+  const { websiteId } = await params;
+  if (!websiteId) {
+    redirect("/builder");
+  }
 
-  const handleNext = () => {
-    router.push(`/checkout/${websiteId}`);
-  };
-
-  return (
-    <div className="flex h-full flex-col">
-      {/* existing builder UI */}
-
-      <div className="mt-6 flex justify-end">
-        <button
-          onClick={handleNext}
-          className="rounded-lg bg-blue-600 px-6 py-3 text-white"
-        >
-          Next → Checkout
-        </button>
-      </div>
-    </div>
-  );
+  redirect(`/builder/${websiteId}/branding`);
 }

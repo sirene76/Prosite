@@ -31,21 +31,11 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
   }, [setWebsiteId, websiteIdFromParams]);
 
   const groupedProgressSteps = useMemo(() => {
-    return steps.reduce<
-      { key: string; label: string; steps: string[] }[]
-    >((acc, step) => {
-      if (step === "theme" || step === "content") {
-        const lastGroup = acc[acc.length - 1];
-        if (!lastGroup || lastGroup.key !== "building") {
-          acc.push({ key: "building", label: "Building", steps: [] });
-        }
-        acc[acc.length - 1]?.steps.push(step);
-        return acc;
-      }
-
-      acc.push({ key: step, label: getBuilderStepLabel(step), steps: [step] });
-      return acc;
-    }, []);
+    return steps.map((step) => ({
+      key: step,
+      label: getBuilderStepLabel(step),
+      steps: [step],
+    }));
   }, [steps]);
 
   const progressSteps = useMemo(
@@ -68,7 +58,7 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
 
   const stepSummary = useMemo(() => {
     const summary = progressSteps.map((step) => step.label).join(" • ");
-    return summary || "Template • Building • Checkout";
+    return summary || "Template • Branding • Preview • Checkout";
   }, [progressSteps]);
 
   return (
