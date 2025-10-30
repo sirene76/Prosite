@@ -5,6 +5,8 @@ import { signOut, useSession } from "next-auth/react";
 
 export default function Navbar() {
   const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+  const isAdmin = userRole === "admin";
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur">
@@ -37,6 +39,11 @@ export default function Navbar() {
               <Link href="/builder" className="text-slate-300 transition hover:text-white">
                 Builder
               </Link>
+              {isAdmin ? (
+                <Link href="/admin" className="text-slate-300 transition hover:text-white">
+                  Admin
+                </Link>
+              ) : null}
               <span className="text-slate-300">Hello, {session.user?.email}</span>
               <button
                 type="button"
