@@ -19,7 +19,7 @@ const sections = [
 
 export default function InspectorPanel() {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col">
       <header className="mb-6">
         <h2 className="text-xl font-semibold text-white">Inspector</h2>
         <p className="text-sm text-gray-400">Branding</p>
