@@ -93,17 +93,17 @@ export function BrandingPageClient({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-10">
-      <div className="mb-8 space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-400">
+      <div className="mb-10 space-y-3 text-slate-800">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-500">
           Step 2 · Add Your Brand
         </p>
-        <h1 className="text-3xl font-semibold text-slate-50">Make it yours</h1>
-        <p className="max-w-2xl text-sm text-slate-400">
-          Enter your business name and upload your logo – see it live instantly.
+        <h1 className="text-3xl font-semibold text-slate-900">Make it yours</h1>
+        <p className="max-w-2xl text-sm text-slate-500">
+          Give your site a name, add your business details, and see changes update instantly in the live preview.
         </p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
+      <div className="grid gap-10 md:grid-cols-2">
         <div className="space-y-6">
           <BrandingForm
             websiteId={websiteId}
@@ -112,23 +112,23 @@ export function BrandingPageClient({
           />
           <Link
             href={`/checkout/${websiteId}`}
-            className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow transition hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            className="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
           >
             Upgrade &amp; Launch Site
           </Link>
         </div>
 
         <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-100">Live Preview</h2>
-            <p className="text-sm text-slate-400">Changes update instantly as you edit.</p>
+          <div className="space-y-1 text-slate-800">
+            <h2 className="text-lg font-semibold">Live Preview</h2>
+            <p className="text-sm text-slate-500">Your website refreshes as you update your details.</p>
           </div>
           <div className="relative">
-            <PreviewFrame html={previewHtml} />
+            <PreviewFrame html={previewHtml} title={values.websiteName} />
             {isRendering ? (
-              <div className="absolute inset-0 rounded-xl border border-blue-500/40 bg-blue-500/10 backdrop-blur-sm" aria-hidden>
+              <div className="absolute inset-0 rounded-2xl border border-blue-500/30 bg-blue-500/10 backdrop-blur-sm" aria-hidden>
                 <div className="flex h-full items-center justify-center">
-                  <span className="text-sm font-medium text-blue-200">Updating preview…</span>
+                  <span className="text-sm font-medium text-blue-700">Updating preview…</span>
                 </div>
               </div>
             ) : null}
