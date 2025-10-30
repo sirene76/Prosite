@@ -2,12 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { isValidObjectId } from "mongoose";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
-
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Website from "@/models/Website";
-import { triggerDeploy } from "@/lib/deployWorker";
+import ContentEditor from "@/components/dashboard/ContentEditor";
 
 function toPlainRecord(value: unknown): Record<string, unknown> {
   if (!value) {
@@ -91,14 +89,15 @@ export default async function DashboardWebsitePage({
       ? website.subdomain
       : websiteId.slice(-6);
 
-  async function redeployAction() {
-    "use server";
-    await triggerDeploy(websiteId);
-    revalidatePath("/dashboard");
-    revalidatePath(`/dashboard/${websiteId}`);
-  }
-
   const hasLiveSite = Boolean(deploymentUrl);
+  const websiteValues = toPlainRecord(website.values);
+  const websiteForEditor = {
+    _id:
+      typeof website._id === "string"
+        ? website._id
+        : website._id?.toString() ?? websiteId,
+    values: websiteValues,
+  };
 
   return (
     <div className="max-w-4xl px-6 py-10 mx-auto">
@@ -135,7 +134,7 @@ export default async function DashboardWebsitePage({
               View Live Site
             </a>
 
-            <form action={redeployAction}>
+            <form action={`/api/websites/${websiteForEditor._id}/redeploy`} method="post">
               <button
                 type="submit"
                 className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
@@ -171,6 +170,14 @@ export default async function DashboardWebsitePage({
               <p className="mt-2 text-sm text-gray-400">Scan not yet run</p>
             )}
           </div>
+        </div>
+
+        <div className="mt-10 rounded-lg border border-gray-200 p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Content</h2>
+            <p className="text-xs uppercase tracking-wide text-gray-400">Live Editing</p>
+          </div>
+          <ContentEditor website={websiteForEditor} />
         </div>
       </div>
     </div>

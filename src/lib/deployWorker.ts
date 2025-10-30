@@ -84,9 +84,11 @@ export async function triggerDeploy(websiteId: string) {
     throw new Error(`Template ${website.templateId} not found`);
   }
 
+  const contentValues = toPlainObject<Record<string, unknown>>(website.content);
+  const customValues = toPlainObject<Record<string, unknown>>(website.values);
   const valuesSource = {
-    ...toPlainObject<Record<string, unknown>>(website.content),
-    ...toPlainObject<Record<string, unknown>>(website.values),
+    ...contentValues,
+    ...customValues,
   };
   const rendered = renderTemplate({
     html: website.html || template.html || "",
@@ -113,9 +115,10 @@ export async function triggerDeploy(websiteId: string) {
   await uploadToStorage(normalizedSubdomain, bundle);
 
   const deploymentUrl = `https://${normalizedSubdomain}.prosite.com`;
+  const deployedAt = new Date();
   website.deployment = {
     url: deploymentUrl,
-    lastDeployedAt: new Date(),
+    lastDeployedAt: deployedAt,
   };
   website.status = "active";
 

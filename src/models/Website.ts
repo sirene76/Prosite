@@ -52,7 +52,7 @@ const WebsiteSchema = new Schema(
       name: { type: String },
       label: { type: String },
     },
-    values: { type: Schema.Types.Mixed },
+    values: { type: Object, default: {} },
     content: { type: Schema.Types.Mixed },
     pages: { type: [String], default: [] },
     html: { type: String },
