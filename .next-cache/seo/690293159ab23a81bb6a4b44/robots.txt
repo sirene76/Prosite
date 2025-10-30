@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://690293159ab23a81bb6a4b44.prosite.com/sitemap.xml
