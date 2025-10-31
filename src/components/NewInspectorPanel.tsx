@@ -1,9 +1,16 @@
 "use client";
 import { useState } from "react";
 
-export default function NewInspectorPanel({ data, setData }: any) {
+export default function NewInspectorPanel({ data, setData, activeStep }: any) {
   const [activeTab, setActiveTab] = useState("content");
   const [openField, setOpenField] = useState<string | null>("Website Title");
+
+  const stepLabelMap: Record<string, string> = {
+    template: "Template",
+    branding: "Branding",
+    checkout: "Checkout",
+  };
+  const stepLabel = stepLabelMap[activeStep as string] ?? "Template";
 
   // ✅ Prevent crash if data not loaded yet
   if (!data) {
@@ -18,7 +25,7 @@ export default function NewInspectorPanel({ data, setData }: any) {
   return (
     <>
       <h2>Inspector</h2>
-      <p className="subtitle">Branding</p>
+      <p className="subtitle">{stepLabel}</p>
 
       <div className="tabs">
         {["pages", "theme", "content"].map((t) => (
