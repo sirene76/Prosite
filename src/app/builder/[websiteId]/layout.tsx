@@ -1,7 +1,7 @@
-import "@/styles/builder-dark.css";
-import BuilderShell from "@/components/builder/BuilderShell";
+import type { ReactNode } from "react";
 
-export default async function BuilderLayout({ children, params }: any) {
-  const { websiteId } = await params;
-  return <BuilderShell websiteId={websiteId}>{children}</BuilderShell>;
+import "@/styles/builder-dark.css";
+
+export default function BuilderLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }
