@@ -1,5 +1,7 @@
 "use client";
 
+import "@/styles/new-builder.css";
+
 import { useEffect, useState } from "react";
 import NewBuilderShell from "@/components/NewBuilderShell";
 import NewBuilderPreview from "@/components/NewBuilderPreview";

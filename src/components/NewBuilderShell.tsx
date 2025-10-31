@@ -9,12 +9,16 @@ export default function NewBuilderShell({ children }: any) {
           <a href="/dashboard" className="nav-link">Dashboard</a>
           <a href="#" className="nav-link active">Builder</a>
         </div>
-        <div className="right-nav">
+        {/* <div className="right-nav">
           <span className="user">Hello, email@gmail.com</span>
           <button className="btn-primary">Sign out</button>
-        </div>
+        </div> */}
       </header>
-      {children}
+
+      {/* ✅ Added this wrapper */}
+      <div className="builder-body">
+        {children}
+      </div>
     </div>
   );
 }
