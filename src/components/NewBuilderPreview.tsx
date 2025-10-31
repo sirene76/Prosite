@@ -24,9 +24,15 @@ type NewBuilderPreviewProps = {
   device: DeviceMode;
 };
 
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
 export default function NewBuilderPreview({ templateHtml, data, device }: NewBuilderPreviewProps) {
   const previewRef = useRef<HTMLIFrameElement>(null);
+  const previewCanvasRef = useRef<HTMLDivElement>(null);
+  const previewInnerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(100);
+  const [transformOrigin, setTransformOrigin] = useState("50% 0%");
 
   useEffect(() => {
     if (!previewRef.current || !templateHtml) return;
@@ -61,6 +67,42 @@ export default function NewBuilderPreview({ templateHtml, data, device }: NewBui
   const scaledWidth = deviceSize.width * zoomScale;
   const scaledHeight = deviceSize.height * zoomScale;
 
+  useEffect(() => {
+    const canvas = previewCanvasRef.current;
+    if (!canvas) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (previewInnerRef.current) {
+        const rect = previewInnerRef.current.getBoundingClientRect();
+        const originX = clamp(
+          ((event.clientX - rect.left) / rect.width) * 100,
+          0,
+          100,
+        );
+        const originY = clamp(
+          ((event.clientY - rect.top) / rect.height) * 100,
+          0,
+          100,
+        );
+        setTransformOrigin(`${originX}% ${originY}%`);
+      }
+
+      setZoom((prevZoom) => {
+        const nextZoom = clamp(prevZoom - event.deltaY * 0.05, 25, 200);
+        return nextZoom === prevZoom ? prevZoom : nextZoom;
+      });
+    };
+
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, []);
+
   const handleFullPreview = () => {
     if (!previewRef.current) return;
     const doc = previewRef.current.contentDocument;
@@ -74,28 +116,18 @@ export default function NewBuilderPreview({ templateHtml, data, device }: NewBui
 
   return (
     <div className="preview-content">
-      <div className="zoom-controls">
-        <label htmlFor="zoom-slider">Zoom</label>
-        <input
-          id="zoom-slider"
-          type="range"
-          min={25}
-          max={150}
-          step={5}
-          value={zoom}
-          onChange={(event) => setZoom(Number(event.target.value))}
-        />
-        <span className="zoom-value">{zoom}%</span>
-      </div>
+      <div className="preview-zoom-indicator">{Math.round(zoom)}%</div>
 
-      <div className="preview-canvas">
+      <div className="preview-canvas" ref={previewCanvasRef}>
         <div className="preview-device" style={{ width: scaledWidth, height: scaledHeight }}>
           <div
+            ref={previewInnerRef}
             className="preview-device-inner"
             style={{
               width: deviceSize.width,
               height: deviceSize.height,
               transform: `scale(${zoomScale})`,
+              transformOrigin,
             }}
           >
             <div className="browser">

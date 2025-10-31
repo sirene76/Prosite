@@ -4,6 +4,7 @@ import { useState } from "react";
 export default function NewInspectorPanel({ data, setData, activeStep }: any) {
   const [activeTab, setActiveTab] = useState("content");
   const [openField, setOpenField] = useState<string | null>("Website Title");
+  const [collapsed, setCollapsed] = useState(false);
 
   const stepLabelMap: Record<string, string> = {
     template: "Template",
@@ -12,17 +13,14 @@ export default function NewInspectorPanel({ data, setData, activeStep }: any) {
   };
   const stepLabel = stepLabelMap[activeStep as string] ?? "Template";
 
-  // ✅ Prevent crash if data not loaded yet
-  if (!data) {
-    return (
-      <div className="inspector-loading">
-        <h2>Inspector</h2>
-        <p>Loading data...</p>
-      </div>
-    );
-  }
+  const toggleCollapsed = () => setCollapsed((prev) => !prev);
 
-  return (
+  const inspectorContent = !data ? (
+    <div className="inspector-loading">
+      <h2>Inspector</h2>
+      <p>Loading data...</p>
+    </div>
+  ) : (
     <>
       <h2>Inspector</h2>
       <p className="subtitle">{stepLabel}</p>
@@ -33,6 +31,7 @@ export default function NewInspectorPanel({ data, setData, activeStep }: any) {
             key={t}
             className={`tab ${activeTab === t ? "active" : ""}`}
             onClick={() => setActiveTab(t)}
+            type="button"
           >
             {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
@@ -55,6 +54,7 @@ export default function NewInspectorPanel({ data, setData, activeStep }: any) {
                 onClick={() =>
                   setOpenField(openField === label ? null : label)
                 }
+                type="button"
               >
                 {label}
               </button>
@@ -100,5 +100,22 @@ export default function NewInspectorPanel({ data, setData, activeStep }: any) {
 
       <footer className="footer">Made with 💜 Prosite</footer>
     </>
+  );
+
+  return (
+    <aside className={`inspector${collapsed ? " collapsed" : ""}`}>
+      <button
+        type="button"
+        className="collapse-btn"
+        onClick={toggleCollapsed}
+        aria-label={collapsed ? "Expand inspector" : "Collapse inspector"}
+        aria-expanded={!collapsed}
+      >
+        {collapsed ? "‹" : "›"}
+      </button>
+      <div className="inspector-content" aria-hidden={collapsed}>
+        {inspectorContent}
+      </div>
+    </aside>
   );
 }
