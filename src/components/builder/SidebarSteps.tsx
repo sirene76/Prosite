@@ -9,7 +9,7 @@ export default function SidebarSteps({ steps = BUILDER_STEPS, activeStep }: Side
   const resolvedActive = activeStep ?? steps[0];
 
   return (
-    <nav className="space-y-4">
+    <nav className="step-list">
       {steps.map((step, index) => {
         const label = getBuilderStepLabel(step);
         const isActive = step === resolvedActive;

@@ -14,39 +14,36 @@ interface BuilderShellProps {
 
 export default function BuilderShell({ websiteId, children }: BuilderShellProps) {
   return (
-    <div className="builder-container">
-      <aside className="sidebar">
-        <div className="sidebar-title">Prosite</div>
-        <SidebarSteps steps={BUILDER_STEPS} activeStep="branding" />
-      </aside>
-
-      <main className="main">
-        <div className="top-nav mb-6">
-          <div className="flex items-center gap-4 text-sm text-gray-400">
-            <Link href="/dashboard" className="hover:text-white transition-colors">
+    <div className="builder-ui">
+      <header className="top-nav">
+        <div className="top-nav-left">
+          <div className="breadcrumbs">
+            <Link href="/dashboard" className="breadcrumb-link">
               Dashboard
             </Link>
-            <span className="opacity-60">/</span>
-            <Link href={`/builder/${websiteId}`} className="text-white">
+            <span className="breadcrumb-separator">/</span>
+            <Link href={`/builder/${websiteId}`} className="breadcrumb-current">
               Builder
             </Link>
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-gray-400">Hello, email@gmail.com</span>
-            <button type="button" className="btn-secondary">
-              Sign out
-            </button>
-            <button type="button" className="btn-primary">
-              Publish
-            </button>
-          </div>
+          <SidebarSteps steps={BUILDER_STEPS} activeStep="branding" />
         </div>
-        {children}
-      </main>
-
-      <aside className="inspector">
-        <InspectorPanel />
-      </aside>
+        <div className="top-nav-actions">
+          <span className="user-email">Hello, email@gmail.com</span>
+          <button type="button" className="btn-secondary">
+            Sign out
+          </button>
+          <button type="button" className="btn-primary">
+            Publish
+          </button>
+        </div>
+      </header>
+      <div className="builder-container">
+        <main className="main">{children}</main>
+        <aside className="inspector">
+          <InspectorPanel />
+        </aside>
+      </div>
     </div>
   );
 }
