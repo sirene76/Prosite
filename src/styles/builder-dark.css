@@ -111,7 +111,7 @@ body,
 
 .builder-ui .btn-primary {
   background-color: #2563eb;
-  color: #fff;
+  color: #ffffff;
 }
 
 .builder-ui .btn-primary:hover {
@@ -223,27 +223,123 @@ body,
   margin-top: 1.5rem;
 }
 
-.builder-ui .inspector-card {
-  background-color: #181a27;
-  border: 1px solid #2a2d3f;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  gap: 1rem;
-  display: flex;
+.builder-ui .inspector h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.builder-ui .subtitle {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+.builder-ui .tabs {
+  display: inline-flex;
+  background-color: #0e0f16;
+  border: 1px solid #1f2233;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.builder-ui .tab {
+  padding: 0.375rem 1rem;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.builder-ui .tab.active {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.builder-ui .tab-content {
+  margin-top: 1.5rem;
+  display: none;
   flex-direction: column;
+  gap: 1rem;
 }
 
-.builder-ui .inspector-card:last-of-type {
-  margin-bottom: 0;
+.builder-ui .tab-content.active {
+  display: flex;
 }
 
-.builder-ui .inspector-footer {
+.builder-ui .tab-content h3 {
   font-size: 0.75rem;
-  color: #6b7280;
-  padding: 0.75rem 0;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+.builder-ui .desc {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.builder-ui .collapsible {
+  border: 1px solid #1f2233;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background-color: #0e0f16;
+}
+
+.builder-ui .collapse-toggle {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  color: #e5e7eb;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.builder-ui .collapse-toggle:hover {
+  background-color: rgba(37, 99, 235, 0.08);
+}
+
+.builder-ui .collapse-toggle.open {
+  background-color: rgba(37, 99, 235, 0.12);
+}
+
+.builder-ui .collapse-content {
+  padding: 1rem;
   border-top: 1px solid #1f2233;
+  background-color: #12131e;
+}
+
+.builder-ui .input-field {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #1f2233;
+  background-color: #0e0f16;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+}
+
+.builder-ui .input-field:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.45);
+}
+
+.builder-ui .footer {
   margin-top: auto;
   text-align: center;
+  font-size: 0.75rem;
+  color: #6b7280;
+  padding-top: 1rem;
+  border-top: 1px solid #1f2233;
 }
 
 @media (max-width: 1024px) {
@@ -267,4 +363,55 @@ body,
     border-top: 1px solid #1f2233;
     min-height: 320px;
   }
+}
+
+.builder-ui .preview-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.builder-ui .preview-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.builder-ui .preview-toolbar .device-icons {
+  display: flex;
+  gap: 0.5rem;
+  color: #e5e7eb;
+}
+
+.builder-ui .preview-toolbar .step-info {
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.builder-ui .browser-url {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+.builder-ui .browser-url img {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.375rem;
+}
+
+.builder-ui .preview-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+}
+
+.builder-ui .step-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 }
