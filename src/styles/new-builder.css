@@ -39,6 +39,12 @@ body {
   gap: 1.5rem;
 }
 
+.top-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .step-nav-horizontal {
   display: flex;
   align-items: center;
@@ -165,20 +171,81 @@ body {
 
 .builder-grid {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   height: 100%;
   width: 100%;
   overflow: hidden;
+  column-gap: 0;
 }
 
 .device-toolbar {
   background-color: #11121a;
   border: 1px solid #1f2233;
-  border-radius: 10px;
-  padding: 0.75rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.5rem;
   display: flex;
   justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
   gap: 0.5rem;
+  background-color: #11121a;
+  border: 1px solid #1f2233;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+}
+
+.zoom-button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #f3f4f6;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.zoom-button:hover,
+.zoom-button:focus-visible {
+  background-color: rgba(37, 99, 235, 0.18);
+  color: #fff;
+  outline: none;
+}
+
+.zoom-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.zoom-input input {
+  width: 60px;
+  background: transparent;
+  border: none;
+  color: #f3f4f6;
+  text-align: right;
+  font-size: 0.9rem;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.zoom-input input::-webkit-outer-spin-button,
+.zoom-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.zoom-input .suffix {
+  color: #9ca3af;
+  font-size: 0.85rem;
 }
 
 .device-button {
@@ -187,13 +254,14 @@ body {
   border: 1px solid transparent;
   color: #9ca3af;
   cursor: pointer;
-  padding: 0.65rem 0.5rem;
-  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 999px;
   font-size: 0.85rem;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  gap: 0.4rem;
   transition: color 0.2s, border-color 0.2s, background-color 0.2s;
 }
 
@@ -219,24 +287,8 @@ body {
   padding: 1.5rem 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
   overflow: hidden;
-}
-
-.preview-toolbar {
-  display: flex;
-  justify-content: flex-start;
-  padding-bottom: 0.5rem;
-}
-
-.preview-zoom-indicator {
-  align-self: flex-end;
-  background-color: rgba(17, 18, 26, 0.85);
-  border: 1px solid #1f2233;
-  border-radius: 999px;
-  padding: 0.25rem 0.85rem;
-  font-size: 0.8rem;
-  color: #f3f4f6;
+  min-width: 0;
 }
 
 .preview-canvas {
@@ -246,6 +298,7 @@ body {
   justify-content: center;
   align-items: flex-start;
   padding: 1rem 0 2rem;
+  min-height: 0;
 }
 
 .preview-device {
@@ -253,15 +306,17 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  max-width: 100%;
+  transition: width 0.2s ease;
+  margin: 0 auto;
 }
 
-.preview-device-inner {
+.preview-scale {
   transform-origin: top center;
   width: 100%;
-  height: 100%;
 }
 
-.preview-device-inner .browser {
+.preview-scale .browser {
   height: 100%;
   width: 100%;
 }
@@ -536,7 +591,7 @@ body {
     border-radius: 999px;
   }
 }
-.preview-content {
+.preview-wrapper {
   display: flex;
   flex-direction: column;
   height: 100%;

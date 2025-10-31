@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import NewBuilderShell from "@/components/NewBuilderShell";
 import NewBuilderPreview from "@/components/NewBuilderPreview";
 import NewInspectorPanel from "@/components/NewInspectorPanel";
-import DeviceToolbar, { DeviceMode } from "@/components/DeviceToolbar";
 
 export default function BuilderPageClient({ websiteId }: { websiteId: string }) {
   const [templateHtml, setTemplateHtml] = useState("");
@@ -65,8 +64,6 @@ export default function BuilderPageClient({ websiteId }: { websiteId: string }) 
   }, [websiteId]);
 
   const [activeStep, setActiveStep] = useState("template");
-  const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
-
   const steps = [
     { id: "template", label: "Template" },
     { id: "branding", label: "Branding" },
@@ -79,23 +76,20 @@ export default function BuilderPageClient({ websiteId }: { websiteId: string }) 
       activeStep={activeStep}
       onStepChange={setActiveStep}
     >
-      <div className="builder-grid">
-        <section className="preview-panel">
-          <div className="preview-toolbar">
-            <DeviceToolbar
-              selectedDevice={deviceMode}
-              onDeviceChange={setDeviceMode}
+      {({ device, zoom }) => (
+        <div className="builder-grid">
+          <section className="preview-panel">
+            <NewBuilderPreview
+              templateHtml={templateHtml}
+              data={data}
+              device={device}
+              zoom={zoom}
             />
-          </div>
-          <NewBuilderPreview
-            templateHtml={templateHtml}
-            data={data}
-            device={deviceMode}
-          />
-        </section>
+          </section>
 
-        <NewInspectorPanel data={data} setData={setData} activeStep={activeStep} />
-      </div>
+          <NewInspectorPanel data={data} setData={setData} activeStep={activeStep} />
+        </div>
+      )}
     </NewBuilderShell>
   );
 }
