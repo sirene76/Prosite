@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import NewBuilderShell from "@/components/NewBuilderShell";
 import NewBuilderPreview from "@/components/NewBuilderPreview";
 import NewInspectorPanel from "@/components/NewInspectorPanel";
+import DeviceToolbar, { DeviceMode } from "@/components/DeviceToolbar";
 
 export default function BuilderPageClient({ websiteId }: { websiteId: string }) {
   const [templateHtml, setTemplateHtml] = useState("");
@@ -63,14 +64,51 @@ export default function BuilderPageClient({ websiteId }: { websiteId: string }) 
     fetchData();
   }, [websiteId]);
 
+  const [activeStep, setActiveStep] = useState("template");
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
+
+  const steps = [
+    { id: "template", label: "Template" },
+    { id: "branding", label: "Branding" },
+    { id: "checkout", label: "Checkout" },
+  ];
+
   return (
     <NewBuilderShell>
-      <main className="main">
-        <NewBuilderPreview templateHtml={templateHtml} data={data} />
-      </main>
-      <aside className="inspector">
-        <NewInspectorPanel data={data} setData={setData} />
-      </aside>
+      <div className="builder-grid">
+        <aside className="left-panel">
+          <nav className="step-navigation">
+            <h3>Process</h3>
+            <div className="step-list">
+              {steps.map((step, index) => (
+                <button
+                  key={step.id}
+                  className={`step-button${activeStep === step.id ? " active" : ""}`}
+                  onClick={() => setActiveStep(step.id)}
+                  type="button"
+                >
+                  {step.label}
+                  <span>Step {index + 1}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          <DeviceToolbar selectedDevice={deviceMode} onDeviceChange={setDeviceMode} />
+        </aside>
+
+        <section className="preview-panel">
+          <NewBuilderPreview
+            templateHtml={templateHtml}
+            data={data}
+            device={deviceMode}
+          />
+        </section>
+
+        <aside className="inspector">
+          <NewInspectorPanel data={data} setData={setData} activeStep={activeStep} />
+        </aside>
+      </div>
     </NewBuilderShell>
   );
 }
