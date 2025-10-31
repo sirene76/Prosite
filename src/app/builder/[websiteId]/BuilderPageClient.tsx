@@ -74,30 +74,19 @@ export default function BuilderPageClient({ websiteId }: { websiteId: string }) 
   ];
 
   return (
-    <NewBuilderShell>
+    <NewBuilderShell
+      steps={steps}
+      activeStep={activeStep}
+      onStepChange={setActiveStep}
+    >
       <div className="builder-grid">
-        <aside className="left-panel">
-          <nav className="step-navigation">
-            <h3>Process</h3>
-            <div className="step-list">
-              {steps.map((step, index) => (
-                <button
-                  key={step.id}
-                  className={`step-button${activeStep === step.id ? " active" : ""}`}
-                  onClick={() => setActiveStep(step.id)}
-                  type="button"
-                >
-                  {step.label}
-                  <span>Step {index + 1}</span>
-                </button>
-              ))}
-            </div>
-          </nav>
-
-          <DeviceToolbar selectedDevice={deviceMode} onDeviceChange={setDeviceMode} />
-        </aside>
-
         <section className="preview-panel">
+          <div className="preview-toolbar">
+            <DeviceToolbar
+              selectedDevice={deviceMode}
+              onDeviceChange={setDeviceMode}
+            />
+          </div>
           <NewBuilderPreview
             templateHtml={templateHtml}
             data={data}
@@ -105,9 +94,7 @@ export default function BuilderPageClient({ websiteId }: { websiteId: string }) 
           />
         </section>
 
-        <aside className="inspector">
-          <NewInspectorPanel data={data} setData={setData} activeStep={activeStep} />
-        </aside>
+        <NewInspectorPanel data={data} setData={setData} activeStep={activeStep} />
       </div>
     </NewBuilderShell>
   );
