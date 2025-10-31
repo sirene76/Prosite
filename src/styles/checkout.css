@@ -213,6 +213,37 @@
   opacity: 0.6;
 }
 
+.checkout-footer {
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  text-align: center;
+  max-width: 640px;
+  color: var(--checkout-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.checkout-footer a {
+  color: var(--checkout-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.checkout-footer a:hover,
+.checkout-footer a:focus {
+  text-decoration: underline;
+}
+
+.checkout-footer .security-note {
+  font-size: 0.9rem;
+  color: var(--checkout-text);
+  opacity: 0.8;
+}
+
 @media (max-width: 1024px) {
   .pricing-cards {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

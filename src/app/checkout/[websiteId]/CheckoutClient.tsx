@@ -176,6 +176,15 @@ export function CheckoutClient({
           </div>
         ))}
       </div>
+
+      <footer className="checkout-footer">
+        <p>
+          Need a hand choosing the right plan? Reach us at{" "}
+          <a href="mailto:support@prosite.com">support@prosite.com</a> and we&apos;ll
+          guide you.
+        </p>
+        <p className="security-note">Secure checkout powered by Stripe.</p>
+      </footer>
     </div>
   );
 }
