@@ -15,8 +15,9 @@ body {
   flex-direction: column;
 }
 
-.branding-builder-active header.sticky {
-  display: none;
+body.branding-builder-active header.sticky,
+body.branding-builder-active header.navbar {
+  display: none !important;
 }
 
 /* ==== BUILDER HEADER ==== */
