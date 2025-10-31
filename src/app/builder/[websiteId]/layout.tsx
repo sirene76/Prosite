@@ -1,7 +1,6 @@
-import type { ReactNode } from "react";
+import "@/styles/new-builder.css";
 
-import "@/styles/builder-dark.css";
-
-export default function BuilderLayout({ children }: { children: ReactNode }) {
+export default async function BuilderLayout({ children, params }: any) {
+  const { websiteId } = await params;
   return <>{children}</>;
 }

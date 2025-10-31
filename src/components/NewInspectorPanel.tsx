@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 
-export default function InspectorPanel() {
+export default function NewInspectorPanel({ data, setData }: any) {
   const [activeTab, setActiveTab] = useState("content");
-  const [openField, setOpenField] = useState<string | null>(null);
+  const [openField, setOpenField] = useState<string | null>("Website Title");
 
   return (
     <>
@@ -24,7 +24,7 @@ export default function InspectorPanel() {
 
       {activeTab === "content" && (
         <div className="tab-content active">
-          <h3>SECTIONS</h3>
+          <h3>Sections</h3>
           <p className="desc">
             Manage your content by opening each field and updating it below.
           </p>
@@ -44,12 +44,34 @@ export default function InspectorPanel() {
               {openField === label && (
                 <div className="collapse-content">
                   {label === "Upload Logo" ? (
-                    <input type="file" accept="image/*" className="input-field" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="input-field"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (r) =>
+                          setData({ ...data, logo: r.target?.result });
+                        reader.readAsDataURL(file);
+                      }}
+                    />
                   ) : (
                     <input
                       type="text"
-                      placeholder={`Enter ${label.toLowerCase()}`}
                       className="input-field"
+                      value={
+                        label === "Website Title" ? data.title : data.business
+                      }
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          [label === "Website Title"
+                            ? "title"
+                            : "business"]: e.target.value,
+                        })
+                      }
                     />
                   )}
                 </div>
