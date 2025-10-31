@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { DeviceMode } from "@/components/DeviceToolbar";
 
-const DEVICE_SIZES: Record<DeviceMode, { width: number; height: number }> = {
-  desktop: { width: 1200, height: 900 },
-  tablet: { width: 834, height: 1112 },
-  mobile: { width: 414, height: 844 },
+const DEVICE_WIDTHS: Record<DeviceMode, number | "100%"> = {
+  desktop: "100%",
+  tablet: 768,
+  mobile: 375,
 };
 
 type BuilderPreviewData = {
@@ -22,17 +22,19 @@ type NewBuilderPreviewProps = {
   templateHtml: string;
   data: BuilderPreviewData;
   device: DeviceMode;
+  zoom: number;
 };
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
-
-export default function NewBuilderPreview({ templateHtml, data, device }: NewBuilderPreviewProps) {
+export default function NewBuilderPreview({
+  templateHtml,
+  data,
+  device,
+  zoom,
+}: NewBuilderPreviewProps) {
   const previewRef = useRef<HTMLIFrameElement>(null);
-  const previewCanvasRef = useRef<HTMLDivElement>(null);
-  const previewInnerRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(100);
-  const [transformOrigin, setTransformOrigin] = useState("50% 0%");
+  const widthValue = DEVICE_WIDTHS[device] ?? DEVICE_WIDTHS.desktop;
+  const previewWidth =
+    typeof widthValue === "number" ? `${widthValue}px` : widthValue;
 
   useEffect(() => {
     if (!previewRef.current || !templateHtml) return;
@@ -62,47 +64,6 @@ export default function NewBuilderPreview({ templateHtml, data, device }: NewBui
     doc.close();
   }, [templateHtml, data]);
 
-  const deviceSize = useMemo(() => DEVICE_SIZES[device] ?? DEVICE_SIZES.desktop, [device]);
-  const zoomScale = zoom / 100;
-  const scaledWidth = deviceSize.width * zoomScale;
-  const scaledHeight = deviceSize.height * zoomScale;
-
-  useEffect(() => {
-    const canvas = previewCanvasRef.current;
-    if (!canvas) return;
-
-    const handleWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey) {
-        return;
-      }
-
-      event.preventDefault();
-
-      if (previewInnerRef.current) {
-        const rect = previewInnerRef.current.getBoundingClientRect();
-        const originX = clamp(
-          ((event.clientX - rect.left) / rect.width) * 100,
-          0,
-          100,
-        );
-        const originY = clamp(
-          ((event.clientY - rect.top) / rect.height) * 100,
-          0,
-          100,
-        );
-        setTransformOrigin(`${originX}% ${originY}%`);
-      }
-
-      setZoom((prevZoom) => {
-        const nextZoom = clamp(prevZoom - event.deltaY * 0.05, 25, 200);
-        return nextZoom === prevZoom ? prevZoom : nextZoom;
-      });
-    };
-
-    canvas.addEventListener("wheel", handleWheel, { passive: false });
-    return () => canvas.removeEventListener("wheel", handleWheel);
-  }, []);
-
   const handleFullPreview = () => {
     if (!previewRef.current) return;
     const doc = previewRef.current.contentDocument;
@@ -115,21 +76,10 @@ export default function NewBuilderPreview({ templateHtml, data, device }: NewBui
   };
 
   return (
-    <div className="preview-content">
-      <div className="preview-zoom-indicator">{Math.round(zoom)}%</div>
-
-      <div className="preview-canvas" ref={previewCanvasRef}>
-        <div className="preview-device" style={{ width: scaledWidth, height: scaledHeight }}>
-          <div
-            ref={previewInnerRef}
-            className="preview-device-inner"
-            style={{
-              width: deviceSize.width,
-              height: deviceSize.height,
-              transform: `scale(${zoomScale})`,
-              transformOrigin,
-            }}
-          >
+    <div className="preview-wrapper">
+      <div className="preview-canvas">
+        <div className="preview-device" style={{ width: previewWidth }}>
+          <div className="preview-scale" style={{ transform: `scale(${zoom / 100})` }}>
             <div className="browser">
               <div className="browser-bar">
                 <div className="browser-dots">
