@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import "@/styles/new-builder.css";
 
@@ -8,14 +8,14 @@ import BuilderLayoutClient from "./BuilderLayoutClient";
 
 type BuilderLayoutProps = {
   children: ReactNode;
-  params: Promise<{ websiteId: string }>;
+  params: { websiteId: string };
 };
 
 export default function BuilderLayout({
   children,
   params,
 }: BuilderLayoutProps) {
-  const { websiteId } = use(params);
+  const { websiteId } = params;
   const pathname = usePathname();
   const isBrandingRoute = Boolean(pathname?.includes("/branding"));
 
