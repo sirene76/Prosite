@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import "@/styles/new-builder.css";
 
@@ -8,7 +8,7 @@ import BuilderLayoutClient from "./BuilderLayoutClient";
 
 type BuilderLayoutProps = {
   children: ReactNode;
-  params: Promise<{ websiteId: string }>;
+  params: { websiteId: string };
 };
 
 export default function BuilderLayout({
