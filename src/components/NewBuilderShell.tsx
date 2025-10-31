@@ -1,19 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import type { ChangeEvent, ReactNode } from "react";
 import { useState } from "react";
 import DeviceToolbar, { type DeviceMode } from "@/components/DeviceToolbar";
 
 const clampZoom = (value: number) => Math.min(200, Math.max(25, value));
 
-type BuilderShellRenderProps = {
+export type BuilderShellRenderProps = {
   device: DeviceMode;
   onDeviceChange: (device: DeviceMode) => void;
   zoom: number;
   onZoomChange: (zoom: number) => void;
 };
 
-type BuilderStep = {
+export type BuilderStep = {
   id: string;
   label: string;
 };
@@ -72,10 +73,12 @@ export default function NewBuilderShell({
 
   return (
     <div className="builder-container">
-      <header className="top-nav">
-        <div className="left-nav">
-          <div className="logo">Prosite</div>
-          {steps.length > 0 && (
+      <header className="builder-header">
+        <div className="builder-header-left">
+          <Link href="/" className="builder-logo">
+            Prosite
+          </Link>
+          {steps.length > 0 ? (
             <nav className="step-nav-horizontal" aria-label="Builder steps">
               {steps.map((step, index) => (
                 <button
@@ -92,9 +95,9 @@ export default function NewBuilderShell({
                 </button>
               ))}
             </nav>
-          )}
+          ) : null}
         </div>
-        <div className="top-controls">
+        <div className="builder-header-right">
           <DeviceToolbar selectedDevice={device} onDeviceChange={setDevice} />
           <div className="zoom-controls" aria-label="Preview zoom controls">
             <button

@@ -1,6 +1,20 @@
+import type { ReactNode } from "react";
 import "@/styles/new-builder.css";
 
-export default async function BuilderLayout({ children, params }: any) {
+import BuilderLayoutClient from "./BuilderLayoutClient";
+
+type BuilderLayoutProps = {
+  children: ReactNode;
+  params: Promise<{ websiteId: string }>;
+};
+
+export default async function BuilderLayout({
+  children,
+  params,
+}: BuilderLayoutProps) {
   const { websiteId } = await params;
-  return <>{children}</>;
+
+  return (
+    <BuilderLayoutClient websiteId={websiteId}>{children}</BuilderLayoutClient>
+  );
 }
