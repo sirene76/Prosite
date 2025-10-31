@@ -4,7 +4,7 @@ export interface DashboardWebsite {
   status?: string;
   templateId?: string;
   plan?: string;
-  thumbnailUrl?: string;
+  thumbnailUrl?: string | null;
   previewImage?: string;
   createdAt?: string;
   updatedAt?: string;

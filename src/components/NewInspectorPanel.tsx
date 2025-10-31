@@ -5,6 +5,16 @@ export default function NewInspectorPanel({ data, setData }: any) {
   const [activeTab, setActiveTab] = useState("content");
   const [openField, setOpenField] = useState<string | null>("Website Title");
 
+  // ✅ Prevent crash if data not loaded yet
+  if (!data) {
+    return (
+      <div className="inspector-loading">
+        <h2>Inspector</h2>
+        <p>Loading data...</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <h2>Inspector</h2>

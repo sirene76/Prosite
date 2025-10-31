@@ -1,30 +1,64 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import NewBuilderShell from '@/components/NewBuilderShell';
-import NewBuilderPreview from '@/components/NewBuilderPreview';
-import NewInspectorPanel from '@/components/NewInspectorPanel';
+import { useEffect, useState } from "react";
+import NewBuilderShell from "@/components/NewBuilderShell";
+import NewBuilderPreview from "@/components/NewBuilderPreview";
+import NewInspectorPanel from "@/components/NewInspectorPanel";
 
 export default function BuilderPageClient({ websiteId }: { websiteId: string }) {
-  const [templateHtml, setTemplateHtml] = useState('');
+  const [templateHtml, setTemplateHtml] = useState("");
   const [data, setData] = useState({
-    title: 'My Awesome Website',
-    business: 'Prosite Inc.',
-    logo: '',
+    title: "",
+    business: "",
+    logo: "",
+    theme: { colors: {}, fonts: {} },
   });
 
   useEffect(() => {
-    async function fetchTemplate() {
+    async function fetchData() {
       try {
-        const res = await fetch(`/api/templates/${websiteId}`);
-        if (!res.ok) throw new Error('Failed to load template');
-        const template = await res.json();
-        setTemplateHtml(template.html || '');
+        if (!websiteId || websiteId === "new") {
+          console.warn("Builder opened without a valid websiteId.");
+          return;
+        }
+
+        // 1️⃣ Fetch the website first
+        const websiteRes = await fetch(`/api/websites/${websiteId}`);
+        if (!websiteRes.ok) {
+          console.error("❌ Failed to fetch website");
+          return;
+        }
+        const website = await websiteRes.json();
+
+        // 2️⃣ Extract the templateId from the website
+        const templateId = website.templateId;
+        if (!templateId) {
+          console.error("❌ Website has no templateId");
+          return;
+        }
+
+        // 3️⃣ Fetch the template using its ID
+        const templateRes = await fetch(`/api/templates/${templateId}`);
+        if (!templateRes.ok) {
+          console.error("❌ Failed to fetch template");
+          return;
+        }
+        const template = await templateRes.json();
+
+        // 4️⃣ Apply the data
+        setTemplateHtml(template.html || "");
+        setData({
+          title: website.branding?.title || "",
+          business: website.branding?.business || "",
+          logo: website.branding?.logo || "",
+          theme: website.theme || { colors: {}, fonts: {} },
+        });
       } catch (err) {
-        console.error('Template fetch failed:', err);
+        console.error("Builder fetch failed:", err);
       }
     }
-    fetchTemplate();
+
+    fetchData();
   }, [websiteId]);
 
   return (
