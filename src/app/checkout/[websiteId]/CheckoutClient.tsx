@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import "./checkout.css";
+import "@/styles/checkout.css";
 
 type CheckoutClientProps = {
   websiteId: string;
@@ -135,11 +135,10 @@ export function CheckoutClient({
   return (
     <div className="checkout-container">
       <header className="checkout-header">
-        <h1>Choose Your Plan</h1>
+        <h1>Choose the plan that fits your growth</h1>
         <p>
-          Template: <strong>{templateName}</strong> &nbsp;|&nbsp; Theme:{" "}
-          <strong>{themeName}</strong> &nbsp;|&nbsp; Business:{" "}
-          <strong>{businessName}</strong>
+          Template <strong>{templateName}</strong> · Theme <strong>{themeName}</strong> ·
+          Business <strong>{businessName}</strong>
         </p>
 
         <div className="billing-toggle">
@@ -152,9 +151,9 @@ export function CheckoutClient({
         </div>
       </header>
 
-      <div className="pricing-grid">
+      <div className="pricing-cards">
         {plans.map((plan) => (
-          <div className="plan-card" key={plan.id}>
+          <div className="pricing-card" key={plan.id}>
             <h2>{plan.title}</h2>
             <div className="price">
               {isYearly ? plan.yearlyPrice : plan.monthlyPrice}
