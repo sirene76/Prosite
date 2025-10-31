@@ -9,7 +9,7 @@ import { DeviceControls } from "@/components/builder/DeviceControls";
 import { StepNavigation } from "@/components/builder/StepNavigation";
 import BackButton from "@/components/builder/BackButton";
 import SidebarSteps from "@/components/builder/SidebarSteps";
-import PreviewArea from "@/components/builder/PreviewArea";
+import { WebsitePreview } from "@/components/builder/WebsitePreview";
 import InspectorPanel from "@/components/builder/InspectorPanel";
 
 import "@/styles/builder-dark.css";
@@ -81,7 +81,7 @@ export function BuilderLayoutClient({ children }: BuilderLayoutClientProps) {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <PreviewArea />
+            <WebsitePreview />
           </div>
         </div>
       </main>
