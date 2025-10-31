@@ -1,72 +1,65 @@
-const tabs = ["Pages", "Theme", "Content"] as const;
-const sections = [
-  {
-    id: "SITE",
-    status: "SUCCESS",
-    description: "Placeholder content for SITE section editing.",
-  },
-  {
-    id: "HERO SECTION",
-    status: "SUCCESS",
-    description: "Placeholder content for HERO SECTION editing.",
-  },
-  {
-    id: "FEATURES",
-    status: "PENDING",
-    description: "Add your feature highlights and supporting details.",
-  },
-];
+"use client";
+import { useState } from "react";
 
 export default function InspectorPanel() {
-  return (
-    <div className="flex flex-col">
-      <header className="mb-6">
-        <h2 className="text-xl font-semibold text-white">Inspector</h2>
-        <p className="text-sm text-gray-400">Branding</p>
-      </header>
+  const [activeTab, setActiveTab] = useState("content");
+  const [openField, setOpenField] = useState<string | null>(null);
 
-      <div className="mb-6 flex gap-3 border-b border-gray-800 pb-2">
-        {tabs.map((tab) => (
+  return (
+    <>
+      <h2>Inspector</h2>
+      <p className="subtitle">Branding</p>
+
+      <div className="tabs">
+        {["pages", "theme", "content"].map((t) => (
           <button
-            key={tab}
-            type="button"
-            className={`text-sm font-medium transition-colors ${
-              tab === "Content"
-                ? "text-white"
-                : "text-gray-500 hover:text-gray-300"
-            }`}
+            key={t}
+            className={`tab ${activeTab === t ? "active" : ""}`}
+            onClick={() => setActiveTab(t)}
           >
-            {tab}
+            {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
 
-      <div className="mb-4">
-        <h3 className="text-xs font-semibold text-gray-400">SECTIONS</h3>
-        <p className="mt-1 text-xs text-gray-500">
-          Manage your content by opening each tag card and updating the fields.
-        </p>
-      </div>
+      {activeTab === "content" && (
+        <div className="tab-content active">
+          <h3>SECTIONS</h3>
+          <p className="desc">
+            Manage your content by opening each field and updating it below.
+          </p>
 
-      <div className="space-y-3 overflow-y-auto pr-1">
-        {sections.map((section) => (
-          <article key={section.id} className="inspector-card">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-white">{section.id}</span>
-              <span
-                className={`text-xs font-semibold ${
-                  section.status === "SUCCESS" ? "text-green-400" : "text-yellow-400"
+          {["Website Title", "Business Name", "Upload Logo"].map((label) => (
+            <div className="collapsible" key={label}>
+              <button
+                className={`collapse-toggle ${
+                  openField === label ? "open" : ""
                 }`}
+                onClick={() =>
+                  setOpenField(openField === label ? null : label)
+                }
               >
-                {section.status}
-              </span>
+                {label}
+              </button>
+              {openField === label && (
+                <div className="collapse-content">
+                  {label === "Upload Logo" ? (
+                    <input type="file" accept="image/*" className="input-field" />
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder={`Enter ${label.toLowerCase()}`}
+                      className="input-field"
+                    />
+                  )}
+                </div>
+              )}
             </div>
-            <p className="text-xs text-gray-400">{section.description}</p>
-          </article>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      <footer className="inspector-footer">Made with 💜 Prosite</footer>
-    </div>
+      <footer className="footer">Made with 💜 Prosite</footer>
+    </>
   );
 }
