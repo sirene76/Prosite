@@ -76,10 +76,16 @@ export default function NewBuilderPreview({
   };
 
   return (
-    <div className="preview-wrapper">
+    <div
+      className="preview-wrapper"
+      style={{ height: "calc(100vh - 120px)", overflow: "hidden" }}
+    >
       <div className="preview-canvas">
         <div className="preview-device" style={{ width: previewWidth }}>
-          <div className="preview-scale" style={{ transform: `scale(${zoom / 100})` }}>
+          <div
+            className="preview-scale"
+            style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
+          >
             <div className="browser">
               <div className="browser-bar">
                 <div className="browser-dots">
