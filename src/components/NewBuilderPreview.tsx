@@ -75,6 +75,26 @@ export default function NewBuilderPreview({
     previewWindow.document.close();
   };
 
+  useEffect(() => {
+    const handleScrollMessage = (event: MessageEvent) => {
+      if (event.origin && event.origin !== window.location.origin) return;
+      if (!event.data || typeof event.data !== "object") return;
+      const { scrollTo } = event.data as { scrollTo?: string };
+      if (!scrollTo || typeof scrollTo !== "string") return;
+
+      const iframeDocument = previewRef.current?.contentDocument;
+      if (!iframeDocument) return;
+
+      const target = iframeDocument.getElementById(scrollTo);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+
+    window.addEventListener("message", handleScrollMessage);
+    return () => window.removeEventListener("message", handleScrollMessage);
+  }, []);
+
   return (
     <div
       className="preview-wrapper"

@@ -59,6 +59,7 @@ export default function BuilderLayoutClient({
       steps={BUILDER_STEPS}
       activeStep="branding"
       onStepChange={handleStepChange}
+      websiteId={websiteId}
     >
       {((shellProps: BuilderShellRenderProps) =>
         cloneElement(children as ReactElement<BuilderPageChildProps>, {

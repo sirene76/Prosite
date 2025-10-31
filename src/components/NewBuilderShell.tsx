@@ -24,6 +24,7 @@ type NewBuilderShellProps = {
   steps?: BuilderStep[];
   activeStep?: string;
   onStepChange?: (stepId: string) => void;
+  websiteId?: string;
 };
 
 
@@ -31,6 +32,7 @@ export default function NewBuilderShell({
   children,
   steps = [],
   activeStep,
+  websiteId,
 }: NewBuilderShellProps) {
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [zoom, setZoom] = useState(100);
@@ -96,6 +98,14 @@ export default function NewBuilderShell({
           ) : null}
         </div>
         <div className="builder-header-right">
+          {websiteId ? (
+            <Link
+              href={`/builder/${websiteId}/checkout`}
+              className="btn-primary next-step"
+            >
+              Next → Checkout
+            </Link>
+          ) : null}
           <DeviceToolbar selectedDevice={device} onDeviceChange={setDevice} />
           <div className="zoom-controls" aria-label="Preview zoom controls">
             <button
