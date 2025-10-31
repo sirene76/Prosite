@@ -17,11 +17,13 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   padding: clamp(1.5rem, 2vw + 1rem, 3rem);
   background: var(--checkout-bg);
   color: var(--checkout-text);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .checkout-header {
