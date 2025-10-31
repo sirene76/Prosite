@@ -2,12 +2,29 @@
 
 import "@/styles/new-builder.css";
 
-import { useEffect, useState } from "react";
-import NewBuilderShell from "@/components/NewBuilderShell";
+import { useEffect, useMemo, useState } from "react";
+import NewBuilderShell, {
+  type BuilderShellRenderProps,
+  type BuilderStep,
+} from "@/components/NewBuilderShell";
 import NewBuilderPreview from "@/components/NewBuilderPreview";
 import NewInspectorPanel from "@/components/NewInspectorPanel";
 
-export default function BuilderPageClient({ websiteId }: { websiteId: string }) {
+type BuilderPageClientProps = {
+  websiteId: string;
+  builderShell?: BuilderShellRenderProps;
+  steps?: BuilderStep[];
+  activeStep?: string;
+  onStepChange?: (stepId: string) => void;
+};
+
+export default function BuilderPageClient({
+  websiteId,
+  builderShell,
+  steps,
+  activeStep,
+  onStepChange,
+}: BuilderPageClientProps) {
   const [templateHtml, setTemplateHtml] = useState("");
   const [data, setData] = useState({
     title: "",
@@ -63,33 +80,62 @@ export default function BuilderPageClient({ websiteId }: { websiteId: string }) 
     fetchData();
   }, [websiteId]);
 
-  const [activeStep, setActiveStep] = useState("template");
-  const steps = [
-    { id: "template", label: "Template" },
-    { id: "branding", label: "Branding" },
-    { id: "checkout", label: "Checkout" },
-  ];
+  const [internalActiveStep, setInternalActiveStep] = useState(
+    activeStep ?? "template",
+  );
+
+  const resolvedSteps = useMemo<BuilderStep[]>(
+    () =>
+      steps ?? [
+        { id: "template", label: "Template" },
+        { id: "branding", label: "Branding" },
+        { id: "checkout", label: "Checkout" },
+      ],
+    [steps],
+  );
+
+  useEffect(() => {
+    if (activeStep) {
+      setInternalActiveStep(activeStep);
+    }
+  }, [activeStep]);
+
+  const resolvedActiveStep = activeStep ?? internalActiveStep;
+  const handleStepChange = onStepChange ?? setInternalActiveStep;
+
+  const renderBuilderContent = ({
+    device,
+    zoom,
+  }: BuilderShellRenderProps) => (
+    <div className="builder-grid">
+      <section className="preview-panel">
+        <NewBuilderPreview
+          templateHtml={templateHtml}
+          data={data}
+          device={device}
+          zoom={zoom}
+        />
+      </section>
+
+      <NewInspectorPanel
+        data={data}
+        setData={setData}
+        activeStep={resolvedActiveStep}
+      />
+    </div>
+  );
+
+  if (builderShell) {
+    return renderBuilderContent(builderShell);
+  }
 
   return (
     <NewBuilderShell
-      steps={steps}
-      activeStep={activeStep}
-      onStepChange={setActiveStep}
+      steps={resolvedSteps}
+      activeStep={resolvedActiveStep}
+      onStepChange={handleStepChange}
     >
-      {({ device, zoom }) => (
-        <div className="builder-grid">
-          <section className="preview-panel">
-            <NewBuilderPreview
-              templateHtml={templateHtml}
-              data={data}
-              device={device}
-              zoom={zoom}
-            />
-          </section>
-
-          <NewInspectorPanel data={data} setData={setData} activeStep={activeStep} />
-        </div>
-      )}
+      {(shellRenderProps) => renderBuilderContent(shellRenderProps)}
     </NewBuilderShell>
   );
 }
