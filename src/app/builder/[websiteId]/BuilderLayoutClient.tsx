@@ -46,9 +46,7 @@ export default function BuilderLayoutClient({
 
   const handleStepChange = (stepId: string) => {
     const targetRoute = stepRoutes[stepId as keyof typeof stepRoutes];
-    if (!targetRoute || targetRoute === pathname) {
-      return;
-    }
+    if (!targetRoute || targetRoute === pathname) return;
     router.push(targetRoute);
   };
 
@@ -62,14 +60,14 @@ export default function BuilderLayoutClient({
       activeStep="branding"
       onStepChange={handleStepChange}
     >
-      {(shellProps) =>
+      {((shellProps: BuilderShellRenderProps) =>
         cloneElement(children as ReactElement<BuilderPageChildProps>, {
           builderShell: shellProps,
           activeStep: "branding",
           steps: BUILDER_STEPS,
           onStepChange: handleStepChange,
         })
-      }
+      ) as unknown as ReactNode}
     </NewBuilderShell>
   );
 }

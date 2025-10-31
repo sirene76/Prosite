@@ -20,11 +20,12 @@ export type BuilderStep = {
 };
 
 type NewBuilderShellProps = {
-  children: ReactNode | ((props: BuilderShellRenderProps) => ReactNode);
+  children: ReactNode;
   steps?: BuilderStep[];
   activeStep?: string;
   onStepChange?: (stepId: string) => void;
 };
+
 
 export default function NewBuilderShell({
   children,
