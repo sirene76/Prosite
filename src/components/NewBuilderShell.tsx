@@ -30,7 +30,6 @@ export default function NewBuilderShell({
   children,
   steps = [],
   activeStep,
-  onStepChange,
 }: NewBuilderShellProps) {
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [zoom, setZoom] = useState(100);
@@ -81,18 +80,16 @@ export default function NewBuilderShell({
           {steps.length > 0 ? (
             <nav className="step-nav-horizontal" aria-label="Builder steps">
               {steps.map((step, index) => (
-                <button
+                <span
                   key={step.id}
-                  type="button"
                   className={`step-nav-item${
                     activeStep === step.id ? " active" : ""
                   }`}
-                  onClick={() => onStepChange?.(step.id)}
                   aria-current={activeStep === step.id ? "step" : undefined}
                 >
                   <span className="step-pill">{index + 1}</span>
                   <span className="step-label">{step.label}</span>
-                </button>
+                </span>
               ))}
             </nav>
           ) : null}
