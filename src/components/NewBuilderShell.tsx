@@ -100,7 +100,7 @@ export default function NewBuilderShell({
         <div className="builder-header-right">
           {websiteId ? (
             <Link
-              href={`/builder/${websiteId}/checkout`}
+              href={`/checkout/${websiteId}`}
               className="btn-primary next-step"
             >
               Next → Checkout

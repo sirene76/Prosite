@@ -1,24 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
-
-const PLAN_PRICING: Record<PlanId, { price: string; description: string }> = {
-  free: { price: "$0/mo", description: "Basic hosting with limited features" },
-  pro: { price: "$49/mo", description: "Professional features with premium support" },
-  agency: { price: "$99/mo", description: "Advanced collaboration and priority support" },
-};
-
-type PlanId = "free" | "pro" | "agency";
+import { useState } from "react";
+import "./checkout.css";
 
 type CheckoutClientProps = {
   websiteId: string;
   websiteName: string;
   templateName: string;
   themeName: string;
-  previewImage: string;
-  initialError?: string | null;
+  businessName: string;
+};
+
+// 🧱 Stripe Price IDs (replace with your real ones)
+const STRIPE_PRICE_IDS = {
+  basic: {
+    monthly: "price_basic_monthly_123",
+    yearly: "price_basic_yearly_456",
+  },
+  standard: {
+    monthly: "price_standard_monthly_789",
+    yearly: "price_standard_yearly_abc",
+  },
+  premium: {
+    monthly: "price_premium_monthly_def",
+    yearly: "price_premium_yearly_ghi",
+  },
 };
 
 export function CheckoutClient({
@@ -26,302 +32,151 @@ export function CheckoutClient({
   websiteName,
   templateName,
   themeName,
-  previewImage,
-  initialError = null,
+  businessName,
 }: CheckoutClientProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const success = searchParams?.get("success") === "true";
-  const canceled = searchParams?.get("canceled") === "true";
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("pro");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(initialError);
-  const [status, setStatus] = useState<string | null>(null);
-  const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const resolvedThemeName = themeName?.trim() ? themeName : "Default";
+  const [isYearly, setIsYearly] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!success) return;
+  const handleToggle = () => setIsYearly(!isYearly);
 
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-    let isMounted = true;
+  const plans = [
+    {
+      id: "basic",
+      title: "Basic Plan — “Get Online”",
+      monthlyPrice: "300 MAD / month",
+      yearlyPrice: "3,000 MAD / year",
+      yearlyNote: "→ 2 months free",
+      description:
+        "Perfect for small websites or startups that just need a solid online presence.",
+      features: [
+        "Secure hosting + free domain & SSL",
+        "Automatic updates & backups",
+        "Basic SEO setup so your site appears on Google",
+        "Monthly report showing your traffic & rankings",
+      ],
+      goal:
+        "Keep your site online, protected, and visible — without doing the tech work yourself.",
+    },
+    {
+      id: "standard",
+      title: "Standard Plan — “Grow Online”",
+      monthlyPrice: "600 MAD / month",
+      yearlyPrice: "6,000 MAD / year",
+      yearlyNote: "→ 2 months free",
+      description:
+        "Perfect for growing businesses that want more visitors and better rankings.",
+      features: [
+        "Everything in Basic, plus:",
+        "Faster support + monthly content edits",
+        "Advanced security & local SEO (Google Maps setup)",
+        "1 new blog post per month",
+        "AI-assisted SEO to boost performance automatically",
+        "Detailed monthly reports with progress insights",
+      ],
+      goal:
+        "Help your site grow in Google and bring in real customers.",
+    },
+    {
+      id: "premium",
+      title: "Premium Plan — “Dominate Online”",
+      monthlyPrice: "1,200 MAD / month",
+      yearlyPrice: "12,000 MAD / year",
+      yearlyNote: "→ save big",
+      description:
+        "Perfect for businesses ready to scale fast and lead their market.",
+      features: [
+        "Everything in Standard, plus:",
+        "Premium high-speed hosting + priority support",
+        "Full content strategy + multiple blog posts/month",
+        "AI-powered SEO agent working 24/7",
+        "Multilingual & local SEO (multi-city/language)",
+        "Quarterly strategy meetings + detailed reports",
+      ],
+      goal:
+        "Become a top-ranking brand online with AI + expert support working for you.",
+    },
+  ];
 
-    const checkStatus = async () => {
-      try {
-        const res = await fetch(`/api/websites/${websiteId}`, { cache: "no-store" });
-        if (!res.ok) return;
-
-        const data = await res.json();
-        if (!isMounted) return;
-
-        setStatus(data.status ?? null);
-        setDeploymentUrl(data.deployment?.url ?? null);
-
-        if (data.status === "active") {
-          setIsLoading(false);
-          setIsComplete(true);
-          if (intervalId) {
-            clearInterval(intervalId);
-          }
-        }
-      } catch (err) {
-        console.error("Error checking website status:", err);
-      }
-    };
-
-    setIsLoading(true);
-    setIsComplete(false);
-    setStatus(null);
-    setDeploymentUrl(null);
-    checkStatus();
-    intervalId = setInterval(checkStatus, 4000);
-
-    return () => {
-      isMounted = false;
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [success, websiteId]);
-
-  const handleProceed = async () => {
-    if (isSubmitting) return;
-
+  async function handleCheckout(planId: string) {
     try {
-      setIsSubmitting(true);
-      setError(null);
+      setLoadingPlan(planId);
+
+      const priceId = STRIPE_PRICE_IDS[planId as keyof typeof STRIPE_PRICE_IDS][
+        isYearly ? "yearly" : "monthly"
+      ];
 
       const res = await fetch("/api/checkout_sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ websiteId, plan: selectedPlan }),
+        body: JSON.stringify({
+          websiteId,
+          priceId,
+          planId,
+          billingCycle: isYearly ? "yearly" : "monthly",
+        }),
       });
 
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (res.ok && data?.url) {
+      const data = await res.json();
+
+      if (data.url) {
         window.location.href = data.url;
-        return;
+      } else {
+        alert("Error: could not start checkout session.");
+        console.error(data);
       }
-
-      setError(data?.error ?? "Unable to start checkout. Please try again.");
-    } catch (err) {
-      console.error(err);
-      setError("Unexpected error starting checkout. Please try again.");
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong. Please try again later.");
     } finally {
-      setIsSubmitting(false);
+      setLoadingPlan(null);
     }
-  };
-
-  if (canceled) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center text-white">
-        <h2 className="mb-2 text-xl">Payment canceled</h2>
-        <p>You can return to your dashboard anytime to complete the purchase.</p>
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="mt-6 rounded bg-white px-4 py-2 text-black"
-        >
-          Go to Dashboard
-        </button>
-      </div>
-    );
-  }
-
-  if (success && isComplete) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center text-center text-white">
-        <h2 className="mb-3 text-3xl font-semibold">🎉 Your website is live!</h2>
-        <p className="mb-6 text-gray-300">{websiteName} has been successfully deployed.</p>
-
-        <div className="flex gap-4">
-          {deploymentUrl ? (
-            <a
-              href={deploymentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded bg-emerald-500 px-6 py-3 font-medium text-black transition hover:bg-emerald-400"
-            >
-              🌐 View Live Site
-            </a>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="cursor-not-allowed rounded bg-emerald-500/40 px-6 py-3 font-medium text-black/60"
-            >
-              🌐 View Live Site
-            </button>
-          )}
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="rounded bg-white px-6 py-3 font-medium text-black transition hover:bg-gray-200"
-          >
-            Go to Dashboard
-          </button>
-        </div>
-
-        {!deploymentUrl ? (
-          <p className="mt-4 text-xs text-emerald-200/80">
-            We’ll add your live site link here the moment it’s ready.
-          </p>
-        ) : null}
-
-        <p className="mt-8 text-sm text-gray-500">
-          You can manage and edit your website anytime from your dashboard.
-        </p>
-      </div>
-    );
-  }
-
-  if (success && !isComplete) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center text-center text-white">
-        <h2 className="mb-3 text-2xl font-semibold">✅ Payment received!</h2>
-        <p className="mb-1 text-gray-300">Your website is now being deployed...</p>
-        <p className="mb-8 text-sm text-gray-500">This may take around 10–20 seconds.</p>
-
-        <div className="h-2 w-56 overflow-hidden rounded-full bg-gray-700">
-          <div
-            className="h-full animate-pulse bg-emerald-400"
-            style={{
-              width: isLoading ? "60%" : "100%",
-              transition: "width 2s ease-in-out",
-            }}
-          />
-        </div>
-
-        {status && status !== "active" ? (
-          <p className="mt-3 text-xs uppercase tracking-wide text-emerald-200/80">
-            Current status: {status}
-          </p>
-        ) : null}
-
-        <p className="mt-3 text-xs text-gray-400">
-          This page will update automatically once it’s ready.
-        </p>
-      </div>
-    );
-  }
-
-  if (initialError) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center text-red-400">
-        <p>{initialError}</p>
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="mt-4 rounded bg-white px-4 py-2 text-black"
-        >
-          Back to Dashboard
-        </button>
-      </div>
-    );
   }
 
   return (
-    <div
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8 rounded-3xl bg-white/5 p-10 text-white shadow-xl shadow-blue-950/30 lg:flex-row"
-    >
-      <section className="flex-1 space-y-8">
-        <div className="flex flex-col gap-6 rounded-2xl bg-white/5 p-6 backdrop-blur">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-white">{websiteName}</h1>
-              <p className="text-sm text-slate-300">Review your site details before heading to Stripe checkout.</p>
-            </div>
-            <div className="text-sm text-slate-300">
-              <p><span className="font-medium text-white">Template:</span> {templateName}</p>
-              <p><span className="font-medium text-white">Theme:</span> {resolvedThemeName}</p>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-900/80">
-            <div className="relative h-64 w-full bg-slate-800">
-              <Image
-                src={previewImage}
-                alt={`${websiteName} preview`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-white">Choose your plan</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {(Object.keys(PLAN_PRICING) as PlanId[]).map((plan) => {
-              const isSelected = selectedPlan === plan;
-              const { price, description } = PLAN_PRICING[plan];
-
-              return (
-                <button
-                  key={plan}
-                  type="button"
-                  onClick={() => setSelectedPlan(plan)}
-                  className={`flex h-full flex-col rounded-2xl border p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
-                    isSelected
-                      ? "border-blue-500 bg-blue-600/20 ring-2 ring-blue-400"
-                      : "border-white/10 bg-white/5 hover:border-blue-500/60"
-                  }`}
-                >
-                  <span className="text-sm uppercase tracking-wide text-slate-300">{plan}</span>
-                  <span className="mt-2 text-2xl font-semibold text-white">{price}</span>
-                  <span className="mt-3 text-sm text-slate-300">{description}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <aside className="w-full max-w-sm space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Order summary</h2>
-          <dl className="mt-4 space-y-3 text-sm text-slate-300">
-            <div className="flex justify-between">
-              <dt>Website</dt>
-              <dd className="text-white">{websiteName}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt>Template</dt>
-              <dd className="text-white">{templateName}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt>Theme</dt>
-              <dd className="text-white">{resolvedThemeName}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt>Plan</dt>
-              <dd className="text-white">{selectedPlan.toUpperCase()}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt>Price</dt>
-              <dd className="text-white">{PLAN_PRICING[selectedPlan].price}</dd>
-            </div>
-          </dl>
-        </div>
-
-        {error ? (
-          <p className="rounded-md border border-red-500/60 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={handleProceed}
-          disabled={isSubmitting}
-          className="flex w-full items-center justify-center rounded-full bg-blue-500 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {selectedPlan === "free" ? "Activate Free Plan" : isSubmitting ? "Redirecting..." : "Proceed to Payment"}
-        </button>
-
-        <p className="text-xs text-slate-400">
-          Payments are securely processed by Stripe. You will be redirected to complete your subscription.
+    <div className="checkout-container">
+      <header className="checkout-header">
+        <h1>Choose Your Plan</h1>
+        <p>
+          Template: <strong>{templateName}</strong> &nbsp;|&nbsp; Theme:{" "}
+          <strong>{themeName}</strong> &nbsp;|&nbsp; Business:{" "}
+          <strong>{businessName}</strong>
         </p>
-      </aside>
+
+        <div className="billing-toggle">
+          <span className={`label ${!isYearly ? "active" : ""}`}>Monthly</span>
+          <label className="switch">
+            <input type="checkbox" checked={isYearly} onChange={handleToggle} />
+            <span className="slider"></span>
+          </label>
+          <span className={`label ${isYearly ? "active" : ""}`}>Yearly</span>
+        </div>
+      </header>
+
+      <div className="pricing-grid">
+        {plans.map((plan) => (
+          <div className="plan-card" key={plan.id}>
+            <h2>{plan.title}</h2>
+            <div className="price">
+              {isYearly ? plan.yearlyPrice : plan.monthlyPrice}
+            </div>
+            {isYearly && <div className="savings">{plan.yearlyNote}</div>}
+            <p className="description">{plan.description}</p>
+            <ul className="features">
+              {plan.features.map((f, i) => (
+                <li key={i}>{f}</li>
+              ))}
+            </ul>
+            <p className="goal">{plan.goal}</p>
+            <button
+              className="btn-primary"
+              onClick={() => handleCheckout(plan.id)}
+              disabled={loadingPlan === plan.id}
+            >
+              {loadingPlan === plan.id ? "Redirecting..." : "Select Plan"}
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
