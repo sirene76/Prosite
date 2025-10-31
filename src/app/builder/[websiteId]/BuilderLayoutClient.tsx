@@ -1,7 +1,7 @@
 "use client";
 
 import { cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import NewBuilderShell, {
   type BuilderShellRenderProps,
@@ -34,17 +34,6 @@ export default function BuilderLayoutClient({
   const router = useRouter();
 
   const isBrandingRoute = Boolean(pathname?.includes("/branding"));
-
-  useEffect(() => {
-    if (!isBrandingRoute) {
-      return;
-    }
-
-    document.body.classList.add("branding-builder-active");
-    return () => {
-      document.body.classList.remove("branding-builder-active");
-    };
-  }, [isBrandingRoute]);
 
   const stepRoutes = useMemo(
     () => ({
