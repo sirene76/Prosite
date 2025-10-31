@@ -15,12 +15,12 @@ export default function BuilderLayout({
   children,
   params,
 }: BuilderLayoutProps) {
-  const { websiteId } = params;
+  const { websiteId } = use(params);
   const pathname = usePathname();
-  const isBrandingRoute = Boolean(pathname?.includes("/branding"));
+  const isBuilderRoute = Boolean(pathname?.startsWith("/builder/"));
 
   useEffect(() => {
-    if (!isBrandingRoute) {
+    if (!isBuilderRoute) {
       document.body.classList.remove("branding-builder-active");
       return;
     }
@@ -29,7 +29,7 @@ export default function BuilderLayout({
     return () => {
       document.body.classList.remove("branding-builder-active");
     };
-  }, [isBrandingRoute]);
+  }, [isBuilderRoute]);
 
   return (
     <BuilderLayoutClient websiteId={websiteId}>{children}</BuilderLayoutClient>
