@@ -26,8 +26,10 @@ interface BuilderState {
   setContent: (key: string, value: any) => void;
   setTheme: (theme: Theme) => void;
   reset: () => void;
+  initialize: (params: { websiteId: string }) => Promise<void>;
 }
 
+// Utility to build nested default content
 function buildDefaultContent(fields: { id: string; default: string }[]) {
   const content: Record<string, any> = {};
   for (const field of fields) {
@@ -46,26 +48,45 @@ function buildDefaultContent(fields: { id: string; default: string }[]) {
   return content;
 }
 
-export const useBuilderStore = create<BuilderState>((set) => ({
+export const useBuilderStore = create<BuilderState>((set, get) => ({
   template: null,
   content: {},
   theme: null,
 
+  // Initialize builder from API
+  initialize: async ({ websiteId }) => {
+    try {
+      const res = await fetch(`/api/websites/${websiteId}`);
+      const data = await res.json();
+
+      if (data.template) get().setTemplate(data.template);
+      if (data.theme) get().setTheme(data.theme);
+      if (data.content) set({ content: data.content });
+    } catch (err) {
+      console.error("Failed to initialize builder:", err);
+    }
+  },
+
+  // Apply template + default content/theme
   setTemplate: (t) =>
-    set(() => ({
+    set({
       template: { ...t, defaultContent: buildDefaultContent(t.fields) },
       content: buildDefaultContent(t.fields),
       theme: t.themes[0] || null,
-    })),
-
-  setContent: (key, value) =>
-    set((state) => {
-      const newContent = { ...state.content };
-      lodashSet(newContent, key, value);
-      return { content: newContent };
     }),
 
+  // Update nested field value
+
+setContent: (key, value) =>
+  set((state) => {
+    const newContent = { ...state.content };
+    lodashSet(newContent, key, value);
+    return { content: newContent };
+  }),
+
+  // Update theme
   setTheme: (theme) => set({ theme }),
 
+  // Reset everything
   reset: () => set({ template: null, content: {}, theme: null }),
 }));
