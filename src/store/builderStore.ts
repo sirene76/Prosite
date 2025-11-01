@@ -90,3 +90,26 @@ setContent: (key, value) =>
   // Reset everything
   reset: () => set({ template: null, content: {}, theme: null }),
 }));
+
+// Debug snapshot (safe to import in dev)
+export function __debugBuilderSnapshot() {
+  try {
+    const s = require("./builderStore").useBuilderStore.getState();
+    const sampleKeys = Object.keys(s.content || {}).slice(0, 8);
+    return {
+      hasTemplate: !!s.template,
+      templateId: s.template?.id,
+      fieldsCount: s.template?.fields?.length ?? 0,
+      modulesCount: s.template?.modules?.length ?? 0,
+      themeId: s.theme?.id,
+      contentType: typeof s.content,
+      topKeys: sampleKeys,
+      contentSample: sampleKeys.reduce((acc: any, k) => {
+        acc[k] = s.content[k];
+        return acc;
+      }, {} as Record<string, unknown>),
+    };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
