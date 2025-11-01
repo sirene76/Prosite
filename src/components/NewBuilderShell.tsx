@@ -98,14 +98,7 @@ export default function NewBuilderShell({
           ) : null}
         </div>
         <div className="builder-header-right">
-          {websiteId ? (
-            <Link
-              href={`/checkout/${websiteId}`}
-              className="btn-primary next-step"
-            >
-              Next → Checkout
-            </Link>
-          ) : null}
+
           <DeviceToolbar selectedDevice={device} onDeviceChange={setDevice} />
           <div className="zoom-controls" aria-label="Preview zoom controls">
             <button
@@ -141,7 +134,16 @@ export default function NewBuilderShell({
             >
               +
             </button>
+            
           </div>
+                    {websiteId ? (
+            <Link
+              href={`/checkout/${websiteId}`}
+              className="btn-primary next-step"
+            >
+              Next → Checkout
+            </Link>
+          ) : null}
         </div>
       </header>
 

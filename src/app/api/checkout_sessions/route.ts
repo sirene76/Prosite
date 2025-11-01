@@ -8,6 +8,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: Request) {
   try {
+    const prices = await stripe.prices.list({ limit: 10 });
+console.log("Available Stripe Prices:", prices.data.map(p => ({
+  id: p.id,
+  nickname: p.nickname,
+  currency: p.currency,
+  recurring: p.recurring?.interval,
+  amount: p.unit_amount,
+})));
+
     const { priceId, websiteId, planId, billingCycle } = await req.json();
 
     const session = await stripe.checkout.sessions.create({
@@ -18,6 +27,7 @@ export async function POST(req: Request) {
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${websiteId}?canceled=true`,
       metadata: { websiteId, planId, billingCycle },
     });
+    
 
     return NextResponse.json({ url: session.url });
   } catch (err) {

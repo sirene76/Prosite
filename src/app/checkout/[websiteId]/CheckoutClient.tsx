@@ -11,19 +11,18 @@ type CheckoutClientProps = {
   businessName: string;
 };
 
-// 🧱 Stripe Price IDs (replace with your real ones)
 const STRIPE_PRICE_IDS = {
   basic: {
-    monthly: "price_basic_monthly_123",
-    yearly: "price_basic_yearly_456",
+    monthly: "price_1SOhYyQaFhkWD362FDisrEdv",
+    yearly: "price_1SOhhGQaFhkWD3625hb3rV0Z",
   },
   standard: {
-    monthly: "price_standard_monthly_789",
-    yearly: "price_standard_yearly_abc",
+    monthly: "price_1SOhiPQaFhkWD3627UspQ1pA",
+    yearly: "price_1SOhkTQaFhkWD362P0GN4nLy",
   },
   premium: {
-    monthly: "price_premium_monthly_def",
-    yearly: "price_premium_yearly_ghi",
+    monthly: "price_1SOhn6QaFhkWD362CZtZPwLG",
+    yearly: "price_1SOhquQaFhkWD362y31CGore",
   },
 };
 
