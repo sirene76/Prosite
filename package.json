@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "diagnose:preview": "tsx scripts/diagnosePreview.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.917.0",
