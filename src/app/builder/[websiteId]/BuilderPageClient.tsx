@@ -2,7 +2,7 @@
 
 import "@/styles/new-builder.css";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import InspectorPanel from "@/components/InspectorPanel";
 import NewBuilderPreview from "@/components/NewBuilderPreview";
@@ -10,7 +10,34 @@ import NewBuilderShell, {
   type BuilderShellRenderProps,
   type BuilderStep,
 } from "@/components/NewBuilderShell";
+import { DEBUG_PREVIEW } from "@/lib/debug";
 import { useBuilderStore } from "@/store/builderStore";
+
+export function BuilderDebugBar() {
+  const s = useBuilderStore();
+  if (!DEBUG_PREVIEW) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 8,
+        right: 8,
+        zIndex: 999999,
+        background: "rgba(0,0,0,.7)",
+        color: "#fff",
+        font: "12px/1.4 monospace",
+        padding: "8px 10px",
+        borderRadius: 6,
+      }}
+    >
+      <div>[builder] debug</div>
+      <div>template: {s.template?.id || "none"}</div>
+      <div>fields: {s.template?.fields?.length ?? 0} | modules: {s.template?.modules?.length ?? 0}</div>
+      <div>theme: {s.theme?.id || "none"}</div>
+      <div>content keys: {Object.keys(s.content || {}).slice(0, 8).join(", ") || "none"}</div>
+    </div>
+  );
+}
 
 type BuilderPageClientProps = {
   websiteId: string;
@@ -362,18 +389,21 @@ export default function BuilderPageClient({
     device,
     zoom,
   }: BuilderShellRenderProps) => (
-    <div className="builder-grid">
-      <section className="preview-panel">
-        <NewBuilderPreview
-          templateHtml={templateHtml}
-          data={previewData}
-          device={device}
-          zoom={zoom}
-        />
-      </section>
+    <>
+      <BuilderDebugBar />
+      <div className="builder-grid">
+        <section className="preview-panel">
+          <NewBuilderPreview
+            templateHtml={templateHtml}
+            data={previewData}
+            device={device}
+            zoom={zoom}
+          />
+        </section>
 
-      <InspectorPanel />
-    </div>
+        <InspectorPanel />
+      </div>
+    </>
   );
 
   if (builderShell) {
