@@ -235,6 +235,7 @@ export default async function DashboardWebsitePage({
             siteStatus={siteStatus}
             siteValues={websiteValues}
             seoScore={seoScore}
+            plan={sitePlan.toLowerCase() as "basic" | "standard" | "premium"}
           />
         </div>
 
