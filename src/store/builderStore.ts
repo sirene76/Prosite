@@ -26,27 +26,33 @@ interface BuilderState {
   setContent: (key: string, value: any) => void;
   setTheme: (theme: Theme) => void;
   reset: () => void;
-  initialize: (params: { websiteId: string }) => Promise<void>;
+initialize: (params: {
+  websiteId: string;
+  templateId?: string;
+  content?: Record<string, any>;
+  theme?: any;
+}) => Promise<void>;
 }
 
 // Utility to build nested default content
 function buildDefaultContent(fields: { id: string; default: string }[]) {
   const content: Record<string, any> = {};
   for (const field of fields) {
-    const parts = field.id.split(".");
+    const path = field.id.split(".");
     let current = content;
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      if (i === parts.length - 1) {
-        current[part] = field.default;
+    for (let i = 0; i < path.length; i++) {
+      const key = path[i];
+      if (i === path.length - 1) {
+        current[key] = field.default;
       } else {
-        if (!current[part]) current[part] = {};
-        current = current[part];
+        current[key] = current[key] || {};
+        current = current[key];
       }
     }
   }
   return content;
 }
+
 
 export const useBuilderStore = create<BuilderState>((set, get) => ({
   template: null,
@@ -54,26 +60,47 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   theme: null,
 
   // Initialize builder from API
-  initialize: async ({ websiteId }) => {
-    try {
+initialize: async ({
+  websiteId,
+  templateId,
+  content,
+  theme,
+}: {
+  websiteId: string;
+  templateId?: string;
+  content?: Record<string, any>;
+  theme?: any;
+}) => {
+  try {
+    console.log("✅ Builder initialized", { templateId, contentKeys: Object.keys(content || {}) });
+
+    // Optional: If you want to load from API when content is missing
+    if (!content) {
       const res = await fetch(`/api/websites/${websiteId}`);
       const data = await res.json();
-
-      if (data.template) get().setTemplate(data.template);
-      if (data.theme) get().setTheme(data.theme);
-      if (data.content) set({ content: data.content });
-    } catch (err) {
-      console.error("Failed to initialize builder:", err);
+      if (data.template) useBuilderStore.getState().setTemplate(data.template);
+      if (data.theme) useBuilderStore.getState().setTheme(data.theme);
+      if (data.content) useBuilderStore.getState().setContent("", data.content);
+    } else {
+      // Otherwise just set what's passed in
+      if (theme) useBuilderStore.getState().setTheme(theme);
+      if (content) useBuilderStore.getState().setContent("", content);
     }
-  },
+  } catch (err) {
+    console.error("Failed to initialize builder:", err);
+  }
+},
+
+
 
   // Apply template + default content/theme
-  setTemplate: (t) =>
-    set({
-      template: { ...t, defaultContent: buildDefaultContent(t.fields) },
-      content: buildDefaultContent(t.fields),
-      theme: t.themes[0] || null,
-    }),
+setTemplate: (t) =>
+  set(() => ({
+    template: { ...t, defaultContent: buildDefaultContent(t.fields) },
+    content: buildDefaultContent(t.fields), // ✅ nested default structure
+    theme: t.themes[0] || null,
+  })),
+
 
   // Update nested field value
 

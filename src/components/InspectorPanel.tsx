@@ -1,37 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { ChangeEvent } from "react";
-
+import React, { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useBuilderStore } from "@/store/builderStore";
 
 type TabId = "pages" | "theme" | "content";
 
-type TemplateMeta = {
-  pages?: Array<Record<string, unknown>>;
-  themes?: Array<Record<string, unknown>>;
-};
-
-type ThemeOption = Record<string, unknown> & {
+type ThemeOption = {
+  id?: string;
   name?: string;
   label?: string;
-  id?: string;
   colors?: Record<string, string> | string[];
   fonts?: Record<string, string>;
   font?: string;
+  palette?: string[];
 };
 
-type PageOption = Record<string, unknown> & {
+type PageModule = {
   id?: string;
-  name?: string;
-  label?: string;
-  sections?: Array<Record<string, unknown> | string>;
-};
-
-type SectionOption = Record<string, unknown> & {
-  id?: string;
-  sectionId?: string;
-  name?: string;
   label?: string;
 };
 
@@ -47,139 +32,52 @@ const CONTENT_FIELDS = [
   { id: "logoUrl", label: "Upload Logo", type: "file" as const },
 ];
 
+// helpers
 const getThemeIdentifier = (theme: ThemeOption, fallback: string) =>
-  (typeof theme.id === "string" && theme.id.length > 0
-    ? theme.id
-    : typeof theme.name === "string" && theme.name.length > 0
-      ? theme.name
-      : typeof theme.label === "string" && theme.label.length > 0
-        ? theme.label
-        : fallback);
+  theme.id || theme.name || theme.label || fallback;
 
 const getThemeLabel = (theme: ThemeOption) =>
-  typeof theme.label === "string" && theme.label.length > 0
-    ? theme.label
-    : typeof theme.name === "string" && theme.name.length > 0
-      ? theme.name
-      : "Theme";
+  theme.label || theme.name || theme.id || "Theme";
 
 const resolveThemeColors = (theme: ThemeOption): string[] => {
-  if (Array.isArray(theme.colors)) {
-    return theme.colors.filter((value): value is string => typeof value === "string");
-  }
-
-  if (theme.colors && typeof theme.colors === "object") {
-    return Object.values(theme.colors).filter(
-      (value): value is string => typeof value === "string",
-    );
-  }
-
-  const palette = theme.palette;
-  if (Array.isArray(palette)) {
-    return palette.filter((value): value is string => typeof value === "string");
-  }
-
+  if (Array.isArray(theme.colors)) return theme.colors;
+  if (theme.colors && typeof theme.colors === "object")
+    return Object.values(theme.colors);
+  if (Array.isArray(theme.palette)) return theme.palette;
   return [];
 };
 
 const resolveThemeFont = (theme: ThemeOption) => {
-  if (theme.font && typeof theme.font === "string") {
-    return theme.font;
-  }
-
+  if (theme.font) return theme.font;
   if (theme.fonts && typeof theme.fonts === "object") {
-    const fonts = theme.fonts as Record<string, unknown>;
-    const primaryFont = fonts.primary;
-    if (typeof primaryFont === "string") {
-      return primaryFont;
-    }
-
-    const firstFont = Object.values(fonts).find((value) => typeof value === "string");
-    if (typeof firstFont === "string") {
-      return firstFont;
-    }
+    const f = Object.values(theme.fonts).find(
+      (v) => typeof v === "string"
+    ) as string | undefined;
+    return f;
   }
-
   return undefined;
-};
-
-const resolveSectionId = (section: SectionOption | string) => {
-  if (typeof section === "string") {
-    return section;
-  }
-
-  return (
-    (typeof section.id === "string" && section.id.length > 0 && section.id) ||
-    (typeof section.sectionId === "string" && section.sectionId.length > 0 && section.sectionId) ||
-    (typeof section.name === "string" && section.name.length > 0 && section.name) ||
-    undefined
-  );
-};
-
-const resolveSectionLabel = (section: SectionOption | string) => {
-  if (typeof section === "string") {
-    return section;
-  }
-
-  return (
-    (typeof section.label === "string" && section.label.length > 0 && section.label) ||
-    (typeof section.name === "string" && section.name.length > 0 && section.name) ||
-    (typeof section.id === "string" && section.id.length > 0 && section.id) ||
-    "Section"
-  );
 };
 
 export default function InspectorPanel() {
   const [activeTab, setActiveTab] = useState<TabId>("pages");
   const [collapsed, setCollapsed] = useState(false);
-  const [openPages, setOpenPages] = useState<Record<string, boolean>>({});
   const [openField, setOpenField] = useState<string | null>("title");
 
-  const template = useBuilderStore((state) => state.template);
-  const themeName = useBuilderStore((state) => state.theme);
-  const content = useBuilderStore((state) => state.content);
-  const setTheme = useBuilderStore((state) => state.setTheme);
-  const updateContent = useBuilderStore((state) => state.updateContent);
+  // ✅ pull state from builderStore
+  const { template, theme, content, setTheme, setContent } = useBuilderStore();
 
-  const templateMeta = useMemo<TemplateMeta>(() => {
-    if (!template?.meta || typeof template.meta !== "object") {
-      return {};
-    }
-    return template.meta as TemplateMeta;
-  }, [template?.meta]);
+  const pages = useMemo<PageModule[]>(() => {
+    if (!template?.modules) return [];
+    return template.modules;
+  }, [template?.modules]);
 
-  const pages = useMemo(() => {
-    if (!Array.isArray(templateMeta.pages)) {
-      return [] as PageOption[];
-    }
-    return templateMeta.pages as PageOption[];
-  }, [templateMeta.pages]);
-
-  const themes = useMemo(() => {
-    if (!Array.isArray(templateMeta.themes)) {
-      return [] as ThemeOption[];
-    }
-    return templateMeta.themes as ThemeOption[];
-  }, [templateMeta.themes]);
+  const themes = useMemo<ThemeOption[]>(() => {
+    if (!template?.themes) return [];
+    return template.themes;
+  }, [template?.themes]);
 
   const [titleDraft, setTitleDraft] = useState(content.title ?? "");
   const [businessDraft, setBusinessDraft] = useState(content.businessName ?? "");
-
-  useEffect(() => {
-    if (pages.length === 0) {
-      setOpenPages({});
-      return;
-    }
-
-    const firstPage = pages[0];
-    const firstKey = getThemeIdentifier(firstPage as ThemeOption, "page-0");
-    setOpenPages((current) => {
-      if (current[firstKey]) {
-        return current;
-      }
-      return { [firstKey]: true };
-    });
-  }, [pages]);
 
   useEffect(() => {
     setTitleDraft(content.title ?? "");
@@ -189,29 +87,26 @@ export default function InspectorPanel() {
     setBusinessDraft(content.businessName ?? "");
   }, [content.businessName]);
 
-  const handleThemeClick = (theme: ThemeOption, index: number) => {
-    const identifier = getThemeIdentifier(theme, `theme-${index}`);
-    if (identifier === themeName) {
-      return;
-    }
-    setTheme(identifier);
+  // ✅ Theme click — now passes theme object instead of string
+  const handleThemeClick = (selected: ThemeOption) => {
+    const themeObj = template?.themes?.find((t) => t.id === selected.id) || selected;
+    setTheme(themeObj as any);
   };
 
-  const handleSectionClick = (section: SectionOption | string) => {
-    const sectionId = resolveSectionId(section);
+  const handleSectionClick = (sectionId: string) => {
     if (!sectionId) return;
     window.postMessage({ scrollTo: sectionId }, window.location.origin);
   };
 
   const commitTitle = () => {
     if (titleDraft !== content.title) {
-      updateContent("title", titleDraft);
+      setContent("title", titleDraft);
     }
   };
 
   const commitBusiness = () => {
     if (businessDraft !== content.businessName) {
-      updateContent("businessName", businessDraft);
+      setContent("businessName", businessDraft);
     }
   };
 
@@ -222,112 +117,75 @@ export default function InspectorPanel() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        updateContent("logoUrl", reader.result);
+        setContent("logoUrl", reader.result);
       }
     };
     reader.readAsDataURL(file);
     event.target.value = "";
   };
 
+  // === Tabs ===
   const renderPagesTab = () => (
     <div className="tab-content active">
-      <div className="pages-list" role="list">
-        {pages.length === 0 ? (
-          <p className="placeholder">No pages available for this template.</p>
-        ) : (
-          pages.map((page, index) => {
-            const pageKey = getThemeIdentifier(page as ThemeOption, `page-${index}`);
-            const pageLabel = getThemeLabel(page as ThemeOption);
-            const sections = Array.isArray(page.sections) ? page.sections : [];
-            const isOpen = openPages[pageKey] ?? index === 0;
-
-            return (
-              <div className="collapsible" key={pageKey}>
-                <button
-                  type="button"
-                  className={`collapse-toggle ${isOpen ? "open" : ""}`}
-                  onClick={() =>
-                    setOpenPages((current) => ({
-                      ...current,
-                      [pageKey]: !isOpen,
-                    }))
-                  }
-                >
-                  {pageLabel}
-                </button>
-                <div className="collapse-content" style={{ display: isOpen ? "block" : "none" }}>
-                  {sections.length === 0 ? (
-                    <p className="placeholder">No sections for this page.</p>
-                  ) : (
-                    <ul className="section-list">
-                      {sections.map((section, sectionIndex) => {
-                        const sectionId = resolveSectionId(section as SectionOption | string);
-                        const sectionLabel = resolveSectionLabel(section as SectionOption | string);
-                        const key = sectionId ?? `section-${sectionIndex}`;
-
-                        return (
-                          <li key={key}>
-                            <button
-                              type="button"
-                              className="section-button"
-                              onClick={() => handleSectionClick(section)}
-                            >
-                              {sectionLabel}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+      {pages.length === 0 ? (
+        <p className="placeholder">No pages available for this template.</p>
+      ) : (
+        <ul className="pages-list">
+          {pages.map((mod, index) => (
+            <li key={mod.id || index}>
+              <button
+                type="button"
+                className="section-button"
+                onClick={() => handleSectionClick(mod.id || "")}
+              >
+                {mod.label || mod.id || `Section ${index + 1}`}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 
   const renderThemeTab = () => (
     <div className="tab-content active">
-      <div className="theme-grid">
-        {themes.length === 0 ? (
-          <p className="placeholder">No themes available for this template.</p>
-        ) : (
-          themes.map((theme, index) => {
-            const identifier = getThemeIdentifier(theme, `theme-${index}`);
-            const label = getThemeLabel(theme);
-            const colors = resolveThemeColors(theme);
-            const font = resolveThemeFont(theme);
-            const isActive = themeName === identifier;
+      {themes.length === 0 ? (
+        <p className="placeholder">No themes available.</p>
+      ) : (
+        <div className="theme-grid">
+          {themes.map((th, index) => {
+            const identifier = getThemeIdentifier(th, `theme-${index}`);
+            const colors = resolveThemeColors(th);
+            const font = resolveThemeFont(th);
+            const isActive = theme?.id === identifier || theme?.name === identifier;
 
             return (
               <button
                 key={identifier}
                 type="button"
                 className={`theme-card ${isActive ? "active" : ""}`}
-                onClick={() => handleThemeClick(theme, index)}
+                onClick={() => handleThemeClick(th)}
               >
                 <div className="theme-card-header">
-                  <span className="theme-name">{label}</span>
-                  {font ? <span className="theme-font">{font}</span> : null}
+                  <span className="theme-name">{getThemeLabel(th)}</span>
+                  {font && <span className="theme-font">{font}</span>}
                 </div>
-                {colors.length > 0 ? (
+                {colors.length > 0 && (
                   <div className="theme-swatches" aria-hidden="true">
-                    {colors.slice(0, 5).map((color, colorIndex) => (
+                    {colors.slice(0, 5).map((color, ci) => (
                       <span
-                        key={`${identifier}-color-${colorIndex}`}
+                        key={`${identifier}-c-${ci}`}
                         className="theme-swatch"
                         style={{ backgroundColor: color }}
                       />
                     ))}
                   </div>
-                ) : null}
+                )}
               </button>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 
@@ -336,6 +194,13 @@ export default function InspectorPanel() {
       <p className="desc">Update your branding content and assets.</p>
       {CONTENT_FIELDS.map((field) => {
         const isOpen = openField === field.id;
+        const value =
+          field.id === "title"
+            ? titleDraft
+            : field.id === "businessName"
+            ? businessDraft
+            : "";
+
         return (
           <div className="collapsible" key={field.id}>
             <button
@@ -350,11 +215,11 @@ export default function InspectorPanel() {
                 <input
                   className="input-field"
                   type="text"
-                  value={field.id === "title" ? titleDraft : businessDraft}
-                  onChange={(event) =>
+                  value={value}
+                  onChange={(e) =>
                     field.id === "title"
-                      ? setTitleDraft(event.target.value)
-                      : setBusinessDraft(event.target.value)
+                      ? setTitleDraft(e.target.value)
+                      : setBusinessDraft(e.target.value)
                   }
                   onBlur={field.id === "title" ? commitTitle : commitBusiness}
                   placeholder={field.label}
@@ -371,11 +236,11 @@ export default function InspectorPanel() {
                     accept="image/*"
                     onChange={handleLogoUpload}
                   />
-                  {content.logoUrl ? (
+                  {content.logoUrl && (
                     <div className="logo-preview">
                       <img src={content.logoUrl} alt="Logo preview" />
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>
@@ -403,7 +268,7 @@ export default function InspectorPanel() {
       <button
         type="button"
         className="collapse-btn"
-        onClick={() => setCollapsed((value) => !value)}
+        onClick={() => setCollapsed((v) => !v)}
         aria-label={collapsed ? "Expand inspector" : "Collapse inspector"}
         aria-expanded={!collapsed}
       >
