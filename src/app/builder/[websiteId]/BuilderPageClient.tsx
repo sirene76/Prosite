@@ -16,14 +16,16 @@ import type { TemplateMeta } from "@/types/template";
 
 // === Debug Overlay ===
 export function BuilderDebugBar() {
-  // ✅ Use separate stable Zustand selectors to prevent infinite loops
+  // ✅ Use separate stable Zustand selectors
   const template = useBuilderStore((s) => s.template);
-  const theme = useBuilderStore((s) => s.theme);
+  const themeId = useBuilderStore((s) => s.themeId);
+  const themeConfig = useBuilderStore((s) => s.themeConfig);
   const content = useBuilderStore((s) => s.content);
 
   if (!DEBUG_PREVIEW) return null;
 
   const topContentKeys = Object.keys(content || {}).slice(0, 8).join(", ") || "none";
+  const themeKeys = themeConfig ? Object.keys(themeConfig.colors || {}).length : 0;
 
   return (
     <div
@@ -41,11 +43,12 @@ export function BuilderDebugBar() {
     >
       <div>[builder] debug</div>
       <div>template: {template?.id || "none"}</div>
-      <div>theme: {theme?.id || "none"}</div>
+      <div>theme: {themeId || "none"} ({themeKeys} colors)</div>
       <div>content keys: {topContentKeys}</div>
     </div>
   );
 }
+
 
 // === Local Types ===
 type BuilderPageClientProps = {
