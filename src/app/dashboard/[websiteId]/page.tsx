@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Website, { WebsiteDocument } from "@/models/Website";
 import ContentEditor from "@/components/dashboard/ContentEditor";
+import { CompleteSetupCard } from "@/components/dashboard/CompleteSetupCard";
 import { isValidObjectId } from "mongoose";
 
 /* -------------------------- Utilities -------------------------- */
@@ -67,7 +68,7 @@ function SEOInsights({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 p-6">
+    <div id="seo-insights" className="rounded-lg border border-gray-200 p-6">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
         SEO insights
       </h2>
@@ -199,7 +200,7 @@ export default async function DashboardWebsitePage({
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div id="redeploy" className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <a
               href={hasLiveSite ? deploymentUrl : "#"}
               target="_blank"
@@ -226,6 +227,15 @@ export default async function DashboardWebsitePage({
               </button>
             </form>
           </div>
+        </div>
+
+        <div className="mt-8">
+          <CompleteSetupCard
+            websiteId={String(websiteForEditor._id)}
+            siteStatus={siteStatus}
+            siteValues={websiteValues}
+            seoScore={seoScore}
+          />
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -259,7 +269,10 @@ export default async function DashboardWebsitePage({
         </div>
 
         {/* ---- Content Editor ---- */}
-        <div className="mt-10 rounded-lg border border-gray-200 p-6">
+        <div
+          id="content-editor"
+          className="mt-10 rounded-lg border border-gray-200 p-6"
+        >
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Content</h2>
             <p className="text-xs uppercase tracking-wide text-gray-400">
