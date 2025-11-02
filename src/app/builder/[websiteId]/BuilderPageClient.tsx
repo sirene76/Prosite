@@ -16,11 +16,10 @@ import type { TemplateMeta } from "@/types/template";
 
 // === Debug Overlay ===
 export function BuilderDebugBar() {
-  const { template, themeId, content } = useBuilderStore((state) => ({
-    template: state.template,
-    themeId: state.themeId,
-    content: state.content,
-  }));
+  // ✅ Use separate stable Zustand selectors to prevent infinite loops
+  const template = useBuilderStore((s) => s.template);
+  const theme = useBuilderStore((s) => s.theme);
+  const content = useBuilderStore((s) => s.content);
 
   if (!DEBUG_PREVIEW) return null;
 
@@ -42,7 +41,7 @@ export function BuilderDebugBar() {
     >
       <div>[builder] debug</div>
       <div>template: {template?.id || "none"}</div>
-      <div>theme: {themeId || "none"}</div>
+      <div>theme: {theme?.id || "none"}</div>
       <div>content keys: {topContentKeys}</div>
     </div>
   );
