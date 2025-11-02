@@ -289,6 +289,7 @@ export default function BuilderPageClient({
   const resetBuilder = useBuilderStore((state) => state.reset);
   const template = useBuilderStore((state) => state.template);
   const themeId = useBuilderStore((state) => state.themeId);
+  const themeConfig = useBuilderStore((state) => state.themeConfig);
   const content = useBuilderStore((state) => state.content);
 
   useEffect(() => {
@@ -412,7 +413,10 @@ export default function BuilderPageClient({
     );
   }, [templateThemes, themeId]);
 
-  const previewTheme = useMemo(() => createPreviewTheme(selectedTheme), [selectedTheme]);
+  const previewTheme = useMemo(
+    () => themeConfig ?? createPreviewTheme(selectedTheme),
+    [selectedTheme, themeConfig],
+  );
 
   const titleValue = typeof content.title === "string" ? content.title : "";
   const businessNameValue = typeof content.businessName === "string" ? content.businessName : "";
@@ -424,8 +428,9 @@ export default function BuilderPageClient({
       business: businessNameValue || websiteName,
       logo: logoValue,
       theme: previewTheme,
+      content,
     }),
-    [titleValue, businessNameValue, logoValue, previewTheme, websiteName],
+    [titleValue, businessNameValue, logoValue, previewTheme, websiteName, content],
   );
 
   const renderBuilderContent = useCallback(
