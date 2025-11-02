@@ -145,40 +145,51 @@ export function normaliseTemplateFields(source: FieldSource): TemplateFieldDefin
   }
 
   if (Array.isArray(source)) {
-    return source
-      .map((field) => {
-        if (!isPlainObject(field)) {
-          return null;
-        }
-        const id = typeof field.id === "string" ? field.id : "";
-        if (!id.trim()) {
-          return null;
-        }
-        return {
-          id: id.trim(),
-          label:
-            typeof field.label === "string" && field.label.trim()
-              ? field.label.trim()
-              : toSentence(id.split(".").pop() ?? id),
-          type: typeof field.type === "string" ? field.type : undefined,
-          placeholder:
-            typeof field.placeholder === "string" && field.placeholder.trim()
-              ? field.placeholder
-              : undefined,
-          description:
-            typeof field.description === "string" && field.description.trim()
-              ? field.description
-              : undefined,
-          default: normaliseDefault(field.default),
-        } satisfies TemplateFieldDefinition;
-      })
-      .filter((field): field is TemplateFieldDefinition => field !== null);
+    const results: TemplateFieldDefinition[] = [];
+
+    for (const field of source) {
+      if (!isPlainObject(field)) {
+        continue;
+      }
+
+      const id = typeof field.id === "string" ? field.id : "";
+      if (!id.trim()) {
+        continue;
+      }
+
+      results.push({
+        id: id.trim(),
+        label:
+          typeof field.label === "string" && field.label.trim()
+            ? field.label.trim()
+            : toSentence(id.split(".").pop() ?? id),
+        type: typeof field.type === "string" ? field.type : undefined,
+        placeholder:
+          typeof field.placeholder === "string" && field.placeholder.trim()
+            ? field.placeholder
+            : undefined,
+        description:
+          typeof field.description === "string" && field.description.trim()
+            ? field.description
+            : undefined,
+        default: normaliseDefault(field.default),
+      });
+    }
+
+    return results;
   }
 
   if (isPlainObject(source)) {
-    return Object.entries(source)
-      .map(([id, config]) => toFieldDefinition(id, config))
-      .filter((field): field is TemplateFieldDefinition => field !== null);
+    const results: TemplateFieldDefinition[] = [];
+
+    for (const [id, config] of Object.entries(source)) {
+      const definition = toFieldDefinition(id, config);
+      if (definition) {
+        results.push(definition);
+      }
+    }
+
+    return results;
   }
 
   return [];
