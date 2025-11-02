@@ -2,7 +2,7 @@
 
 import "@/styles/new-builder.css";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import InspectorPanel from "@/components/InspectorPanel";
 import NewBuilderPreview from "@/components/NewBuilderPreview";
@@ -14,8 +14,16 @@ import { DEBUG_PREVIEW } from "@/lib/debug";
 import { useBuilderStore } from "@/store/builderStore";
 
 export function BuilderDebugBar() {
-  const s = useBuilderStore();
+  const { template, themeId, content } = useBuilderStore((state) => ({
+    template: state.template,
+    themeId: state.themeId,
+    content: state.content,
+  }));
+
+  const topContentKeys = Object.keys(content || {}).slice(0, 8).join(", ") || "none";
+
   if (!DEBUG_PREVIEW) return null;
+
   return (
     <div
       style={{
@@ -31,10 +39,9 @@ export function BuilderDebugBar() {
       }}
     >
       <div>[builder] debug</div>
-      <div>template: {s.template?.id || "none"}</div>
-      <div>fields: {s.template?.fields?.length ?? 0} | modules: {s.template?.modules?.length ?? 0}</div>
-      <div>theme: {s.theme?.id || "none"}</div>
-      <div>content keys: {Object.keys(s.content || {}).slice(0, 8).join(", ") || "none"}</div>
+      <div>template: {template?.id || "none"}</div>
+      <div>theme: {themeId || "none"}</div>
+      <div>content keys: {topContentKeys}</div>
     </div>
   );
 }
@@ -91,15 +98,14 @@ const normalizeRecord = (value: unknown): Record<string, unknown> | null => {
   return value as Record<string, unknown>;
 };
 
-type TemplateLike = { meta?: Record<string, unknown> } | null;
-
-const extractTemplateThemes = (template: TemplateLike): TemplateThemeOption[] => {
-  const metaRecord = template?.meta ?? null;
-  if (!metaRecord || typeof metaRecord !== "object") {
+const extractTemplateThemes = (
+  templateMeta: Record<string, unknown> | null | undefined,
+): TemplateThemeOption[] => {
+  if (!templateMeta || typeof templateMeta !== "object") {
     return [];
   }
 
-  const meta = metaRecord as Record<string, unknown>;
+  const meta = templateMeta as Record<string, unknown>;
   const rawThemes = meta.themes;
   if (!Array.isArray(rawThemes)) {
     return [];
@@ -247,6 +253,26 @@ const toFontRecord = (theme: TemplateThemeOption | null): Record<string, string>
   return {};
 };
 
+const DEFAULT_STEPS: BuilderStep[] = [
+  { id: "template", label: "Template" },
+  { id: "branding", label: "Branding" },
+  { id: "checkout", label: "Checkout" },
+];
+
+const DEFAULT_STEP_ID = DEFAULT_STEPS[0].id;
+
+const createPreviewTheme = (theme: TemplateThemeOption | null) => ({
+  colors: toColorRecord(theme),
+  fonts: (() => {
+    const fonts = toFontRecord(theme);
+    if (theme && Object.keys(fonts).length === 0) {
+      const identifier = getThemeIdentifier(theme, "theme");
+      return { primary: identifier };
+    }
+    return fonts;
+  })(),
+});
+
 export default function BuilderPageClient({
   websiteId,
   builderShell,
@@ -258,86 +284,99 @@ export default function BuilderPageClient({
   const [websiteName, setWebsiteName] = useState("");
 
   const initialize = useBuilderStore((state) => state.initialize);
+  const resetBuilder = useBuilderStore((state) => state.reset);
   const template = useBuilderStore((state) => state.template);
-  const themeName = useBuilderStore((state) => state.theme);
+  const themeId = useBuilderStore((state) => state.themeId);
   const content = useBuilderStore((state) => state.content);
 
   useEffect(() => {
-    initialize({ websiteId });
-  }, [websiteId, initialize]);
+    resetBuilder();
+    setTemplateHtml("");
+    setWebsiteName("");
+  }, [websiteId, resetBuilder]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!websiteId || websiteId === "new") {
+      console.warn("Builder opened without a valid websiteId.");
+      return;
+    }
 
-    async function fetchData() {
-      if (!websiteId || websiteId === "new") {
-        console.warn("Builder opened without a valid websiteId.");
-        return;
-      }
+    const controller = new AbortController();
 
+    const load = async () => {
       try {
-        const websiteRes = await fetch(`/api/websites/${websiteId}`);
+        const websiteRes = await fetch(`/api/websites/${websiteId}`, {
+          signal: controller.signal,
+        });
         if (!websiteRes.ok) {
           console.error("❌ Failed to fetch website");
           return;
         }
+
         const website = (await websiteRes.json()) as WebsiteResponse;
+        if (controller.signal.aborted) return;
 
-        if (cancelled) return;
+        const websiteLabel = typeof website.name === "string" ? website.name : "";
+        setWebsiteName(websiteLabel);
 
-        setWebsiteName(typeof website.name === "string" ? website.name : "");
+        const templateId =
+          typeof website.templateId === "string" && website.templateId.length > 0
+            ? website.templateId
+            : null;
 
-        const templateId = website.templateId;
         if (!templateId) {
           console.error("❌ Website has no templateId");
           return;
         }
 
-        const templateRes = await fetch(`/api/templates/${templateId}`);
+        const templateRes = await fetch(`/api/templates/${templateId}`, {
+          signal: controller.signal,
+        });
         if (!templateRes.ok) {
           console.error("❌ Failed to fetch template");
           return;
         }
 
         const templateData = (await templateRes.json()) as TemplateResponse;
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
 
-        const templateMeta = templateData.meta ?? {};
-        const themes = extractTemplateThemes(templateData);
+        const templateMeta = normalizeRecord(templateData.meta);
+        const themes = extractTemplateThemes(templateMeta);
         const websiteThemeName = extractWebsiteThemeName(website.theme);
-        const initialTheme =
+        const initialThemeId =
           websiteThemeName ?? (themes[0] ? getThemeIdentifier(themes[0], "theme-0") : null);
+        const initialThemeOption = initialThemeId
+          ? themes.find(
+              (theme, index) => getThemeIdentifier(theme, `theme-${index}`) === initialThemeId,
+            ) ?? null
+          : null;
         const initialContent = deriveInitialContent(website);
 
-        setTemplateHtml(templateData.html ?? "");
+        setTemplateHtml(typeof templateData.html === "string" ? templateData.html : "");
 
         initialize({
-          websiteId,
-          template: { id: templateId, meta: templateMeta },
+          template: { id: templateId, meta: templateMeta ?? undefined },
           content: initialContent,
-          theme: initialTheme,
+          themeId: initialThemeId,
+          themeConfig: initialThemeOption ? createPreviewTheme(initialThemeOption) : null,
         });
       } catch (error) {
+        if ((error as Error)?.name === "AbortError") return;
         console.error("Builder fetch failed:", error);
       }
-    }
+    };
 
-    fetchData();
+    load();
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [websiteId, initialize]);
 
-  const [internalActiveStep, setInternalActiveStep] = useState(activeStep ?? "template");
+  const [internalActiveStep, setInternalActiveStep] = useState(activeStep ?? DEFAULT_STEP_ID);
 
   const resolvedSteps = useMemo<BuilderStep[]>(
-    () =>
-      steps ?? [
-        { id: "template", label: "Template" },
-        { id: "branding", label: "Branding" },
-        { id: "checkout", label: "Checkout" },
-      ],
+    () => steps ?? DEFAULT_STEPS,
     [steps],
   );
 
@@ -350,60 +389,56 @@ export default function BuilderPageClient({
   const resolvedActiveStep = activeStep ?? internalActiveStep;
   const handleStepChange = onStepChange ?? setInternalActiveStep;
 
-  const templateThemes = useMemo(() => extractTemplateThemes(template ?? null), [template]);
+  const templateThemes = useMemo(
+    () => extractTemplateThemes(template?.meta ?? null),
+    [template?.meta],
+  );
 
   const selectedTheme = useMemo(() => {
-    if (!themeName) return null;
+    if (!themeId) return null;
     return (
-      templateThemes.find((theme, index) => getThemeIdentifier(theme, `theme-${index}`) === themeName) ??
-      null
+      templateThemes.find(
+        (theme, index) => getThemeIdentifier(theme, `theme-${index}`) === themeId,
+      ) ?? null
     );
-  }, [templateThemes, themeName]);
+  }, [templateThemes, themeId]);
 
-  const previewTheme = useMemo(
-    () => ({
-      colors: toColorRecord(selectedTheme),
-      fonts: (() => {
-        const fonts = toFontRecord(selectedTheme);
-        if (selectedTheme && Object.keys(fonts).length === 0) {
-          const identifier = getThemeIdentifier(selectedTheme, "theme");
-          return { primary: identifier };
-        }
-        return fonts;
-      })(),
-    }),
-    [selectedTheme],
-  );
+  const previewTheme = useMemo(() => createPreviewTheme(selectedTheme), [selectedTheme]);
+
+  const titleValue = typeof content.title === "string" ? content.title : "";
+  const businessNameValue =
+    typeof content.businessName === "string" ? content.businessName : "";
+  const logoValue = typeof content.logoUrl === "string" ? content.logoUrl : undefined;
 
   const previewData = useMemo(
     () => ({
-      title: content.title || websiteName,
-      business: content.businessName || websiteName,
-      logo: content.logoUrl,
+      title: titleValue || websiteName,
+      business: businessNameValue || websiteName,
+      logo: logoValue,
       theme: previewTheme,
     }),
-    [content.title, content.businessName, content.logoUrl, previewTheme, websiteName],
+    [titleValue, businessNameValue, logoValue, previewTheme, websiteName],
   );
 
-  const renderBuilderContent = ({
-    device,
-    zoom,
-  }: BuilderShellRenderProps) => (
-    <>
-      <BuilderDebugBar />
-      <div className="builder-grid">
-        <section className="preview-panel">
-          <NewBuilderPreview
-            templateHtml={templateHtml}
-            data={previewData}
-            device={device}
-            zoom={zoom}
-          />
-        </section>
+  const renderBuilderContent = useCallback(
+    ({ device, zoom }: BuilderShellRenderProps) => (
+      <>
+        <BuilderDebugBar />
+        <div className="builder-grid">
+          <section className="preview-panel">
+            <NewBuilderPreview
+              templateHtml={templateHtml}
+              data={previewData}
+              device={device}
+              zoom={zoom}
+            />
+          </section>
 
-        <InspectorPanel />
-      </div>
-    </>
+          <InspectorPanel />
+        </div>
+      </>
+    ),
+    [previewData, templateHtml],
   );
 
   if (builderShell) {
