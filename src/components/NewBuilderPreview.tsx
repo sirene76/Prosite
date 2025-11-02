@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DeviceMode } from "@/components/DeviceToolbar";
 
 const DEVICE_WIDTHS: Record<DeviceMode, number | "100%"> = {
@@ -12,10 +12,11 @@ type BuilderPreviewData = {
   title: string;
   business: string;
   logo?: string;
+  content: Record<string, unknown>;
   theme?: {
     colors?: Record<string, string>;
-    fonts?: { primary?: string };
-  };
+    fonts?: Record<string, string>;
+  } | null;
 };
 
 type NewBuilderPreviewProps = {
@@ -32,37 +33,132 @@ export default function NewBuilderPreview({
   zoom,
 }: NewBuilderPreviewProps) {
   const previewRef = useRef<HTMLIFrameElement>(null);
+  const [iframeReady, setIframeReady] = useState(false);
   const widthValue = DEVICE_WIDTHS[device] ?? DEVICE_WIDTHS.desktop;
   const previewWidth =
     typeof widthValue === "number" ? `${widthValue}px` : widthValue;
 
-  useEffect(() => {
-    if (!previewRef.current || !templateHtml) return;
-    const doc = previewRef.current.contentDocument;
+  const applyThemeToIframe = useCallback((theme: BuilderPreviewData["theme"]) => {
+    const doc = previewRef.current?.contentDocument;
     if (!doc) return;
 
-    const colorVars = Object.entries(data.theme?.colors || {})
-      .map(([key, val]) => `${key}: ${val};`)
+    const head = doc.head || doc.getElementsByTagName("head")[0] || doc.documentElement;
+    if (!head) return;
+
+    const styleId = "__builder_preview_theme";
+    let styleElement = doc.getElementById(styleId) as HTMLStyleElement | null;
+    if (!styleElement) {
+      styleElement = doc.createElement("style");
+      styleElement.id = styleId;
+      head.appendChild(styleElement);
+    }
+
+    const colorLines = Object.entries(theme?.colors || {})
+      .map(([key, val]) => `  ${key}: ${val};`)
       .join("\n");
+    const primaryFont = theme?.fonts?.primary;
+    const fontFamily = primaryFont ? `${primaryFont}, sans-serif` : "Inter, sans-serif";
+
+    styleElement.textContent = `:root {\n${colorLines}\n}\nbody {\n  margin: 0;\n  font-family: ${fontFamily};\n}`;
+  }, []);
+
+  useEffect(() => {
+    const iframe = previewRef.current;
+    if (!iframe) return;
+
+    const handleLoad = () => {
+      setIframeReady(true);
+    };
+
+    iframe.addEventListener("load", handleLoad);
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!previewRef.current) return;
+    if (!templateHtml) {
+      setIframeReady(false);
+      return;
+    }
+
+    const iframe = previewRef.current;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+
+    setIframeReady(false);
 
     doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <style>
-            :root { ${colorVars} }
-            body { font-family: ${data.theme?.fonts?.primary || "Inter"}, sans-serif; margin: 0; }
-          </style>
-        </head>
-        <body>
-          ${templateHtml
-            .replace(/{{\s*title\s*}}/g, data.title)
-            .replace(/{{\s*business\s*}}/g, data.business)}
-        </body>
-      </html>
-    `);
+    doc.write(templateHtml);
     doc.close();
-  }, [templateHtml, data]);
+
+    const script = doc.createElement("script");
+    script.src = "/preview-script.js";
+    script.async = false;
+    script.defer = false;
+    (doc.body ?? doc.documentElement).appendChild(script);
+  }, [templateHtml]);
+
+  useEffect(() => {
+    applyThemeToIframe(data.theme ?? null);
+  }, [applyThemeToIframe, data.theme, templateHtml]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== previewRef.current?.contentWindow) return;
+      if (!event.data || typeof event.data !== "object") return;
+      const { type } = event.data as { type?: string };
+      if (type === "preview-script-loaded") {
+        setIframeReady(true);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  const contentPayload = useMemo(() => {
+    const base: Record<string, unknown> = {
+      ...data.content,
+    };
+
+    if (typeof data.title === "string" && data.title.length > 0) {
+      base.title = data.title;
+    }
+
+    if (typeof data.business === "string" && data.business.length > 0) {
+      base.business = data.business;
+      const businessName = base.businessName;
+      if (typeof businessName !== "string" || businessName.length === 0) {
+        base.businessName = data.business;
+      }
+    }
+
+    if (data.logo) {
+      base.logo = data.logo;
+      const logoUrl = base.logoUrl;
+      if (typeof logoUrl !== "string" || logoUrl.length === 0) {
+        base.logoUrl = data.logo;
+      }
+    }
+
+    return base;
+  }, [data.content, data.title, data.business, data.logo]);
+
+  useEffect(() => {
+    if (!iframeReady) return;
+    const targetWindow = previewRef.current?.contentWindow;
+    if (!targetWindow) return;
+    targetWindow.postMessage({ type: "update-content", payload: contentPayload }, "*");
+  }, [iframeReady, contentPayload]);
+
+  useEffect(() => {
+    if (!iframeReady) return;
+    const targetWindow = previewRef.current?.contentWindow;
+    if (!targetWindow) return;
+    targetWindow.postMessage({ type: "update-theme", payload: data.theme ?? null }, "*");
+  }, [iframeReady, data.theme]);
 
   const handleFullPreview = () => {
     if (!previewRef.current) return;
