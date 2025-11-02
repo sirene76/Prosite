@@ -1,7 +1,15 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+} from "react";
+
 import { useBuilderStore } from "@/store/builderStore";
+import type { TemplateMeta } from "@/types/template";
 
 type TabId = "pages" | "theme" | "content";
 
@@ -32,7 +40,7 @@ const CONTENT_FIELDS = [
   { id: "logoUrl", label: "Upload Logo", type: "file" as const },
 ];
 
-// helpers
+// === helpers ===
 const getThemeIdentifier = (theme: ThemeOption, fallback: string) =>
   theme.id || theme.name || theme.label || fallback;
 
@@ -50,188 +58,222 @@ const resolveThemeColors = (theme: ThemeOption): string[] => {
 const resolveThemeFont = (theme: ThemeOption) => {
   if (theme.font) return theme.font;
   if (theme.fonts && typeof theme.fonts === "object") {
-    const f = Object.values(theme.fonts).find(
-      (v) => typeof v === "string"
-    ) as string | undefined;
-    return f;
+    const fontEntry = Object.values(theme.fonts).find(
+      (value) => typeof value === "string",
+    );
+    return fontEntry as string | undefined;
   }
   return undefined;
 };
 
+const toThemeOptions = (meta: TemplateMeta | null | undefined): ThemeOption[] => {
+  if (!meta || !Array.isArray(meta.themes)) return [];
+  return meta.themes as ThemeOption[];
+};
+
+const toPageModules = (meta: TemplateMeta | null | undefined): PageModule[] => {
+  if (!meta || !Array.isArray(meta.modules)) return [];
+  return meta.modules as PageModule[];
+};
+
 export default function InspectorPanel() {
+  const templateMeta = useBuilderStore(
+    (state) => state.template?.meta as TemplateMeta | null | undefined,
+  );
+  const themeId = useBuilderStore((state) => state.themeId);
+  const content = useBuilderStore((state) => state.content);
+  const setTheme = useBuilderStore((state) => state.setTheme);
+  const setContent = useBuilderStore((state) => state.setContent);
+
   const [activeTab, setActiveTab] = useState<TabId>("pages");
   const [collapsed, setCollapsed] = useState(false);
   const [openField, setOpenField] = useState<string | null>("title");
 
-<<<<<<< HEAD
-  // ✅ pull state from builderStore
-  const { template, theme, content, setTheme, setContent } = useBuilderStore();
-=======
-  const template = useBuilderStore((state) => state.template);
-  const themeId = useBuilderStore((state) => state.themeId);
-  const content = useBuilderStore((state) => state.content);
-  const setTheme = useBuilderStore((state) => state.setTheme);
-  const updateContent = useBuilderStore((state) => state.updateContent);
->>>>>>> 976c0ee06117fe1e560e76089e3b2a601c4579a0
+  const pages = useMemo<PageModule[]>(
+    () => toPageModules(templateMeta),
+    [templateMeta],
+  );
 
-  const pages = useMemo<PageModule[]>(() => {
-    if (!template?.modules) return [];
-    return template.modules;
-  }, [template?.modules]);
+  const themes = useMemo<ThemeOption[]>(
+    () => toThemeOptions(templateMeta),
+    [templateMeta],
+  );
 
-  const themes = useMemo<ThemeOption[]>(() => {
-    if (!template?.themes) return [];
-    return template.themes;
-  }, [template?.themes]);
-
-  const [titleDraft, setTitleDraft] = useState(content.title ?? "");
-  const [businessDraft, setBusinessDraft] = useState(content.businessName ?? "");
+  const [titleDraft, setTitleDraft] = useState<string>(() => {
+    const title = content.title;
+    return typeof title === "string" ? title : "";
+  });
+  const [businessDraft, setBusinessDraft] = useState<string>(() => {
+    const business = content.businessName;
+    return typeof business === "string" ? business : "";
+  });
 
   useEffect(() => {
-    setTitleDraft(content.title ?? "");
+    const title = content.title;
+    setTitleDraft(typeof title === "string" ? title : "");
   }, [content.title]);
 
   useEffect(() => {
-    setBusinessDraft(content.businessName ?? "");
+    const business = content.businessName;
+    setBusinessDraft(typeof business === "string" ? business : "");
   }, [content.businessName]);
 
-<<<<<<< HEAD
-  // ✅ Theme click — now passes theme object instead of string
-  const handleThemeClick = (selected: ThemeOption) => {
-    const themeObj = template?.themes?.find((t) => t.id === selected.id) || selected;
-    setTheme(themeObj as any);
-=======
-  const handleThemeClick = (theme: ThemeOption, index: number) => {
-    const identifier = getThemeIdentifier(theme, `theme-${index}`);
-    if (identifier === themeId) {
-      return;
-    }
-    const colors = resolveThemeColors(theme);
-    const colorRecord =
-      colors.length > 0
-        ? colors.reduce<Record<string, string>>((acc, color, colorIndex) => {
-            acc[`--color-${colorIndex + 1}`] = color;
-            return acc;
-          }, {})
-        : undefined;
-    const font = resolveThemeFont(theme);
-    const fonts = font ? { primary: font } : undefined;
-    const nextThemeConfig = colorRecord || fonts ? { colors: colorRecord, fonts } : null;
-    setTheme(identifier, nextThemeConfig);
->>>>>>> 976c0ee06117fe1e560e76089e3b2a601c4579a0
-  };
+  const handleThemeClick = useCallback(
+    (theme: ThemeOption, index: number) => {
+      const identifier = getThemeIdentifier(theme, `theme-${index}`);
+      if (identifier === themeId) {
+        return;
+      }
 
-  const handleSectionClick = (sectionId: string) => {
+      let colorRecord: Record<string, string> | undefined;
+      if (Array.isArray(theme.colors)) {
+        colorRecord = theme.colors.reduce<Record<string, string>>((acc, color, colorIndex) => {
+          if (typeof color === "string") {
+            acc[`--color-${colorIndex + 1}`] = color;
+          }
+          return acc;
+        }, {});
+      } else if (theme.colors && typeof theme.colors === "object") {
+        const entries = Object.entries(theme.colors).filter(
+          (entry): entry is [string, string] => typeof entry[1] === "string",
+        );
+        if (entries.length > 0) {
+          colorRecord = Object.fromEntries(entries);
+        }
+      } else if (Array.isArray(theme.palette)) {
+        colorRecord = theme.palette.reduce<Record<string, string>>((acc, color, colorIndex) => {
+          if (typeof color === "string") {
+            acc[`--color-${colorIndex + 1}`] = color;
+          }
+          return acc;
+        }, {});
+      }
+
+      let fonts: Record<string, string> | undefined;
+      if (theme.font && typeof theme.font === "string") {
+        fonts = { primary: theme.font };
+      } else if (theme.fonts && typeof theme.fonts === "object") {
+        const entries = Object.entries(theme.fonts).filter(
+          (entry): entry is [string, string] => typeof entry[1] === "string",
+        );
+        if (entries.length > 0) {
+          fonts = Object.fromEntries(entries);
+          if (!fonts.primary) {
+            fonts.primary = entries[0][1];
+          }
+        }
+      }
+
+      const nextThemeConfig = colorRecord || fonts ? { colors: colorRecord, fonts } : null;
+
+      setTheme(identifier, nextThemeConfig ?? null);
+    },
+    [setTheme, themeId],
+  );
+
+  const handleSectionClick = useCallback((sectionId: string | undefined) => {
     if (!sectionId) return;
     window.postMessage({ scrollTo: sectionId }, window.location.origin);
-  };
+  }, []);
 
-  const commitTitle = () => {
+  const commitTitle = useCallback(() => {
     if (titleDraft !== content.title) {
       setContent("title", titleDraft);
     }
-  };
+  }, [content.title, setContent, titleDraft]);
 
-  const commitBusiness = () => {
+  const commitBusiness = useCallback(() => {
     if (businessDraft !== content.businessName) {
       setContent("businessName", businessDraft);
     }
-  };
+  }, [businessDraft, content.businessName, setContent]);
 
-  const handleLogoUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleLogoUpload = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setContent("logoUrl", reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
-    event.target.value = "";
-  };
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setContent("logoUrl", reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+      event.target.value = "";
+    },
+    [setContent],
+  );
 
-  // === Tabs ===
-  const renderPagesTab = () => (
-    <div className="tab-content active">
-      {pages.length === 0 ? (
+  const renderPagesTab = useCallback(() => {
+    if (pages.length === 0) {
+      return (
         <p className="placeholder">No pages available for this template.</p>
-      ) : (
-        <ul className="pages-list">
-          {pages.map((mod, index) => (
-            <li key={mod.id || index}>
-              <button
-                type="button"
-                className="section-button"
-                onClick={() => handleSectionClick(mod.id || "")}
-              >
-                {mod.label || mod.id || `Section ${index + 1}`}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+      );
+    }
 
-  const renderThemeTab = () => (
-    <div className="tab-content active">
-<<<<<<< HEAD
-      {themes.length === 0 ? (
-        <p className="placeholder">No themes available.</p>
-      ) : (
-        <div className="theme-grid">
-          {themes.map((th, index) => {
-            const identifier = getThemeIdentifier(th, `theme-${index}`);
-            const colors = resolveThemeColors(th);
-            const font = resolveThemeFont(th);
-            const isActive = theme?.id === identifier || theme?.name === identifier;
-=======
+    return (
+      <ul className="pages-list">
+        {pages.map((mod, index) => (
+          <li key={mod.id || index}>
+            <button
+              type="button"
+              className="section-button"
+              onClick={() => handleSectionClick(mod.id)}
+            >
+              {mod.label || mod.id || `Section ${index + 1}`}
+            </button>
+          </li>
+        ))}
+      </ul>
+    );
+  }, [handleSectionClick, pages]);
+
+  const renderThemeTab = useCallback(() => {
+    if (themes.length === 0) {
+      return <p className="placeholder">No themes available for this template.</p>;
+    }
+
+    return (
       <div className="theme-grid">
-        {themes.length === 0 ? (
-          <p className="placeholder">No themes available for this template.</p>
-        ) : (
-          themes.map((theme, index) => {
-            const identifier = getThemeIdentifier(theme, `theme-${index}`);
-            const label = getThemeLabel(theme);
-            const colors = resolveThemeColors(theme);
-            const font = resolveThemeFont(theme);
-            const isActive = themeId === identifier;
->>>>>>> 976c0ee06117fe1e560e76089e3b2a601c4579a0
+        {themes.map((theme, index) => {
+          const identifier = getThemeIdentifier(theme, `theme-${index}`);
+          const label = getThemeLabel(theme);
+          const colors = resolveThemeColors(theme);
+          const font = resolveThemeFont(theme);
+          const isActive = themeId === identifier;
 
-            return (
-              <button
-                key={identifier}
-                type="button"
-                className={`theme-card ${isActive ? "active" : ""}`}
-                onClick={() => handleThemeClick(th)}
-              >
-                <div className="theme-card-header">
-                  <span className="theme-name">{getThemeLabel(th)}</span>
-                  {font && <span className="theme-font">{font}</span>}
+          return (
+            <button
+              key={identifier}
+              type="button"
+              className={`theme-card ${isActive ? "active" : ""}`}
+              onClick={() => handleThemeClick(theme, index)}
+            >
+              <div className="theme-card-header">
+                <span className="theme-name">{label}</span>
+                {font && <span className="theme-font">{font}</span>}
+              </div>
+              {colors.length > 0 && (
+                <div className="theme-swatches" aria-hidden="true">
+                  {colors.slice(0, 5).map((color, colorIndex) => (
+                    <span
+                      key={`${identifier}-c-${colorIndex}`}
+                      className="theme-swatch"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
                 </div>
-                {colors.length > 0 && (
-                  <div className="theme-swatches" aria-hidden="true">
-                    {colors.slice(0, 5).map((color, ci) => (
-                      <span
-                        key={`${identifier}-c-${ci}`}
-                        className="theme-swatch"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }, [handleThemeClick, themeId, themes]);
 
-  const renderContentTab = () => (
-    <div className="tab-content active">
+  const renderContentTab = useCallback(() => (
+    <>
       <p className="desc">Update your branding content and assets.</p>
       {CONTENT_FIELDS.map((field) => {
         const isOpen = openField === field.id;
@@ -257,10 +299,10 @@ export default function InspectorPanel() {
                   className="input-field"
                   type="text"
                   value={value}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     field.id === "title"
-                      ? setTitleDraft(e.target.value)
-                      : setBusinessDraft(e.target.value)
+                      ? setTitleDraft(event.target.value)
+                      : setBusinessDraft(event.target.value)
                   }
                   onBlur={field.id === "title" ? commitTitle : commitBusiness}
                   placeholder={field.label}
@@ -277,7 +319,7 @@ export default function InspectorPanel() {
                     accept="image/*"
                     onChange={handleLogoUpload}
                   />
-                  {content.logoUrl && (
+                  {typeof content.logoUrl === "string" && content.logoUrl.length > 0 && (
                     <div className="logo-preview">
                       <img src={content.logoUrl} alt="Logo preview" />
                     </div>
@@ -288,10 +330,18 @@ export default function InspectorPanel() {
           </div>
         );
       })}
-    </div>
-  );
+    </>
+  ), [
+    businessDraft,
+    commitBusiness,
+    commitTitle,
+    content.logoUrl,
+    handleLogoUpload,
+    openField,
+    titleDraft,
+  ]);
 
-  const renderTabContent = () => {
+  const renderTabContent = useMemo(() => {
     switch (activeTab) {
       case "pages":
         return renderPagesTab();
@@ -302,14 +352,14 @@ export default function InspectorPanel() {
       default:
         return null;
     }
-  };
+  }, [activeTab, renderContentTab, renderPagesTab, renderThemeTab]);
 
   return (
     <aside className={`inspector${collapsed ? " collapsed" : ""}`}>
       <button
         type="button"
         className="collapse-btn"
-        onClick={() => setCollapsed((v) => !v)}
+        onClick={() => setCollapsed((value) => !value)}
         aria-label={collapsed ? "Expand inspector" : "Collapse inspector"}
         aria-expanded={!collapsed}
       >
@@ -331,9 +381,10 @@ export default function InspectorPanel() {
             </button>
           ))}
         </div>
-        {renderTabContent()}
+        <div className="tab-content active">{renderTabContent}</div>
         <footer className="footer">Made with 💜 Prosite</footer>
       </div>
     </aside>
   );
 }
+
