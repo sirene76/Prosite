@@ -111,6 +111,25 @@ const extractTemplateThemes = (
   return rawThemes as TemplateThemeOption[];
 };
 
+// === Utility: build default nested content from template meta.fields ===
+function buildDefaultContent(fields: { id: string; default?: string }[] = []) {
+  const content: Record<string, any> = {};
+  for (const field of fields) {
+    const parts = field.id.split(".");
+    let current = content;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (i === parts.length - 1) {
+        current[part] = field.default ?? "";
+      } else {
+        current[part] = current[part] || {};
+        current = current[part];
+      }
+    }
+  }
+  return content;
+}
+
 const extractWebsiteThemeName = (theme: unknown): string | null => {
   if (typeof theme === "string" && theme.length > 0) {
     return theme;
@@ -345,11 +364,23 @@ export default function BuilderPageClient({
             : null;
         const initialContent = deriveInitialContent(website);
 
+        const templateFields = Array.isArray(templateData.meta?.fields)
+          ? (templateData.meta?.fields as any[])
+          : [];
+
+        const defaultNested = buildDefaultContent(templateFields);
+
+        // Merge: website content overwrites template defaults
+        const mergedContent = {
+          ...defaultNested,
+          ...initialContent,
+        };
+
         setTemplateHtml(typeof templateData.html === "string" ? templateData.html : "");
 
         initialize({
           template: { id: templateId, meta: templateMeta ?? undefined },
-          content: initialContent,
+          content: mergedContent, // ✅ now includes template defaults
           themeId: initialThemeId,
           themeConfig: initialThemeOption ? createPreviewTheme(initialThemeOption) : null,
         });
