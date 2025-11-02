@@ -136,7 +136,7 @@ export default function InspectorPanel() {
   const [openField, setOpenField] = useState<string | null>("title");
 
   const template = useBuilderStore((state) => state.template);
-  const themeName = useBuilderStore((state) => state.theme);
+  const themeId = useBuilderStore((state) => state.themeId);
   const content = useBuilderStore((state) => state.content);
   const setTheme = useBuilderStore((state) => state.setTheme);
   const updateContent = useBuilderStore((state) => state.updateContent);
@@ -191,10 +191,21 @@ export default function InspectorPanel() {
 
   const handleThemeClick = (theme: ThemeOption, index: number) => {
     const identifier = getThemeIdentifier(theme, `theme-${index}`);
-    if (identifier === themeName) {
+    if (identifier === themeId) {
       return;
     }
-    setTheme(identifier);
+    const colors = resolveThemeColors(theme);
+    const colorRecord =
+      colors.length > 0
+        ? colors.reduce<Record<string, string>>((acc, color, colorIndex) => {
+            acc[`--color-${colorIndex + 1}`] = color;
+            return acc;
+          }, {})
+        : undefined;
+    const font = resolveThemeFont(theme);
+    const fonts = font ? { primary: font } : undefined;
+    const nextThemeConfig = colorRecord || fonts ? { colors: colorRecord, fonts } : null;
+    setTheme(identifier, nextThemeConfig);
   };
 
   const handleSectionClick = (section: SectionOption | string) => {
@@ -299,7 +310,7 @@ export default function InspectorPanel() {
             const label = getThemeLabel(theme);
             const colors = resolveThemeColors(theme);
             const font = resolveThemeFont(theme);
-            const isActive = themeName === identifier;
+            const isActive = themeId === identifier;
 
             return (
               <button

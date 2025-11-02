@@ -6,7 +6,10 @@ import { DEBUG_PREVIEW } from "@/lib/debug";
 
 export function PreviewFrame({ html }: { html: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { content, theme } = useBuilderStore();
+  const { content, themeConfig } = useBuilderStore((state) => ({
+    content: state.content,
+    themeConfig: state.themeConfig,
+  }));
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -69,12 +72,12 @@ export function PreviewFrame({ html }: { html: string }) {
     if (!targetWindow) return;
     if (DEBUG_PREVIEW) {
       console.log("[parent] posting update-theme", {
-        hasColors: !!theme?.colors,
-        colorKeys: theme?.colors ? Object.keys(theme.colors) : [],
+        hasColors: !!themeConfig?.colors,
+        colorKeys: themeConfig?.colors ? Object.keys(themeConfig.colors) : [],
       });
     }
-    targetWindow.postMessage({ type: "update-theme", payload: theme }, "*");
-  }, [theme]);
+    targetWindow.postMessage({ type: "update-theme", payload: themeConfig }, "*");
+  }, [themeConfig]);
 
   useEffect(() => {
     if (!DEBUG_PREVIEW) return;
