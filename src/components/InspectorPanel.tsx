@@ -63,8 +63,16 @@ export default function InspectorPanel() {
   const [collapsed, setCollapsed] = useState(false);
   const [openField, setOpenField] = useState<string | null>("title");
 
+<<<<<<< HEAD
   // ✅ pull state from builderStore
   const { template, theme, content, setTheme, setContent } = useBuilderStore();
+=======
+  const template = useBuilderStore((state) => state.template);
+  const themeId = useBuilderStore((state) => state.themeId);
+  const content = useBuilderStore((state) => state.content);
+  const setTheme = useBuilderStore((state) => state.setTheme);
+  const updateContent = useBuilderStore((state) => state.updateContent);
+>>>>>>> 976c0ee06117fe1e560e76089e3b2a601c4579a0
 
   const pages = useMemo<PageModule[]>(() => {
     if (!template?.modules) return [];
@@ -87,10 +95,30 @@ export default function InspectorPanel() {
     setBusinessDraft(content.businessName ?? "");
   }, [content.businessName]);
 
+<<<<<<< HEAD
   // ✅ Theme click — now passes theme object instead of string
   const handleThemeClick = (selected: ThemeOption) => {
     const themeObj = template?.themes?.find((t) => t.id === selected.id) || selected;
     setTheme(themeObj as any);
+=======
+  const handleThemeClick = (theme: ThemeOption, index: number) => {
+    const identifier = getThemeIdentifier(theme, `theme-${index}`);
+    if (identifier === themeId) {
+      return;
+    }
+    const colors = resolveThemeColors(theme);
+    const colorRecord =
+      colors.length > 0
+        ? colors.reduce<Record<string, string>>((acc, color, colorIndex) => {
+            acc[`--color-${colorIndex + 1}`] = color;
+            return acc;
+          }, {})
+        : undefined;
+    const font = resolveThemeFont(theme);
+    const fonts = font ? { primary: font } : undefined;
+    const nextThemeConfig = colorRecord || fonts ? { colors: colorRecord, fonts } : null;
+    setTheme(identifier, nextThemeConfig);
+>>>>>>> 976c0ee06117fe1e560e76089e3b2a601c4579a0
   };
 
   const handleSectionClick = (sectionId: string) => {
@@ -149,6 +177,7 @@ export default function InspectorPanel() {
 
   const renderThemeTab = () => (
     <div className="tab-content active">
+<<<<<<< HEAD
       {themes.length === 0 ? (
         <p className="placeholder">No themes available.</p>
       ) : (
@@ -158,6 +187,18 @@ export default function InspectorPanel() {
             const colors = resolveThemeColors(th);
             const font = resolveThemeFont(th);
             const isActive = theme?.id === identifier || theme?.name === identifier;
+=======
+      <div className="theme-grid">
+        {themes.length === 0 ? (
+          <p className="placeholder">No themes available for this template.</p>
+        ) : (
+          themes.map((theme, index) => {
+            const identifier = getThemeIdentifier(theme, `theme-${index}`);
+            const label = getThemeLabel(theme);
+            const colors = resolveThemeColors(theme);
+            const font = resolveThemeFont(theme);
+            const isActive = themeId === identifier;
+>>>>>>> 976c0ee06117fe1e560e76089e3b2a601c4579a0
 
             return (
               <button

@@ -1,57 +1,64 @@
 import { create } from "zustand";
 import lodashSet from "lodash.set";
 
-export interface Theme {
-  id: string;
-  name: string;
-  colors: Record<string, string>;
-}
+type PlainObject = Record<string, unknown>;
 
-export interface TemplateMeta {
+export type BuilderTemplate = {
   id: string;
-  name: string;
-  description: string;
-  category: string;
-  modules: { id: string; label: string }[];
-  fields: { id: string; label: string; default: string }[];
-  themes: Theme[];
-  defaultContent?: Record<string, any>;
-}
+  meta?: PlainObject;
+  /**
+   * When available, templates can expose a default content payload. This mirrors
+   * the shape expected by the preview iframe and is merged with any overrides
+   * provided during initialisation.
+   */
+  defaultContent?: PlainObject | null;
+  /** Additional template metadata collected elsewhere in the app. */
+  [key: string]: unknown;
+};
+
+export type BuilderThemeConfig = {
+  colors?: Record<string, string>;
+  fonts?: Record<string, string>;
+};
+
+export type BuilderContent = PlainObject;
+
+export type BuilderInitializeInput = {
+  template?: BuilderTemplate | null;
+  content?: BuilderContent | null;
+  themeId?: string | null;
+  themeConfig?: BuilderThemeConfig | null;
+};
 
 interface BuilderState {
-  template: TemplateMeta | null;
-  content: Record<string, any>;
-  theme: Theme | null;
-  setTemplate: (t: TemplateMeta) => void;
-  setContent: (key: string, value: any) => void;
-  setTheme: (theme: Theme) => void;
+  template: BuilderTemplate | null;
+  content: BuilderContent;
+  themeId: string | null;
+  themeConfig: BuilderThemeConfig | null;
+  setTemplate: (template: BuilderTemplate | null) => void;
+  updateContent: (path: string, value: unknown) => void;
+  setTheme: (themeId: string | null, themeConfig?: BuilderThemeConfig | null) => void;
+  initialize: (input: BuilderInitializeInput) => void;
   reset: () => void;
-initialize: (params: {
-  websiteId: string;
-  templateId?: string;
-  content?: Record<string, any>;
-  theme?: any;
-}) => Promise<void>;
 }
 
-// Utility to build nested default content
 function buildDefaultContent(fields: { id: string; default: string }[]) {
   const content: Record<string, any> = {};
   for (const field of fields) {
-    const path = field.id.split(".");
+    const parts = field.id.split(".");
     let current = content;
-    for (let i = 0; i < path.length; i++) {
-      const key = path[i];
-      if (i === path.length - 1) {
-        current[key] = field.default;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (i === parts.length - 1) {
+        current[part] = field.default;
       } else {
-        current[key] = current[key] || {};
-        current = current[key];
+        if (!current[part]) current[part] = {};
+        current = current[part];
       }
     }
   }
-  return content;
-}
+  return merged;
+};
 
 
 export const useBuilderStore = create<BuilderState>((set, get) => ({
@@ -121,20 +128,17 @@ setContent: (key, value) =>
 // Debug snapshot (safe to import in dev)
 export function __debugBuilderSnapshot() {
   try {
-    const s = require("./builderStore").useBuilderStore.getState();
+    const s = useBuilderStore.getState();
     const sampleKeys = Object.keys(s.content || {}).slice(0, 8);
     return {
       hasTemplate: !!s.template,
       templateId: s.template?.id,
-      fieldsCount: s.template?.fields?.length ?? 0,
-      modulesCount: s.template?.modules?.length ?? 0,
-      themeId: s.theme?.id,
-      contentType: typeof s.content,
-      topKeys: sampleKeys,
-      contentSample: sampleKeys.reduce((acc: any, k) => {
-        acc[k] = s.content[k];
+      themeId: s.themeId,
+      contentKeys: sampleKeys,
+      contentSample: sampleKeys.reduce((acc: PlainObject, key) => {
+        acc[key] = s.content[key];
         return acc;
-      }, {} as Record<string, unknown>),
+      }, {} as PlainObject),
     };
   } catch (e) {
     return { error: String(e) };
