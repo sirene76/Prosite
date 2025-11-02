@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -20,16 +23,17 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email", placeholder: "you@example.com" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(rawCredentials) {
-        const parsed = credentialsSchema.safeParse(rawCredentials);
-        if (!parsed.success) {
-          return null;
-        }
+async authorize(rawCredentials) {
+  const parsed = credentialsSchema.safeParse(rawCredentials);
+  if (!parsed.success) return null;
 
-        const { email, password } = parsed.data;
+  const { email, password } = parsed.data;
 
-        await connectDB();
-        const user = await User.findOne({ email }).lean();
+  const { connectDB } = await import("@/lib/db");
+  const { User } = await import("@/models/user");
+
+  await connectDB();
+  const user = await User.findOne({ email }).lean();
         if (!user || !user.password) {
           return null;
         }

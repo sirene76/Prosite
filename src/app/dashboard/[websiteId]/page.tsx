@@ -1,64 +1,139 @@
+/* ---------------------- Client Component ----------------------- */
+"use client";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { isValidObjectId } from "mongoose";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
-import Website from "@/models/Website";
+import Website, { WebsiteDocument } from "@/models/Website";
 import ContentEditor from "@/components/dashboard/ContentEditor";
+import { isValidObjectId } from "mongoose";
 
+/* -------------------------- Utilities -------------------------- */
 function toPlainRecord(value: unknown): Record<string, unknown> {
-  if (!value) {
-    return {};
-  }
-
-  if (value instanceof Map) {
-    return Object.fromEntries(value.entries());
-  }
-
-  if (typeof value === "object") {
-    return value as Record<string, unknown>;
-  }
-
+  if (!value) return {};
+  if (value instanceof Map) return Object.fromEntries(value.entries());
+  if (typeof value === "object") return value as Record<string, unknown>;
   return {};
 }
 
 function formatDateTime(value: unknown) {
-  if (!value) {
-    return null;
-  }
-
+  if (!value) return null;
   const date = value instanceof Date ? value : new Date(String(value));
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
+  if (Number.isNaN(date.getTime())) return null;
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
 }
 
+
+import { useState } from "react";
+
+function SEOInsights({
+  websiteId,
+  initialScore,
+  initialLastScan,
+}: {
+  websiteId: string;
+  initialScore: number | null;
+  initialLastScan: string | null;
+}) {
+  const [score, setScore] = useState<number | null>(initialScore);
+  const [lastScan, setLastScan] = useState<string | null>(initialLastScan);
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleScan() {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`/api/seo/${websiteId}/scan`);
+      const data = await res.json();
+
+      if (res.ok) {
+        setScore(data.score ?? null);
+        setLastScan(data.lastScan ?? null);
+        setSuggestions(data.suggestions ?? []);
+      } else {
+        setError(data.error || "Failed to run scan");
+      }
+    } catch {
+      setError("Network error during SEO scan");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 p-6">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        SEO insights
+      </h2>
+
+      <p className="mt-3 text-lg font-semibold text-gray-900">
+        {typeof score === "number" ? `${Math.round(score)} / 100` : "No data"}
+      </p>
+
+      {lastScan ? (
+        <p className="mt-2 text-sm text-gray-400">
+          Last scan {new Date(lastScan).toLocaleString()}
+        </p>
+      ) : (
+        <p className="mt-2 text-sm text-gray-400">Scan not yet run</p>
+      )}
+
+      <button
+        onClick={handleScan}
+        disabled={loading}
+        className={`mt-4 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm transition ${
+          loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-500"
+        }`}
+      >
+        {loading ? "Scanning..." : "Run SEO Scan"}
+      </button>
+
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+      {suggestions.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-gray-700">Suggestions:</h3>
+          <ul className="mt-2 list-disc list-inside text-sm text-gray-600">
+            {suggestions.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <Link
+        href={`/dashboard/${websiteId}/analytics`}
+        className="mt-4 inline-flex text-sm font-medium text-blue-600 hover:text-blue-500"
+      >
+        View Analytics
+      </Link>
+    </div>
+  );
+}
+
+/* ---------------------- Server Component ----------------------- */
 export default async function DashboardWebsitePage({
   params,
 }: {
   params: Promise<{ websiteId: string }>;
 }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect("/auth/login");
-  }
+  if (!session?.user?.email) redirect("/auth/login");
 
-  const { websiteId } = await params;
-  if (!websiteId || !isValidObjectId(websiteId)) {
-    notFound();
-  }
+  const { websiteId } = await params; // ✅ Next.js 15.5 async params
+  if (!websiteId || !isValidObjectId(websiteId)) notFound();
 
   await connectDB();
-  const website = await Website.findById(websiteId).lean();
-  if (!website) {
-    notFound();
-  }
+  const website = (await Website.findById(websiteId).lean()) as
+    | (WebsiteDocument & { _id: string })
+    | null;
+  if (!website) notFound();
 
   const sessionWithId = session as typeof session & { userId?: string };
   const sessionUserId = sessionWithId.userId;
@@ -71,7 +146,8 @@ export default async function DashboardWebsitePage({
   }
 
   const deployment = toPlainRecord(website.deployment);
-  const deploymentUrl = typeof deployment.url === "string" ? deployment.url : undefined;
+  const deploymentUrl =
+    typeof deployment.url === "string" ? deployment.url : undefined;
   const lastDeployed = formatDateTime(deployment.lastDeployedAt);
 
   const seo = toPlainRecord(website.seo);
@@ -82,8 +158,15 @@ export default async function DashboardWebsitePage({
     typeof website.name === "string" && website.name.trim().length > 0
       ? website.name
       : "Untitled Website";
-  const sitePlan = typeof website.plan === "string" ? website.plan : "Free";
-  const siteStatus = typeof website.status === "string" ? website.status : "preview";
+  const sitePlan =
+    typeof website.plan === "string" ? website.plan : "Free";
+  const billingCycle =
+    typeof website.billingCycle === "string"
+      ? website.billingCycle.charAt(0).toUpperCase() +
+        website.billingCycle.slice(1)
+      : null;
+  const siteStatus =
+    typeof website.status === "string" ? website.status : "preview";
   const siteSubdomain =
     typeof website.subdomain === "string" && website.subdomain
       ? website.subdomain
@@ -92,10 +175,7 @@ export default async function DashboardWebsitePage({
   const hasLiveSite = Boolean(deploymentUrl);
   const websiteValues = toPlainRecord(website.values);
   const websiteForEditor = {
-    _id:
-      typeof website._id === "string"
-        ? website._id
-        : website._id?.toString() ?? websiteId,
+    _id: String(website._id),
     values: websiteValues,
   };
 
@@ -134,7 +214,10 @@ export default async function DashboardWebsitePage({
               View Live Site
             </a>
 
-            <form action={`/api/websites/${websiteForEditor._id}/redeploy`} method="post">
+            <form
+              action={`/api/websites/${websiteForEditor._id}/redeploy`}
+              method="post"
+            >
               <button
                 type="submit"
                 className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
@@ -146,44 +229,50 @@ export default async function DashboardWebsitePage({
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
+          {/* ---- Website Info Card ---- */}
           <div className="rounded-lg border border-gray-200 p-6">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
               Website status
             </h2>
-            <p className="mt-3 text-lg font-semibold text-gray-900">{siteStatus}</p>
-            <p className="mt-1 text-sm text-gray-500">Plan: {sitePlan}</p>
+            <p className="mt-3 text-lg font-semibold text-gray-900">
+              {siteStatus}
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              Plan: {sitePlan}
+              {billingCycle && (
+                <span className="text-gray-400"> · {billingCycle}</span>
+              )}
+            </p>
             {lastDeployed && (
-              <p className="mt-2 text-sm text-gray-400">Last deployed {lastDeployed}</p>
+              <p className="mt-2 text-sm text-gray-400">
+                Last deployed {lastDeployed}
+              </p>
             )}
           </div>
 
-          <div className="rounded-lg border border-gray-200 p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-              SEO insights
-            </h2>
-            <p className="mt-3 text-lg font-semibold text-gray-900">
-              {typeof seoScore === "number" ? `${Math.round(seoScore)} / 100` : "No data"}
-            </p>
-            {seoLastScan ? (
-              <p className="mt-2 text-sm text-gray-400">Last scan {seoLastScan}</p>
-            ) : (
-              <p className="mt-2 text-sm text-gray-400">Scan not yet run</p>
-            )}
-            <Link
-              href={`/dashboard/${websiteForEditor._id}/analytics`}
-              className="mt-4 inline-flex text-sm font-medium text-blue-600 hover:text-blue-500"
-            >
-              View Analytics
-            </Link>
-          </div>
+          {/* ---- SEO Card with Scan Button ---- */}
+          <SEOInsights
+            websiteId={String(websiteForEditor._id)}
+            initialScore={seoScore}
+            initialLastScan={seoLastScan}
+          />
         </div>
 
+        {/* ---- Content Editor ---- */}
         <div className="mt-10 rounded-lg border border-gray-200 p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Content</h2>
-            <p className="text-xs uppercase tracking-wide text-gray-400">Live Editing</p>
+            <p className="text-xs uppercase tracking-wide text-gray-400">
+              Live Editing
+            </p>
           </div>
-          <ContentEditor website={websiteForEditor} />
+
+          <ContentEditor
+            website={{
+              _id: String(websiteForEditor._id),
+              values: websiteForEditor.values ?? {},
+            }}
+          />
         </div>
       </div>
     </div>

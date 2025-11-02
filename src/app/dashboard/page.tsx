@@ -4,19 +4,18 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
-import Website from "@/models/Website";
+import Website, { WebsiteDocument } from "@/models/Website";
 
 interface DashboardSite {
   id: string;
   name: string;
   plan: string;
+  billingCycle?: string;
   status: string;
 }
 
 function toDashboardSite(value: unknown): DashboardSite | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
+  if (!value || typeof value !== "object") return null;
 
   const record = value as Record<string, unknown>;
   const idRaw = record._id;
@@ -27,34 +26,46 @@ function toDashboardSite(value: unknown): DashboardSite | null {
       ? String((idRaw as { toString: () => string }).toString())
       : "";
 
-  if (!id) {
-    return null;
-  }
+  if (!id) return null;
 
-  const name = typeof record.name === "string" && record.name.trim().length > 0
-    ? record.name
-    : "Untitled Website";
+  const name =
+    typeof record.name === "string" && record.name.trim().length > 0
+      ? record.name
+      : "Untitled Website";
 
-  const plan = typeof record.plan === "string" && record.plan.length > 0 ? record.plan : "Free";
-  const status = typeof record.status === "string" && record.status.length > 0 ? record.status : "preview";
+  const plan =
+    typeof record.plan === "string" && record.plan.length > 0
+      ? record.plan.charAt(0).toUpperCase() + record.plan.slice(1)
+      : "Free";
 
-  return { id, name, plan, status };
+  const billingCycle =
+    typeof record.billingCycle === "string" && record.billingCycle.length > 0
+      ? record.billingCycle.charAt(0).toUpperCase() + record.billingCycle.slice(1)
+      : undefined;
+
+  const status =
+    typeof record.status === "string" && record.status.length > 0
+      ? record.status
+      : "preview";
+
+  return { id, name, plan, billingCycle, status };
 }
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect("/auth/login");
-  }
+  if (!session?.user?.email) redirect("/auth/login");
 
   await connectDB();
-  const websites = await Website.find({ user: session.user.email })
+  const websites = (await Website.find({ user: session.user.email })
     .sort({ createdAt: -1 })
-    .lean();
+    .lean()) as (WebsiteDocument & { _id: string })[];
 
   const dashboardSites = websites
     .map(toDashboardSite)
-    .filter((site): site is DashboardSite => Boolean(site && site.status === "active"));
+    .filter(
+      (site): site is DashboardSite =>
+        Boolean(site && site.status && site.status !== "preview")
+    );
 
   return (
     <div className="max-w-5xl px-6 py-10 mx-auto">
@@ -86,6 +97,9 @@ export default async function DashboardPage() {
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500">
                   <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">
                     Plan: {site.plan}
+                    {site.billingCycle && (
+                      <span className="text-gray-400"> · {site.billingCycle}</span>
+                    )}
                   </span>
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
                     Status: {site.status}

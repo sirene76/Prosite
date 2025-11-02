@@ -1,5 +1,5 @@
 import { CheckoutClient } from "./CheckoutClient";
-import Website from "@/models/Website";
+import Website, { WebsiteDocument } from "@/models/Website";
 import { notFound } from "next/navigation";
 import { connectDB } from "@/lib/db";
 
@@ -11,7 +11,10 @@ export default async function CheckoutPage({
   const { websiteId } = await params;
 
   await connectDB();
-  const website = await Website.findById(websiteId).lean();
+  const website = (await Website.findById(websiteId).lean()) as
+  | (WebsiteDocument & { _id: string })
+  | null;
+
 
   if (!website) return notFound();
 

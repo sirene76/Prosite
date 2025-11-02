@@ -1,6 +1,12 @@
-import { Schema, model, models, type HydratedDocument } from "mongoose";
+import mongoose, {
+  Schema,
+  Model,
+  models,
+  Document,
+  type HydratedDocument,
+} from "mongoose";
 
-export interface IUser {
+export interface IUser extends Document {
   email: string;
   password: string;
   stripeCustomerId?: string;
@@ -23,5 +29,9 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-export const User = models.User || model<IUser>("User", UserSchema);
-export type UserDocument = HydratedDocument<IUser>;
+// ✅ Always reference mongoose.models, not destructured models (can be undefined)
+export const User: Model<IUser> =
+  (mongoose.models?.User as Model<IUser>) ||
+  mongoose.model<IUser>("User", UserSchema);
+
+export type UserDocument = mongoose.HydratedDocument<IUser>;
