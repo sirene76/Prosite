@@ -20,11 +20,12 @@ const WebsiteSchema = new Schema(
       enum: ["preview", "active"],
       default: "preview",
     },
-    plan: {
-      type: String,
-      enum: ["Free", "Basic", "Standard", "Premium"],
-      default: "Free",
-    },
+plan: {
+  type: String,
+  enum: ["free", "basic", "standard", "premium", "Free", "Basic", "Standard", "Premium"],
+  default: "free",
+},
+
     billingCycle: {
       type: String,
       enum: ["monthly", "yearly"],

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Circle } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircleCheck, faCircle as faEmptyCircle } from "@fortawesome/free-regular-svg-icons";
 
 function hasNonEmptyContent(values: Record<string, unknown> | null | undefined) {
   if (!values) return false;
@@ -48,6 +49,7 @@ export type CompleteSetupCardProps = {
   siteStatus: string | null | undefined;
   siteValues: Record<string, unknown> | null | undefined;
   seoScore: number | null | undefined;
+  plan: string | null | undefined;
 };
 
 export function CompleteSetupCard({
@@ -143,10 +145,11 @@ export function CompleteSetupCard({
                 }`}
               >
                 {step.completed ? (
-                  <CheckCircle2 className="h-5 w-5" />
-                ) : (
-                  <Circle className="h-5 w-5" />
-                )}
+  <FontAwesomeIcon icon={faCircleCheck} className="text-green-500" />
+) : (
+  <FontAwesomeIcon icon={faEmptyCircle} className="text-gray-400" />
+)}
+
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-900">{step.label}</p>
