@@ -1,11 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Website, { WebsiteDocument } from "@/models/Website";
 import ContentEditor from "@/components/dashboard/ContentEditor";
 import { CompleteSetupCard } from "@/components/dashboard/CompleteSetupCard";
+import { SEOInsights } from "@/components/dashboard/SEOInsights";
 import { SEOInsights } from "@/components/dashboard/SEOInsights";
 import { isValidObjectId } from "mongoose";
 

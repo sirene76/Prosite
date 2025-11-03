@@ -88,4 +88,5 @@ export function SEOInsights({
       </Link>
     </div>
   );
+
 }
