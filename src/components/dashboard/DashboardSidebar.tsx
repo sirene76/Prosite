@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType, MouseEvent } from "react";
+import { type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,54 +8,42 @@ import {
   FileText,
   Globe,
   BarChart,
-  Settings as SettingsIcon,
+  Settings,
   Lock,
 } from "lucide-react";
 
-interface SidebarProps {
-  websiteId: string;
-  plan: "free" | "basic" | "standard" | "premium";
-}
+const plans = ["free", "basic", "standard", "premium"] as const;
+export type Plan = (typeof plans)[number];
 
-type NavItem = {
+interface SidebarNavItem {
   label: string;
   href: string;
   icon: ComponentType<{ size?: number }>;
-  requires?: "basic" | "standard" | "premium";
-  badge?: string;
-};
+  requires?: Plan;
+}
 
-const navItems: NavItem[] = [
+interface SidebarProps {
+  websiteId: string;
+  plan: Plan;
+}
+
+const navItems: SidebarNavItem[] = [
   { label: "Overview", href: "", icon: LayoutDashboard },
   { label: "Content", href: "content", icon: FileText },
   { label: "SEO", href: "seo", icon: Globe },
-  {
-    label: "Analytics",
-    href: "analytics",
-    icon: BarChart,
-    requires: "standard",
-    badge: "PRO",
-  },
-  {
-    label: "Settings",
-    href: "settings",
-    icon: SettingsIcon,
-    requires: "premium",
-    badge: "PREMIUM",
-  },
+  { label: "Analytics", href: "analytics", icon: BarChart, requires: "standard" },
+  { label: "Settings", href: "settings", icon: Settings, requires: "premium" },
 ];
 
-const planOrder = ["free", "basic", "standard", "premium"] as const;
-
-type PlanOrder = (typeof planOrder)[number];
-
-function getPlanRank(plan: PlanOrder) {
-  return planOrder.indexOf(plan);
+function getBadgeLabel(requirement?: Plan) {
+  if (requirement === "standard") return "PRO";
+  if (requirement === "premium") return "PREMIUM";
+  return null;
 }
 
 export function DashboardSidebar({ websiteId, plan }: SidebarProps) {
-  const pathname = usePathname() ?? "";
-  const planRank = getPlanRank(plan);
+  const pathname = usePathname();
+  const planRank = plans.indexOf(plan);
   const basePath = `/dashboard/${websiteId}`;
 
   return (
@@ -65,29 +53,24 @@ export function DashboardSidebar({ websiteId, plan }: SidebarProps) {
         <p className="mt-1 text-xs capitalize text-gray-500">{plan} plan</p>
       </div>
       <nav className="flex-1 space-y-1 p-4">
-        {navItems.map(({ label, href, icon: Icon, requires, badge }) => {
+        {navItems.map(({ label, href, icon: Icon, requires }) => {
           const fullPath = href ? `${basePath}/${href}` : basePath;
-          const isOverview = href.length === 0;
-          const active = isOverview
-            ? pathname === basePath || pathname === `${basePath}/`
-            : pathname === fullPath || pathname.startsWith(`${fullPath}/`);
+          const isActive =
+            pathname === fullPath ||
+            pathname === `${fullPath}/` ||
+            (href !== "" && pathname.startsWith(`${fullPath}/`));
 
-          const requiredRank = requires
-            ? getPlanRank(requires as PlanOrder)
-            : -1;
+          const requiredRank = requires ? plans.indexOf(requires) : -1;
           const locked = requiredRank > planRank;
+          const badge = locked ? getBadgeLabel(requires) : null;
 
           return (
             <Link
               key={label}
               href={locked ? "#" : fullPath}
               aria-disabled={locked}
-              tabIndex={locked ? -1 : undefined}
-              onClick={locked ? (event: MouseEvent<HTMLAnchorElement>) => event.preventDefault() : undefined}
               className={`flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-black text-white"
-                  : "text-gray-700 hover:bg-gray-100"
+                isActive ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
               } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
             >
               <span className="flex items-center gap-2">
@@ -95,13 +78,9 @@ export function DashboardSidebar({ websiteId, plan }: SidebarProps) {
                 {label}
               </span>
               {locked && (
-                <span className="flex items-center gap-1 text-gray-400">
-                  {badge && (
-                    <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-600">
-                      {badge}
-                    </span>
-                  )}
-                  <Lock size={14} />
+                <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                  <Lock size={12} />
+                  {badge}
                 </span>
               )}
             </Link>
@@ -111,5 +90,3 @@ export function DashboardSidebar({ websiteId, plan }: SidebarProps) {
     </aside>
   );
 }
-
-export type { SidebarProps };

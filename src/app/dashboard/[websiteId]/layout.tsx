@@ -6,29 +6,29 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { connectDB } from "@/lib/mongodb";
 import Website from "@/models/Website";
 
-const supportedPlans = ["free", "basic", "standard", "premium"] as const;
-type SidebarPlan = (typeof supportedPlans)[number];
+const allowedPlans = ["free", "basic", "standard", "premium"] as const;
+type Plan = (typeof allowedPlans)[number];
 
-function normalizePlan(value: unknown): SidebarPlan {
-  if (typeof value !== "string") {
-    return "free";
+function normalizePlan(value: unknown): Plan {
+  if (typeof value === "string") {
+    const normalized = value.toLowerCase();
+    if ((allowedPlans as readonly string[]).includes(normalized)) {
+      return normalized as Plan;
+    }
   }
+  return "free";
+}
 
-  const normalized = value.toLowerCase();
-  return supportedPlans.includes(normalized as SidebarPlan)
-    ? (normalized as SidebarPlan)
-    : "free";
+interface DashboardLayoutProps {
+  children: ReactNode;
+  params: { websiteId: string };
 }
 
 export default async function DashboardLayout({
   children,
   params,
-}: {
-  children: ReactNode;
-  params: Promise<{ websiteId: string }> | { websiteId: string };
-}) {
-  const resolvedParams = await Promise.resolve(params);
-  const { websiteId } = resolvedParams;
+}: DashboardLayoutProps) {
+  const { websiteId } = params;
 
   if (!websiteId || !isValidObjectId(websiteId)) {
     notFound();
