@@ -6,6 +6,12 @@ export type RenderTemplateOptions = {
   modules?: TemplateModuleDefinition[];
 };
 
+/**
+ * renderTemplate
+ * Renders {{tokens}} inside HTML using values from Website (content + values).
+ * Supports nested keys like hero.title or content.businessName.
+ * Integrates module previews if provided.
+ */
 export function renderTemplate({
   html,
   values = {},
@@ -13,14 +19,14 @@ export function renderTemplate({
 }: RenderTemplateOptions) {
   if (!html) return "";
 
-  // Handle modules first
+  // ---------- MODULES HANDLING ----------
   const moduleMap = new Map<string, string>();
   modules.forEach((module) => {
     const key = `modules.${module.id}`;
     moduleMap.set(key, renderModule(module));
   });
 
-  // Resolve nested paths like hero.image and ensure we always return a string
+  // ---------- UTILITIES ----------
   const resolvePath = (obj: Record<string, unknown>, path: string): unknown => {
     const parts = path.split(".");
     let current: unknown = obj;
@@ -39,40 +45,59 @@ export function renderTemplate({
   };
 
   const toStringValue = (value: unknown): string => {
-    if (typeof value === "string") return value;
     if (value == null) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
     if (Array.isArray(value)) {
-      return value
-        .map((item) => (typeof item === "string" ? item : String(item)))
-        .join("\n");
+      return value.map((v) => toStringValue(v)).join("\n");
     }
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === "object") return JSON.stringify(value);
     return String(value);
   };
 
-  // Replace placeholders in HTML
-  const rendered = html.replace(/{{(.*?)}}/g, (_, rawKey: string) => {
+  // ---------- FLATTEN VALUES ----------
+  const flatten = (obj: Record<string, any>, prefix = ""): Record<string, string> => {
+    return Object.entries(obj).reduce((acc, [key, val]) => {
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+      if (val && typeof val === "object" && !Array.isArray(val)) {
+        Object.assign(acc, flatten(val, fullKey));
+      } else if (val != null) {
+        acc[fullKey] = toStringValue(val);
+      }
+      return acc;
+    }, {} as Record<string, string>);
+  };
+
+  const flatValues = flatten(values);
+
+  // ---------- REPLACE PLACEHOLDERS ----------
+  let rendered = html.replace(/{{\s*(.*?)\s*}}/g, (_, rawKey: string) => {
     const key = rawKey.trim();
     if (!key) return "";
+
+    // 1. Module slot replacement
     if (moduleMap.has(key)) return moduleMap.get(key) ?? "";
 
-    if (Object.prototype.hasOwnProperty.call(values, key)) {
-      const directValue = values[key];
-      if (directValue === undefined || directValue === null) {
-        return "";
-      }
-      return toStringValue(directValue);
-    }
+    // 2. Direct match from flattened values
+    if (flatValues[key] !== undefined) return flatValues[key];
 
-    const nestedValue = resolvePath(values as Record<string, unknown>, key);
-    if (nestedValue !== undefined) {
-      return toStringValue(nestedValue);
-    }
+    // 3. Try nested object access (redundant safety)
+    const nested = resolvePath(values, key);
+    if (nested !== undefined) return toStringValue(nested);
 
     return "";
   });
 
-  return ensureModuleAnchors(rendered, modules);
+  // ---------- MODULE ANCHORS ----------
+  rendered = ensureModuleAnchors(rendered, modules);
+
+  return rendered;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                   HELPERS                                  */
+/* -------------------------------------------------------------------------- */
 
 function renderModule(module: TemplateModuleDefinition) {
   const badge = '<span class="preview-badge">Preview Content</span>';
@@ -82,22 +107,17 @@ function renderModule(module: TemplateModuleDefinition) {
     : "<p>Placeholder content for this section.</p>";
   const moduleId = typeof module.id === "string" ? module.id.trim() : "";
   const escapedId = moduleId ? escapeHtmlAttribute(moduleId) : "";
-  const attributes = ["class=\"glass module-preview\""];
+  const attributes = ['class="glass module-preview"'];
   if (moduleId) {
-    attributes.unshift(`id=\"${escapedId}\"`);
-    attributes.push(`data-module-id=\"${escapedId}\"`);
+    attributes.unshift(`id="${escapedId}"`);
+    attributes.push(`data-module-id="${escapedId}"`);
   }
 
   return `<section ${attributes.join(" ")}>${badge}${heading}${description}</section>`;
 }
 
-function ensureModuleAnchors(
-  html: string,
-  modules: TemplateModuleDefinition[]
-) {
-  if (!html || !modules.length) {
-    return html;
-  }
+function ensureModuleAnchors(html: string, modules: TemplateModuleDefinition[]) {
+  if (!html || !modules.length) return html;
 
   const attributesToMatch = [
     "data-module-id",
@@ -111,9 +131,7 @@ function ensureModuleAnchors(
 
   return modules.reduce<string>((output, module) => {
     const moduleId = typeof module.id === "string" ? module.id.trim() : "";
-    if (!moduleId) {
-      return output;
-    }
+    if (!moduleId) return output;
 
     const attributePattern = escapeRegExp(moduleId);
     const escapedId = escapeHtmlAttribute(moduleId);
@@ -130,13 +148,15 @@ function ensureModuleAnchors(
           const withModuleId = upsertAttribute(attrs, "data-module-id", escapedId);
           const withId = hasAttribute(withModuleId, "id")
             ? withModuleId
-            : `${withModuleId} id=\"${escapedId}\"`;
+            : `${withModuleId} id="${escapedId}"`;
           return `${start}${withId}${end}`;
         }
       );
     }, output);
   }, html);
 }
+
+/* ---------- Attribute + Escaping Utilities ---------- */
 
 function hasAttribute(attributes: string, name: string) {
   const pattern = new RegExp(`\\s${name}\\s*=`, "i");
@@ -150,7 +170,7 @@ function upsertAttribute(attributes: string, name: string, value: string) {
       return `${prefix}${quote}${value}${quote}`;
     });
   }
-  return `${attributes} ${name}=\"${value}\"`;
+  return `${attributes} ${name}="${value}"`;
 }
 
 function escapeHtmlAttribute(value: string) {
@@ -163,5 +183,5 @@ function escapeHtmlAttribute(value: string) {
 }
 
 function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

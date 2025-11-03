@@ -1,0 +1,72 @@
+
+body {
+  background: var(--bg, radial-gradient(circle at top left, #1e293b, #0f172a));
+  color: var(--text, #f8fafc);
+  font-family: 'Poppins', sans-serif;
+
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+
+section {
+  padding: 80px 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.hero {
+  text-align: center;
+  padding: 120px 20px;
+  background: var(--accent, linear-gradient(135deg, #3b82f6, #06b6d4));
+  color: var(--text, #ffffff);
+  border-radius: 0 0 80px 80px;
+}
+
+.btn {
+  display: inline-block;
+  background: var(--text, #ffffff);
+  color: var(--accent, #3b82f6);
+  padding: 12px 24px;
+  border-radius: 999px;
+  text-decoration: none;
+  margin-top: 16px;
+  transition: all 0.3s ease;
+}
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(255,255,255,0.2);
+}
+
+.cards, .grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: 1.5rem;
+}
+
+.card, .item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  backdrop-filter: blur(6px);
+  transition: all 0.3s;
+}
+.card:hover, .item:hover {
+  transform: scale(1.03);
+}
+
+footer {
+  text-align: center;
+  padding: 40px;
+  opacity: 0.6;
+  font-size: 0.9rem;
+}
+:root {
+  transition: all 0.4s ease;
+}
+body, .hero, .btn {
+  transition: all 0.4s ease;
+}

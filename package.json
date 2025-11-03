@@ -29,7 +29,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
     "lodash.set": "^4.3.2",
-    "lucide-react": "^0.475.0",
+    "lucide-react": "^0.552.0",
     "mongodb": "^6.6.2",
     "mongoose": "^8.18.3",
     "next": "^15.5.4",

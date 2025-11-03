@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import "@/styles/checkout.css";
+import { useBuilderStore } from "@/store/builderStore"; 
 
 type CheckoutClientProps = {
   websiteId: string;
@@ -35,13 +36,17 @@ export function CheckoutClient({
 }: CheckoutClientProps) {
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  
+  // ✅ Use stable selectors - don't create new object inline
+  const values = useBuilderStore((state) => state.content);
+  const theme = useBuilderStore((state) => state.themeConfig);
 
   const handleToggle = () => setIsYearly(!isYearly);
 
   const plans = [
     {
       id: "basic",
-      title: "Basic Plan — “Get Online”",
+      title: "Basic Plan — \"Get Online\"",
       monthlyPrice: "300 MAD / month",
       yearlyPrice: "3,000 MAD / year",
       yearlyNote: "→ 2 months free",
@@ -58,7 +63,7 @@ export function CheckoutClient({
     },
     {
       id: "standard",
-      title: "Standard Plan — “Grow Online”",
+      title: "Standard Plan — \"Grow Online\"",
       monthlyPrice: "600 MAD / month",
       yearlyPrice: "6,000 MAD / year",
       yearlyNote: "→ 2 months free",
@@ -77,7 +82,7 @@ export function CheckoutClient({
     },
     {
       id: "premium",
-      title: "Premium Plan — “Dominate Online”",
+      title: "Premium Plan — \"Dominate Online\"",
       monthlyPrice: "1,200 MAD / month",
       yearlyPrice: "12,000 MAD / year",
       yearlyNote: "→ save big",
@@ -103,6 +108,8 @@ export function CheckoutClient({
       const priceId = STRIPE_PRICE_IDS[planId as keyof typeof STRIPE_PRICE_IDS][
         isYearly ? "yearly" : "monthly"
       ];
+      
+      const billingCycle = isYearly ? "yearly" : "monthly";
 
       const res = await fetch("/api/checkout_sessions", {
         method: "POST",
@@ -111,7 +118,9 @@ export function CheckoutClient({
           websiteId,
           priceId,
           planId,
-          billingCycle: isYearly ? "yearly" : "monthly",
+          billingCycle,
+          values, // ✅ safe - stable selector
+          theme,  // ✅ safe - stable selector
         }),
       });
 

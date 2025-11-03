@@ -40,7 +40,7 @@ export function SEOInsights({
   }
 
   return (
-    <div id="seo-insights" className="rounded-lg border border-gray-200 p-6">
+    <div id="seo-insights" className="rounded-lg border border-gray-200 p-6 bg-white shadow-sm">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
         SEO insights
       </h2>
@@ -84,9 +84,8 @@ export function SEOInsights({
         href={`/dashboard/${websiteId}/analytics`}
         className="mt-4 inline-flex text-sm font-medium text-blue-600 hover:text-blue-500"
       >
-        View Analytics
+        View Analytics →
       </Link>
     </div>
   );
-
 }

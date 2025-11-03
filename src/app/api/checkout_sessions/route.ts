@@ -1,12 +1,15 @@
-// ✅ src/app/api/checkout_sessions/route.ts
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/mongodb";
+import Website from "@/models/Website";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16",
 });
 
-// Stripe price IDs (your new ones)
+// ✅ Stripe price IDs
 const STRIPE_PRICE_IDS = {
   basic: {
     monthly: "price_1SOhYyQaFhkWD362FDisrEdv",
@@ -24,7 +27,12 @@ const STRIPE_PRICE_IDS = {
 
 export async function POST(req: Request) {
   try {
-    const { priceId, websiteId, planId, billingCycle } = await req.json();
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { priceId, websiteId, planId, billingCycle, values, theme } = await req.json();
 
     if (!priceId || !websiteId || !planId || !billingCycle) {
       return NextResponse.json(
@@ -33,7 +41,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify the priceId is valid from our constant map
+    // ✅ Verify the priceId is valid from our constant map
     const validIds = Object.values(STRIPE_PRICE_IDS)
       .flatMap((cycle) => Object.values(cycle));
     if (!validIds.includes(priceId)) {
@@ -44,7 +52,24 @@ export async function POST(req: Request) {
       );
     }
 
-    const session = await stripe.checkout.sessions.create({
+    // ✅ Persist builder data (values + theme) before creating session
+    await connectDB();
+    const website = await Website.findById(websiteId);
+    if (!website) {
+      return NextResponse.json({ error: "Website not found" }, { status: 404 });
+    }
+
+    if (values && typeof values === "object") {
+      website.values = values;
+    }
+    if (theme && typeof theme === "object") {
+      website.theme = theme;
+    }
+
+    await website.save();
+
+    // ✅ Create Stripe Checkout Session
+    const checkoutSession = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
@@ -53,11 +78,11 @@ export async function POST(req: Request) {
       metadata: {
         websiteId,
         planId,
-        billingCycle, // store monthly/yearly toggle
+        billingCycle,
       },
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: checkoutSession.url });
   } catch (err) {
     console.error("Stripe Checkout Error:", err);
     return NextResponse.json(

@@ -42,7 +42,7 @@ plan: {
       name: { type: String, default: "default" },
       label: { type: String },
       colors: { type: Schema.Types.Mixed, default: {} },
-      fonts: { type: Schema.Types.Mixed, default: {} },
+      // fonts: { type: Schema.Types.Mixed, default: {} },
     },
     values: { type: Schema.Types.Mixed, default: {} },
     content: {

@@ -1,28 +1,18 @@
+import fs from "fs";
+import path from "path";
 import { connectDB } from "@/lib/mongodb";
 import { renderTemplate } from "@/lib/renderTemplate";
 import Website from "@/models/Website";
 import { Template } from "@/models/template";
 
-export async function uploadToStorage(
-  subdomain: string,
-  files: Record<string, string>
-) {
-  console.log("Uploading", subdomain, Object.keys(files));
-}
+/* -------------------------------------------------------------------------- */
+/*                               Helper Functions                             */
+/* -------------------------------------------------------------------------- */
 
 function toPlainObject<T extends Record<string, unknown>>(value: unknown): T {
-  if (!value) {
-    return {} as T;
-  }
-
-  if (value instanceof Map) {
-    return Object.fromEntries(value.entries()) as T;
-  }
-
-  if (typeof value === "object") {
-    return value as T;
-  }
-
+  if (!value) return {} as T;
+  if (value instanceof Map) return Object.fromEntries(value.entries()) as T;
+  if (typeof value === "object") return value as T;
   return {} as T;
 }
 
@@ -33,96 +23,118 @@ function sanitizeSubdomain(value: string | undefined | null, fallback: string) {
     .replace(/[^a-z0-9-]/g, "-")
     .replace(/-{2,}/g, "-")
     .replace(/^-+|-+$/g, "");
-
-  if (normalized.length > 0) {
-    return normalized;
-  }
-
-  const fallbackNormalized = fallback
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/-{2,}/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return fallbackNormalized.length > 0 ? fallbackNormalized : `site-${fallback}`;
+  return normalized.length > 0 ? normalized : `site-${fallback}`;
 }
 
 function buildHtmlDocument(title: string, body: string) {
-  const sanitizedTitle = title && title.trim().length > 0 ? title.trim() : "Prosite";
-  return [
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "  <head>",
-    '    <meta charset="utf-8" />',
-    '    <meta name="viewport" content="width=device-width, initial-scale=1" />',
-    `    <title>${sanitizedTitle}</title>`,
-    '    <link rel="stylesheet" href="style.css" />',
-    "  </head>",
-    "  <body>",
-    body,
-    '    <script src="script.js" defer></script>',
-    "  </body>",
-    "</html>",
-    "",
-  ].join("\n");
+  const safeTitle = title?.trim() || "Prosite";
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeTitle}</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    ${body}
+    <script src="script.js" defer></script>
+  </body>
+</html>`;
 }
 
-export async function triggerDeploy(websiteId: string) {
-  if (!websiteId) {
-    throw new Error("Website ID is required for deployment");
+/* -------------------------------------------------------------------------- */
+/*                             Local File Uploader                            */
+/* -------------------------------------------------------------------------- */
+
+export async function uploadToStorage(
+  subdomain: string,
+  files: Record<string, string>
+) {
+  const baseDir = path.join(process.cwd(), "public", "deployments", subdomain);
+  await fs.promises.mkdir(baseDir, { recursive: true });
+
+  for (const [filename, content] of Object.entries(files)) {
+    const filePath = path.join(baseDir, filename);
+    await fs.promises.writeFile(filePath, content, "utf8");
   }
+
+  console.log(`✅ Deployed locally → /public/deployments/${subdomain}`);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               Deploy Function                              */
+/* -------------------------------------------------------------------------- */
+
+export async function triggerDeploy(websiteId: string) {
+  if (!websiteId) throw new Error("Website ID is required for deployment");
 
   await connectDB();
 
   const website = await Website.findById(websiteId);
-  if (!website) {
-    throw new Error(`Website ${websiteId} not found`);
-  }
+  if (!website) throw new Error(`Website ${websiteId} not found`);
 
   const template = await Template.findById(website.templateId);
-  if (!template) {
-    throw new Error(`Template ${website.templateId} not found`);
-  }
+  if (!template) throw new Error(`Template ${website.templateId} not found`);
 
+  // ------------------ Prepare render data ------------------
   const contentValues = toPlainObject<Record<string, unknown>>(website.content);
   const customValues = toPlainObject<Record<string, unknown>>(website.values);
+
   const valuesSource = {
     ...contentValues,
     ...customValues,
   };
-  const rendered = renderTemplate({
+
+  // ------------------ Render HTML ------------------
+  const renderedHtml = renderTemplate({
     html: website.html || template.html || "",
-    values: valuesSource as Record<string, string>,
+    values: valuesSource,
   });
 
-  const css = typeof website.css === "string" ? website.css : template.css || "";
+  // ------------------ Build themed CSS ------------------
+  const themeVars =
+    website.theme?.colors && typeof website.theme.colors === "object"
+      ? Object.entries(website.theme.colors)
+          .map(([key, val]) => `${key}: ${val};`)
+          .join(" ")
+      : "";
+
+  const themeCss = themeVars ? `:root { ${themeVars} }\n\n` : "";
+  const baseCss =
+    typeof website.css === "string" && website.css.trim().length > 0
+      ? website.css
+      : template.css || "";
+
+  const finalCss = themeCss + baseCss;
   const js = typeof template.js === "string" ? template.js : "";
 
-  const id = typeof website._id === "string" ? website._id : website._id?.toString();
-  const fallback = id ?? "preview";
-  const normalizedSubdomain = sanitizeSubdomain(website.subdomain, fallback);
+  // ------------------ Generate files ------------------
+  const htmlDocument = buildHtmlDocument(website.name ?? "Prosite", renderedHtml);
 
+  const id =
+    typeof website._id === "string" ? website._id : website._id.toString();
+  const normalizedSubdomain = sanitizeSubdomain(website.subdomain, id);
   website.subdomain = normalizedSubdomain;
-
-  const htmlDocument = buildHtmlDocument(website.name ?? "Prosite", rendered);
 
   const bundle = {
     "index.html": htmlDocument,
-    "style.css": css,
+    "style.css": finalCss,
     "script.js": js,
-  } satisfies Record<string, string>;
+  };
 
   await uploadToStorage(normalizedSubdomain, bundle);
 
-  const deploymentUrl = `https://${normalizedSubdomain}.prosite.com`;
-  const deployedAt = new Date();
+  // ------------------ Save deployment info ------------------
+  const deploymentUrl = `/deployments/${normalizedSubdomain}/index.html`;
   website.deployment = {
     url: deploymentUrl,
-    lastDeployedAt: deployedAt,
+    lastDeployedAt: new Date(),
   };
   website.status = "active";
 
   await website.save();
 
+  console.log(`✅ Local deployment ready at: ${deploymentUrl}`);
   return deploymentUrl;
 }
