@@ -2,7 +2,6 @@
 "use client";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Website, { WebsiteDocument } from "@/models/Website";
@@ -94,15 +93,6 @@ export default async function DashboardWebsitePage({
 
   return (
     <div className="max-w-4xl px-6 py-10 mx-auto">
-      <div className="mb-8">
-        <Link
-          href="/dashboard"
-          className="text-sm font-medium text-gray-500 hover:text-gray-700"
-        >
-          ← Back to dashboard
-        </Link>
-      </div>
-
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
