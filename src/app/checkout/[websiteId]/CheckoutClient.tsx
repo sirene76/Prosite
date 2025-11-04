@@ -40,6 +40,7 @@ export function CheckoutClient({
   // ✅ Use stable selectors - don't create new object inline
   const values = useBuilderStore((s) => s.content);
   const theme = useBuilderStore((s) => s.themeConfig);
+  const themeId = useBuilderStore((s) => s.themeId);
   const content = {
     websiteTitle: values?.title ?? values?.site?.title ?? "",
     businessName: values?.businessName ?? values?.site?.businessName ?? "",
@@ -126,6 +127,7 @@ export function CheckoutClient({
           billingCycle,
           values,
           theme,
+          themeId,
           content,
         }),
       });

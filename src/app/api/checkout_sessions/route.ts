@@ -32,7 +32,16 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { priceId, websiteId, planId, billingCycle, values, theme, content } = body;
+    const {
+      priceId,
+      websiteId,
+      planId,
+      billingCycle,
+      values,
+      theme,
+      themeId,
+      content,
+    } = body;
 
     if (!priceId || !websiteId || !planId || !billingCycle) {
       return NextResponse.json({ error: "Missing required checkout parameters" }, { status: 400 });
@@ -70,6 +79,14 @@ export async function POST(req: Request) {
         label: theme.label ?? website.theme?.label ?? null,
         colors: theme.colors ?? website.theme?.colors ?? {},
         fonts: theme.fonts ?? website.theme?.fonts ?? {},
+      };
+    }
+
+    if (typeof themeId === "string" && themeId.trim().length > 0) {
+      website.theme = {
+        ...(website.theme || {}),
+        name: themeId,
+        label: website.theme?.label ?? theme?.label ?? themeId,
       };
     }
 
