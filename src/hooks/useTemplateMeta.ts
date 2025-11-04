@@ -11,6 +11,7 @@ export type TemplateMeta = {
   pages?: Array<{ id: string; label: string; scrollAnchor?: string }>;
   fields?: Array<{ key: string; label: string; type?: string; default?: string }>;
   themes?: Array<{ name: string; colors: Record<string, string> }>;
+  content?: Record<string, unknown>;
   [key: string]: unknown;
 };
 

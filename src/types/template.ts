@@ -18,4 +18,5 @@ export type TemplateMeta = {
     | TemplateFieldDefinition[]
     | Record<string, Partial<TemplateFieldDefinition> & { default?: unknown }>;
   modules?: TemplateModuleDefinition[];
+  content?: Record<string, unknown>;
 };

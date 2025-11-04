@@ -19,6 +19,7 @@ type TemplateMeta = {
   themes?: TemplateTheme[];
   fields?: TemplateField[] | Record<string, TemplateField>;
   modules?: TemplateModuleDefinition[];
+  content?: Record<string, unknown>;
 };
 
 type TemplateLivePreviewProps = {

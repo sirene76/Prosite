@@ -8,6 +8,7 @@ export type TemplateTheme = {
 
 export type TemplateMeta = {
   themes?: TemplateTheme[];
+  content?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
