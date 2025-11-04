@@ -38,12 +38,13 @@ plan: {
       url: { type: String },
       lastDeployedAt: { type: Date },
     },
-    theme: {
-      name: { type: String, default: "default" },
-      label: { type: String },
-      colors: { type: Schema.Types.Mixed, default: {} },
-      // fonts: { type: Schema.Types.Mixed, default: {} },
-    },
+theme: {
+  name: { type: String, default: "default" },
+  label: { type: String },
+  colors: { type: Schema.Types.Mixed, default: {} },
+  fonts: { type: Schema.Types.Mixed, default: {} }, // ✅ add this
+},
+
     values: { type: Schema.Types.Mixed, default: {} },
     content: {
       websiteTitle: { type: String, default: "" },

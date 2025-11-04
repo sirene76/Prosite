@@ -75,7 +75,6 @@ const sanitizedWebsites: DashboardWebsite[] = websites.map(
 }
 
 export async function POST(request: Request) {
-  
   await connectDB();
   const session = await getServerSession(authOptions);
 
@@ -84,12 +83,11 @@ export async function POST(request: Request) {
   }
 
   const { templateId } = (await request.json()) as { templateId?: string };
-
   if (!templateId || typeof templateId !== "string" || !templateId.trim()) {
     return NextResponse.json({ error: "templateId is required" }, { status: 400 });
   }
 
-  // Fetch the selected template (can be static or dynamic)
+  // ✅ Fetch template assets
   const assets = await getTemplateAssets(templateId.trim());
   if (!assets) {
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
@@ -97,11 +95,32 @@ export async function POST(request: Request) {
 
   try {
     const { template, html, css, meta } = assets;
-
     const metaRecord = isRecord(meta) ? meta : {};
     const metaTheme = isRecord(metaRecord.theme) ? metaRecord.theme : {};
-    const metaContent = isRecord(metaRecord.content) ? metaRecord.content : {};
+    const metaFields = Array.isArray(metaRecord.fields) ? metaRecord.fields : [];
 
+    // ✅ Build default values from meta.fields
+    const defaultValues: Record<string, unknown> = {};
+    for (const field of metaFields) {
+      const key = typeof field.id === "string" ? field.id.trim() : "";
+      if (!key) continue;
+      defaultValues[key] = field.default ?? "";
+    }
+
+    // ✅ Add branding defaults to values
+    defaultValues["websiteTitle"] = template.name ?? "Untitled Website";
+    defaultValues["businessName"] = "";
+    defaultValues["logoUrl"] = "";
+
+    // ✅ Build theme safely (ensure all keys exist)
+    const theme = {
+      name: metaTheme.name ?? "default",
+      label: metaTheme.label ?? null,
+      colors: metaTheme.colors ?? {},
+      fonts: metaTheme.fonts ?? {}, // added support
+    };
+
+    // ✅ Create website document with both content + values
     const website = await Website.create({
       name: template.name,
       templateId: template._id,
@@ -112,8 +131,14 @@ export async function POST(request: Request) {
       html,
       css,
       meta: metaRecord,
-      theme: metaTheme,
-      content: metaContent,
+      theme,
+      content: {
+        websiteTitle: defaultValues["websiteTitle"],
+        businessName: defaultValues["businessName"],
+        logoUrl: defaultValues["logoUrl"],
+        other: {},
+      },
+      values: defaultValues, // ✅ store full content tree
       pages: ["Home"],
     });
 

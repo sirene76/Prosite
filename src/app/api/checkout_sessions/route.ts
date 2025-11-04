@@ -9,7 +9,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16",
 });
 
-// ✅ Stripe price IDs
 const STRIPE_PRICE_IDS = {
   basic: {
     monthly: "price_1SOhYyQaFhkWD362FDisrEdv",
@@ -32,43 +31,44 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { priceId, websiteId, planId, billingCycle, values, theme } = await req.json();
+    const body = await req.json();
+    const { priceId, websiteId, planId, billingCycle, values, theme } = body;
 
     if (!priceId || !websiteId || !planId || !billingCycle) {
-      return NextResponse.json(
-        { error: "Missing required checkout parameters" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing required checkout parameters" }, { status: 400 });
     }
 
-    // ✅ Verify the priceId is valid from our constant map
-    const validIds = Object.values(STRIPE_PRICE_IDS)
-      .flatMap((cycle) => Object.values(cycle));
+    const validIds = Object.values(STRIPE_PRICE_IDS).flatMap(c => Object.values(c));
     if (!validIds.includes(priceId)) {
-      console.error("❌ Invalid price ID:", priceId);
-      return NextResponse.json(
-        { error: "Invalid Stripe price ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid Stripe price ID" }, { status: 400 });
     }
 
-    // ✅ Persist builder data (values + theme) before creating session
     await connectDB();
     const website = await Website.findById(websiteId);
     if (!website) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
 
-    if (values && typeof values === "object") {
-      website.values = values;
-    }
-    if (theme && typeof theme === "object") {
-      website.theme = theme;
-    }
+// ✅ Inject builder data (values + theme)
+if (values && typeof values === "object") {
+  website.values = { ...(website.values || {}), ...values };
+}
 
+// ✅ Handle theme safely (avoid null errors)
+if (theme && typeof theme === "object") {
+  website.theme = {
+    ...(website.theme || {}),
+    name: theme.name ?? website.theme?.name ?? "default",
+    label: theme.label ?? website.theme?.label ?? null,
+    colors: theme.colors ?? website.theme?.colors ?? {},
+    fonts: theme.fonts ?? website.theme?.fonts ?? {},
+  };
+}
+
+
+    // ✅ Save immediately
     await website.save();
 
-    // ✅ Create Stripe Checkout Session
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
@@ -85,9 +85,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: checkoutSession.url });
   } catch (err) {
     console.error("Stripe Checkout Error:", err);
-    return NextResponse.json(
-      { error: "Failed to create checkout session" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create checkout session" }, { status: 500 });
   }
 }

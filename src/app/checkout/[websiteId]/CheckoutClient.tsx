@@ -38,8 +38,8 @@ export function CheckoutClient({
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   
   // ✅ Use stable selectors - don't create new object inline
-  const values = useBuilderStore((state) => state.content);
-  const theme = useBuilderStore((state) => state.themeConfig);
+const values = useBuilderStore((s) => s.content);
+const theme = useBuilderStore((s) => s.themeConfig);
 
   const handleToggle = () => setIsYearly(!isYearly);
 
@@ -114,14 +114,15 @@ export function CheckoutClient({
       const res = await fetch("/api/checkout_sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          websiteId,
-          priceId,
-          planId,
-          billingCycle,
-          values, // ✅ safe - stable selector
-          theme,  // ✅ safe - stable selector
-        }),
+body: JSON.stringify({
+  priceId,
+  websiteId,
+  planId,
+  billingCycle,
+  values,
+  theme,
+}),
+
       });
 
       const data = await res.json();
