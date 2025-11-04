@@ -83,10 +83,14 @@ export async function POST(req: Request) {
     }
 
     if (typeof themeId === "string" && themeId.trim().length > 0) {
+      const existingTheme = website.theme || {};
+
       website.theme = {
-        ...(website.theme || {}),
+        ...existingTheme,
         name: themeId,
-        label: website.theme?.label ?? theme?.label ?? themeId,
+        label: existingTheme.label ?? theme?.label ?? themeId,
+        colors: existingTheme.colors ?? theme?.colors ?? {},
+        fonts: existingTheme.fonts ?? theme?.fonts ?? {},
       };
     }
 
