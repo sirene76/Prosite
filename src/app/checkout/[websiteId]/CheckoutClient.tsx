@@ -41,9 +41,9 @@ export function CheckoutClient({
   const values = useBuilderStore((s) => s.content);
   const theme = useBuilderStore((s) => s.themeConfig);
   const content = {
-    websiteTitle: values?.site?.title ?? "",
-    businessName: values?.site?.businessName ?? "",
-    logoUrl: values?.site?.logo ?? "",
+    websiteTitle: values?.title ?? values?.site?.title ?? "",
+    businessName: values?.businessName ?? values?.site?.businessName ?? "",
+    logoUrl: values?.logoUrl ?? values?.site?.logo ?? "",
   };
 
   const handleToggle = () => setIsYearly(!isYearly);
