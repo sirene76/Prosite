@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { priceId, websiteId, planId, billingCycle, values, theme } = body;
+    const { priceId, websiteId, planId, billingCycle, values, theme, content } = body;
 
     if (!priceId || !websiteId || !planId || !billingCycle) {
       return NextResponse.json({ error: "Missing required checkout parameters" }, { status: 400 });
@@ -49,24 +49,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Website not found" }, { status: 404 });
     }
 
-// ✅ Inject builder data (values + theme)
-if (values && typeof values === "object") {
-  website.values = { ...(website.values || {}), ...values };
-}
+    // ✅ Save builder values
+    if (values && typeof values === "object") {
+      website.values = { ...(website.values || {}), ...values };
+    }
 
-// ✅ Handle theme safely (avoid null errors)
-if (theme && typeof theme === "object") {
-  website.theme = {
-    ...(website.theme || {}),
-    name: theme.name ?? website.theme?.name ?? "default",
-    label: theme.label ?? website.theme?.label ?? null,
-    colors: theme.colors ?? website.theme?.colors ?? {},
-    fonts: theme.fonts ?? website.theme?.fonts ?? {},
-  };
-}
+    // ✅ Save branding content (title, businessName, logo)
+    if (content && typeof content === "object") {
+      website.content = {
+        ...(website.content || {}),
+        ...content,
+      };
+    }
 
+    // ✅ Save theme safely
+    if (theme && typeof theme === "object") {
+      website.theme = {
+        ...(website.theme || {}),
+        name: theme.name ?? website.theme?.name ?? "default",
+        label: theme.label ?? website.theme?.label ?? null,
+        colors: theme.colors ?? website.theme?.colors ?? {},
+        fonts: theme.fonts ?? website.theme?.fonts ?? {},
+      };
+    }
 
-    // ✅ Save immediately
     await website.save();
 
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -75,11 +81,7 @@ if (theme && typeof theme === "object") {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${websiteId}?canceled=true`,
-      metadata: {
-        websiteId,
-        planId,
-        billingCycle,
-      },
+      metadata: { websiteId, planId, billingCycle },
     });
 
     return NextResponse.json({ url: checkoutSession.url });
