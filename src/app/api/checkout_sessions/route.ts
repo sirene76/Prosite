@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import Website from "@/models/Website";
+import Website, { type WebsiteDocument } from "@/models/Website";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -71,26 +71,57 @@ export async function POST(req: Request) {
       };
     }
 
+    const defaultTheme: NonNullable<WebsiteDocument["theme"]> = {
+      name: "default",
+      label: undefined,
+      colors: {},
+      fonts: {},
+    };
+
     // ✅ Save theme safely
     if (theme && typeof theme === "object") {
-      website.theme = {
-        ...(website.theme || {}),
-        name: theme.name ?? website.theme?.name ?? "default",
-        label: theme.label ?? website.theme?.label ?? null,
-        colors: theme.colors ?? website.theme?.colors ?? {},
-        fonts: theme.fonts ?? website.theme?.fonts ?? {},
+      const existingTheme = website.theme ?? defaultTheme;
+      const updatedTheme: NonNullable<WebsiteDocument["theme"]> = {
+        ...existingTheme,
+        name: typeof theme.name === "string" ? theme.name : existingTheme.name,
+        label:
+          typeof theme.label === "string"
+            ? theme.label
+            : existingTheme.label,
+        colors:
+          typeof theme.colors === "object" && theme.colors !== null
+            ? theme.colors
+            : existingTheme.colors ?? {},
+        fonts:
+          typeof theme.fonts === "object" && theme.fonts !== null
+            ? theme.fonts
+            : existingTheme.fonts ?? {},
       };
+
+      website.theme = updatedTheme;
     }
 
     if (typeof themeId === "string" && themeId.trim().length > 0) {
-      const existingTheme = website.theme || {};
+      const existingTheme: NonNullable<WebsiteDocument["theme"]> =
+        website.theme ?? defaultTheme;
 
       website.theme = {
         ...existingTheme,
         name: themeId,
-        label: existingTheme.label ?? theme?.label ?? themeId,
-        colors: existingTheme.colors ?? theme?.colors ?? {},
-        fonts: existingTheme.fonts ?? theme?.fonts ?? {},
+        label:
+          existingTheme.label ??
+          (typeof theme?.label === "string" ? theme.label : undefined) ??
+          themeId,
+        colors:
+          existingTheme.colors ??
+          ((typeof theme?.colors === "object" && theme.colors !== null
+            ? theme.colors
+            : undefined) ?? {}),
+        fonts:
+          existingTheme.fonts ??
+          ((typeof theme?.fonts === "object" && theme.fonts !== null
+            ? theme.fonts
+            : undefined) ?? {}),
       };
     }
 
