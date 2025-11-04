@@ -12,6 +12,15 @@ type CheckoutClientProps = {
   businessName: string;
 };
 
+const getRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+
+const getString = (record: Record<string, unknown> | null, key: string): string => {
+  if (!record) return "";
+  const value = record[key];
+  return typeof value === "string" ? value : "";
+};
+
 const STRIPE_PRICE_IDS = {
   basic: {
     monthly: "price_1SOhYyQaFhkWD362FDisrEdv",
@@ -41,10 +50,17 @@ export function CheckoutClient({
   const values = useBuilderStore((s) => s.content);
   const theme = useBuilderStore((s) => s.themeConfig);
   const themeId = useBuilderStore((s) => s.themeId);
+  const valuesRecord = getRecord(values);
+  const siteRecord = valuesRecord ? getRecord(valuesRecord["site"]) : null;
+
   const content = {
-    websiteTitle: values?.title ?? values?.site?.title ?? "",
-    businessName: values?.businessName ?? values?.site?.businessName ?? "",
-    logoUrl: values?.logoUrl ?? values?.site?.logo ?? "",
+    websiteTitle:
+      getString(valuesRecord, "title") || getString(siteRecord, "title") || "",
+    businessName:
+      getString(valuesRecord, "businessName") ||
+      getString(siteRecord, "businessName") ||
+      "",
+    logoUrl: getString(valuesRecord, "logoUrl") || getString(siteRecord, "logo") || "",
   };
 
   const handleToggle = () => setIsYearly(!isYearly);
