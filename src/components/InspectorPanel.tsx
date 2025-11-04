@@ -2,7 +2,6 @@
 
 import React, {
   useCallback,
-  useEffect,
   useMemo,
   useState,
   type ChangeEvent,
@@ -38,7 +37,7 @@ const CONTENT_FIELDS = [
   { id: "title", label: "Website Title", type: "text" as const },
   { id: "businessName", label: "Business Name", type: "text" as const },
   { id: "logoUrl", label: "Upload Logo", type: "file" as const },
-];
+] as const;
 
 // === helpers ===
 const getThemeIdentifier = (theme: ThemeOption, fallback: string) =>
@@ -85,6 +84,27 @@ export default function InspectorPanel() {
   const setTheme = useBuilderStore((state) => state.setTheme);
   const setContent = useBuilderStore((state) => state.setContent);
 
+  const BRANDING_TO_VALUES_PATH: Record<
+    "title" | "businessName" | "logoUrl",
+    string
+  > = {
+    title: "site.title",
+    businessName: "site.businessName",
+    logoUrl: "site.logo",
+  };
+
+  const handleBrandingChange = useCallback(
+    (field: "title" | "businessName" | "logoUrl", value: string) => {
+      setContent(field, value);
+
+      const valuesPath = BRANDING_TO_VALUES_PATH[field];
+      if (valuesPath) {
+        setContent(valuesPath, value);
+      }
+    },
+    [setContent],
+  );
+
   const [activeTab, setActiveTab] = useState<TabId>("pages");
   const [collapsed, setCollapsed] = useState(false);
   const [openField, setOpenField] = useState<string | null>("title");
@@ -98,25 +118,6 @@ export default function InspectorPanel() {
     () => toThemeOptions(templateMeta),
     [templateMeta],
   );
-
-  const [titleDraft, setTitleDraft] = useState<string>(() => {
-    const title = content.title;
-    return typeof title === "string" ? title : "";
-  });
-  const [businessDraft, setBusinessDraft] = useState<string>(() => {
-    const business = content.businessName;
-    return typeof business === "string" ? business : "";
-  });
-
-  useEffect(() => {
-    const title = content.title;
-    setTitleDraft(typeof title === "string" ? title : "");
-  }, [content.title]);
-
-  useEffect(() => {
-    const business = content.businessName;
-    setBusinessDraft(typeof business === "string" ? business : "");
-  }, [content.businessName]);
 
   const handleThemeClick = useCallback(
     (theme: ThemeOption, index: number) => {
@@ -176,18 +177,6 @@ export default function InspectorPanel() {
     window.postMessage({ scrollTo: sectionId }, window.location.origin);
   }, []);
 
-  const commitTitle = useCallback(() => {
-    if (titleDraft !== content.title) {
-      setContent("title", titleDraft);
-    }
-  }, [content.title, setContent, titleDraft]);
-
-  const commitBusiness = useCallback(() => {
-    if (businessDraft !== content.businessName) {
-      setContent("businessName", businessDraft);
-    }
-  }, [businessDraft, content.businessName, setContent]);
-
   const handleLogoUpload = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -196,13 +185,13 @@ export default function InspectorPanel() {
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === "string") {
-          setContent("logoUrl", reader.result);
+          handleBrandingChange("logoUrl", reader.result);
         }
       };
       reader.readAsDataURL(file);
       event.target.value = "";
     },
-    [setContent],
+    [handleBrandingChange],
   );
 
   const renderPagesTab = useCallback(() => {
@@ -279,9 +268,11 @@ export default function InspectorPanel() {
         const isOpen = openField === field.id;
         const value =
           field.id === "title"
-            ? titleDraft
+            ? (typeof content.title === "string" ? content.title : "")
             : field.id === "businessName"
-            ? businessDraft
+            ? (typeof content.businessName === "string"
+                ? content.businessName
+                : "")
             : "";
 
         return (
@@ -300,11 +291,8 @@ export default function InspectorPanel() {
                   type="text"
                   value={value}
                   onChange={(event) =>
-                    field.id === "title"
-                      ? setTitleDraft(event.target.value)
-                      : setBusinessDraft(event.target.value)
+                    handleBrandingChange(field.id, event.target.value)
                   }
-                  onBlur={field.id === "title" ? commitTitle : commitBusiness}
                   placeholder={field.label}
                 />
               ) : (
@@ -332,13 +320,12 @@ export default function InspectorPanel() {
       })}
     </>
   ), [
-    businessDraft,
-    commitBusiness,
-    commitTitle,
     content.logoUrl,
+    content.businessName,
+    content.title,
+    handleBrandingChange,
     handleLogoUpload,
     openField,
-    titleDraft,
   ]);
 
   const renderTabContent = useMemo(() => {
