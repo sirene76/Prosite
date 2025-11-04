@@ -48,26 +48,29 @@ export async function GET(request: Request) {
   })[];
 
   // ✅ Explicit map parameter typing
-const sanitizedWebsites: DashboardWebsite[] = websites.map(
-  (website: WebsiteModel & { _id: Types.ObjectId | string }) => {
-    const { _id, createdAt, updatedAt, ...rest } = website;
-    const normalizedId =
-      typeof _id === "string"
-        ? _id
-        : typeof _id?.toString === "function"
-        ? _id.toString()
-        : String(_id);
+  const sanitizedWebsites: DashboardWebsite[] = websites.map(
+    (website: WebsiteModel & { _id: Types.ObjectId | string }) => {
+      const { _id, createdAt, updatedAt, ...rest } = website;
+      const normalizedId =
+        typeof _id === "string"
+          ? _id
+          : typeof _id?.toString === "function"
+          ? _id.toString()
+          : String(_id);
 
-    return {
-      ...rest,
-      _id: normalizedId,
-      createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
-      updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : updatedAt,
-      // ✅ Normalize null → undefined
-      thumbnailUrl: website.thumbnailUrl ?? undefined,
-    } satisfies DashboardWebsite;
-  }
-);
+      const { previewImage, ...restWithoutPreviewImage } = rest;
+
+      return {
+        ...restWithoutPreviewImage,
+        _id: normalizedId,
+        createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
+        updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : updatedAt,
+        // ✅ Normalize null → undefined
+        thumbnailUrl: website.thumbnailUrl ?? undefined,
+        previewImage: previewImage ?? undefined,
+      } satisfies DashboardWebsite;
+    }
+  );
 
 
 
