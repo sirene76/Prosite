@@ -15,6 +15,8 @@ NOTE: I'm still in the production process :)) not yet finished
 - Live **responsive preview** (desktop/tablet/mobile)
 - Automatic **theme saving** and **content sync** via MongoDB
 
+![Prosite Demo](public/demo1.gif)
+
 ### 💳 Checkout & Plans
 - Integrated **Stripe Checkout** :Basic, Standard, Premium
 - Monthly / yearly billing cycles
