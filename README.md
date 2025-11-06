@@ -16,7 +16,7 @@ NOTE: I'm still in the production process :)) not yet finished
 - Automatic **theme saving** and **content sync** via MongoDB
 
 ### 💳 Checkout & Plans
-- Integrated **Stripe Checkout** (Free, Pro, Agency plans)
+- Integrated **Stripe Checkout** :Basic, Standard, Premium
 - Monthly / yearly billing cycles
 - Real-time plan activation and website deployment
 
