@@ -1,0 +1,129 @@
+<section class="layout">
+  <aside class="sidebar">
+    <div class="profile">
+      <div class="avatar">{{hero.headline}}</div>
+      <p class="tagline">{{hero.tagline}}</p>
+    </div>
+    <nav class="nav">
+      <a href="#hero">Home</a>
+      <a href="#about">About</a>
+      <a href="#experience">Experience</a>
+      <a href="#portfolio">Portfolio</a>
+      <a href="#testimonials">Testimonials</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </aside>
+  <main class="content">
+    <section id="hero" class="hero">
+      <p class="eyebrow">Now booking new collaborations</p>
+      <h1>{{hero.headline}}</h1>
+      <p class="lede">{{hero.tagline}}</p>
+      <div class="actions">
+        <a class="button primary" href="#portfolio">View portfolio</a>
+        <a class="button secondary" href="#contact">Book a discovery call</a>
+      </div>
+    </section>
+
+    <section id="about" class="section about">
+      <h2>About</h2>
+      <p>{{about.body}}</p>
+    </section>
+
+    <section id="experience" class="section resume">
+      <h2>{{experience.title}}</h2>
+      <p>{{experience.summary}}</p>
+      <ul class="timeline">
+        <li>
+          <span>2022 — Present</span>
+          <div>
+            <h3>Nova Labs</h3>
+            <p>Principal Product Designer guiding growth initiatives.</p>
+          </div>
+        </li>
+        <li>
+          <span>2020 — 2022</span>
+          <div>
+            <h3>Dataloom</h3>
+            <p>Built the design system powering the platform.</p>
+          </div>
+        </li>
+        <li>
+          <span>2017 — 2020</span>
+          <div>
+            <h3>Pixelwave Studio</h3>
+            <p>Led branding and experiential design for tech startups.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section id="portfolio" class="section portfolio">
+      <div class="section-heading">
+        <h2>{{portfolio.heading}}</h2>
+        <a class="view-all" href="#">View all projects →</a>
+      </div>
+      <div class="grid">
+        <article>
+          <h3>Atlas SaaS Platform</h3>
+          <p>Product design & design system</p>
+        </article>
+        <article>
+          <h3>Flowwave Mobile</h3>
+          <p>UX strategy & brand identity</p>
+        </article>
+        <article>
+          <h3>Northstar Rebrand</h3>
+          <p>Visual direction & campaign</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="testimonials" class="section testimonials">
+      <h2>Testimonials</h2>
+      <blockquote>
+        <p>“{{testimonials.quote}}”</p>
+        <footer>— {{testimonials.author}}</footer>
+      </blockquote>
+    </section>
+
+    <section id="contact" class="section contact">
+      <h2>{{contact.headline}}</h2>
+      <form class="contact-form">
+        <div class="field">
+          <label for="name">Name</label>
+          <input id="name" type="text" placeholder="Your name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@example.com" value="{{contact.email}}" />
+        </div>
+        <div class="field full">
+          <label for="message">Project details</label>
+          <textarea id="message" rows="3" placeholder="Tell me about your project"></textarea>
+        </div>
+        <button type="submit" class="button primary">Submit</button>
+      </form>
+    </section>
+  </main>
+</section>
+<script>
+  window.addEventListener("message", function (event) {
+    if (!event || typeof event.data !== "object" || event.data === null) {
+      return;
+    }
+
+    if (event.data.type !== "scroll-to") {
+      return;
+    }
+
+    var sectionId = typeof event.data.section === "string" ? event.data.section : event.data.id;
+    if (typeof sectionId !== "string") {
+      return;
+    }
+
+    var target = document.getElementById(sectionId);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+</script>
