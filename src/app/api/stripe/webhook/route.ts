@@ -68,30 +68,38 @@ export async function POST(req: NextRequest) {
       if (price && PRICE_TO_PLAN[price]) plan = PRICE_TO_PLAN[price];
     }
 
-    const update: Record<string, unknown> = {
+    const allowedPlans = new Set(["free", "basic", "standard", "premium"]);
+    let planSlug = typeof plan === "string" ? plan.trim().toLowerCase() : "";
+    if (!allowedPlans.has(planSlug)) {
+      planSlug = "basic";
+    }
+
+    const setFields: Record<string, unknown> = {
       status: "active",
       stripeSessionId: session.id,
-      plan: plan || "basic",
+      plan: planSlug,
       billingCycle,
     };
 
     if (typeof session.customer === "string") {
-      update.stripeCustomerId = session.customer;
+      setFields.stripeCustomerId = session.customer;
     } else if (session.customer && typeof session.customer === "object") {
-      update.stripeCustomerId = (session.customer as any).id;
+      setFields.stripeCustomerId = (session.customer as any).id;
     }
 
     if (typeof session.subscription === "string") {
-      update.stripeSubscriptionId = session.subscription;
+      setFields.stripeSubscriptionId = session.subscription;
     } else if (session.subscription && typeof session.subscription === "object") {
-      update.stripeSubscriptionId = (session.subscription as any).id;
+      setFields.stripeSubscriptionId = (session.subscription as any).id;
     }
 
-    await Website.findByIdAndUpdate(websiteId, update);
+    await Website.findByIdAndUpdate(websiteId, { $set: setFields });
 
     try {
       const url = await triggerDeploy(websiteId);
-      console.log(`✅ Payment complete for website ${websiteId} → deployed ${url}`);
+      console.log(
+        `✅ Payment complete for website ${websiteId} (${planSlug}/${billingCycle}) → deployed ${url}`
+      );
     } catch (deployError) {
       console.error(`❌ Failed to deploy website ${websiteId} after checkout`, deployError);
     }
