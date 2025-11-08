@@ -25,6 +25,22 @@ function formatDateTime(value: unknown) {
   }).format(date);
 }
 
+function formatPlanLabel(plan: unknown, status: string): string {
+  const normalizedStatus = status.trim().toLowerCase();
+  const normalizedPlan =
+    typeof plan === "string" ? plan.trim() : plan ? String(plan).trim() : "";
+  const planIsFree =
+    !normalizedPlan || normalizedPlan.toLowerCase() === "free";
+
+  if (normalizedStatus === "preview" && planIsFree) {
+    return "Preview";
+  }
+
+  if (!normalizedPlan) return "Free";
+
+  return normalizedPlan.charAt(0).toUpperCase() + normalizedPlan.slice(1);
+}
+
 /* ---------- main page ---------- */
 export default async function DashboardWebsitePage({
   params,
@@ -62,13 +78,16 @@ export default async function DashboardWebsitePage({
   const seoLastScan = formatDateTime(seo.lastScan);
 
   const siteName = website.name?.trim() || "Untitled Website";
-  const sitePlan = website.plan || "Free";
   const billingCycle =
     typeof website.billingCycle === "string"
       ? website.billingCycle.charAt(0).toUpperCase() +
         website.billingCycle.slice(1)
       : null;
-  const siteStatus = website.status || "preview";
+  const siteStatus =
+    typeof website.status === "string" && website.status.length > 0
+      ? website.status
+      : "preview";
+  const sitePlan = formatPlanLabel(website.plan, siteStatus);
   const siteSubdomain = website.subdomain || websiteId.slice(-6);
 
   const hasLiveSite = Boolean(deploymentUrl);
@@ -98,9 +117,10 @@ export default async function DashboardWebsitePage({
           <p className="mt-3 text-lg font-semibold text-gray-900">{siteStatus}</p>
           <p className="mt-1 text-sm text-gray-500">
             Plan: {sitePlan}
-            {billingCycle && (
-              <span className="text-gray-400"> · {billingCycle}</span>
-            )}
+            {billingCycle &&
+              siteStatus.trim().toLowerCase() !== "preview" && (
+                <span className="text-gray-400"> · {billingCycle}</span>
+              )}
           </p>
           {lastDeployed && (
             <p className="mt-2 text-sm text-gray-400">
