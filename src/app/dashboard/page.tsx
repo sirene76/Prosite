@@ -62,10 +62,7 @@ export default async function DashboardPage() {
 
   const dashboardSites = websites
     .map(toDashboardSite)
-    .filter(
-      (site): site is DashboardSite =>
-        Boolean(site && site.status && site.status !== "preview")
-    );
+    .filter((site): site is DashboardSite => Boolean(site));
 
   return (
     <div className="max-w-5xl px-6 py-10 mx-auto">
@@ -79,10 +76,10 @@ export default async function DashboardPage() {
       {dashboardSites.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
           <p className="text-base font-medium text-gray-700">
-            You don&apos;t have any active websites yet.
+            You don&apos;t have any websites yet.
           </p>
           <p className="mt-1 text-sm text-gray-500">
-            Upgrade a project plan or deploy a preview to see it listed here.
+            Create or deploy a project to see it listed here.
           </p>
         </div>
       ) : (
@@ -101,9 +98,7 @@ export default async function DashboardPage() {
                       <span className="text-gray-400"> · {site.billingCycle}</span>
                     )}
                   </span>
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
-                    Status: {site.status}
-                  </span>
+                  <StatusBadge status={site.status} />
                 </div>
               </div>
 
@@ -119,4 +114,21 @@ export default async function DashboardPage() {
       )}
     </div>
   );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const normalizedStatus = status.trim().toLowerCase();
+
+  const badgeStyles: Record<string, string> = {
+    active: "rounded-full bg-emerald-50 px-3 py-1 text-emerald-700",
+    preview: "rounded-full bg-amber-50 px-3 py-1 text-amber-700",
+    default: "rounded-full bg-gray-100 px-3 py-1 text-gray-700",
+  };
+
+  const className = badgeStyles[normalizedStatus] ?? badgeStyles.default;
+  const label = normalizedStatus
+    ? normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1)
+    : "Unknown";
+
+  return <span className={className}>Status: {label}</span>;
 }
