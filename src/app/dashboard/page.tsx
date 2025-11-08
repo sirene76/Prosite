@@ -14,6 +14,21 @@ interface DashboardSite {
   status: string;
 }
 
+function formatPlanLabel(plan: string | undefined, status: string): string {
+  const normalizedStatus = status.trim().toLowerCase();
+  const normalizedPlan = plan?.trim() ?? "";
+  const planIsFree =
+    !normalizedPlan || normalizedPlan.toLowerCase() === "free";
+
+  if (normalizedStatus === "preview" && planIsFree) {
+    return "Preview";
+  }
+
+  if (!normalizedPlan) return "Free";
+
+  return normalizedPlan.charAt(0).toUpperCase() + normalizedPlan.slice(1);
+}
+
 function toDashboardSite(value: unknown): DashboardSite | null {
   if (!value || typeof value !== "object") return null;
 
@@ -33,11 +48,6 @@ function toDashboardSite(value: unknown): DashboardSite | null {
       ? record.name
       : "Untitled Website";
 
-  const plan =
-    typeof record.plan === "string" && record.plan.length > 0
-      ? record.plan.charAt(0).toUpperCase() + record.plan.slice(1)
-      : "Free";
-
   const billingCycle =
     typeof record.billingCycle === "string" && record.billingCycle.length > 0
       ? record.billingCycle.charAt(0).toUpperCase() + record.billingCycle.slice(1)
@@ -47,6 +57,11 @@ function toDashboardSite(value: unknown): DashboardSite | null {
     typeof record.status === "string" && record.status.length > 0
       ? record.status
       : "preview";
+
+  const plan = formatPlanLabel(
+    typeof record.plan === "string" ? record.plan : undefined,
+    status,
+  );
 
   return { id, name, plan, billingCycle, status };
 }
@@ -94,9 +109,12 @@ export default async function DashboardPage() {
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500">
                   <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">
                     Plan: {site.plan}
-                    {site.billingCycle && (
-                      <span className="text-gray-400"> · {site.billingCycle}</span>
-                    )}
+                    {site.billingCycle &&
+                      site.status.trim().toLowerCase() !== "preview" && (
+                        <span className="text-gray-400">
+                          {" "}· {site.billingCycle}
+                        </span>
+                      )}
                   </span>
                   <StatusBadge status={site.status} />
                 </div>
