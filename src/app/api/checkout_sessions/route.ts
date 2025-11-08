@@ -131,7 +131,7 @@ export async function POST(req: Request) {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?websiteId=${encodeURIComponent(websiteId)}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${websiteId}?canceled=true`,
       metadata: { websiteId, planId, billingCycle },
     });
